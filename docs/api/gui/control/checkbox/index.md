@@ -49,7 +49,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
-- [Rotation](../common/index.md#rotation-functions)
+- [Rotation](../../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

@@ -42,8 +42,8 @@ Once a TextArea has been created, the following functions are available:
 |---|---|
 | [`getText()`](getText.md) | Return the text in the area. |
 | [`setText(text)`](setText.md) | Set the text in the area. |
-| [`getColor()`](../common/color/getColor.md) | Return the area's background color. |
-| [`setColor(color)`](../common/color/setColor.md) | Set the area's background color. |
+| [`getColor()`](../../common/color/getColor.md) | Return the area's background color. |
+| [`setColor(color)`](../../common/color/setColor.md) | Set the area's background color. |
 | [`getFont()`](getFont.md) | Return the area's font. |
 | [`setFont(font)`](setFont.md) | Set the area's font. |
 
@@ -51,7 +51,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
-- [Rotation](../common/index.md#rotation-functions)
+- [Rotation](../../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
