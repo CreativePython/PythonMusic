@@ -228,14 +228,14 @@ We will see timers again used in [chapter 10](ch10.md) for animation.
 
 [Live coding](https://en.wikipedia.org/wiki/Live_coding) is a music performance practice where performers code live (in front of an audience), and change portions of a running program on the fly to affect the musical output being produced.  Live coding is particularly popular in Europe and Australia, with a growing presence in the US.
 
-The following code sample **demonstrates how to perform [Terry Riley’s “In C”](../articles/terryriley-inc.pdf)** using live coding.  JEM supports live coding by allowing you to make changes and re-execute portions of a running program (see JEM’s “Run” menu).
+The following code sample **demonstrates how to perform [Terry Riley’s “In C”](../articles/terryriley-inc.pdf)** using live coding.  PEM supports live coding by allowing you to make changes and re-execute portions of a running program (see PEM’s “Run” menu).
 
 **Performance Instructions**
 
 Each performer should do the following:
 
 1. Run code below.
-2. While code is running in JEM:
+2. While code is running in PEM:
     - update lines 10 and 11 to contain the next musical pattern
     - when ready, press
         - On Mac: **Shift-Command-P**

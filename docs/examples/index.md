@@ -1,6 +1,6 @@
 # Examples
 
-JythonMusic supports music transcription and playback, audio looping, computer-aided music composition, development of computer-based musical instruments (including hybrid instruments), and live performance.
+PythonMusic supports music transcription and playback, audio looping, computer-aided music composition, development of computer-based musical instruments (including hybrid instruments), and live performance.
 
 ---
 
