@@ -870,7 +870,6 @@ class Interactable:
       if not alreadyRegistered:
          _handler().registerEvent(self._objectId, eventType, action)
 
-   # doc-group: Events
    def onMouseClick(self, action):
       """Set up a function to call when the mouse is clicked on this object.
 
@@ -2161,7 +2160,6 @@ class Drawable(Interactable):
 
    # ── Meta Information ─────────────────────────────────────────────────
    # Bounding box, scene endpoints, parent Group/Display, tooltips
-   # doc-group: Information
 
    def _sceneEndpoints(self):
       """"""
@@ -2248,7 +2246,6 @@ class Drawable(Interactable):
 
 
    # ── Position ───────────────────────────────────────────────────────────────
-   # doc-group: Position
 
    def _sceneCenter(self):
       """"""
@@ -2415,7 +2412,6 @@ class Drawable(Interactable):
       self.setCenter(self.getCenterX(), y)
 
    # ── Size ───────────────────────────────────────────────────────────────────
-   # doc-group: Size
 
    def _resize(self, targetWidth, targetHeight, currentWidth, currentHeight):
       """"""
@@ -2510,7 +2506,6 @@ class Drawable(Interactable):
       self.setSize(None, height)
 
    # ── Rotation ───────────────────────────────────────────────────────────────
-   # doc-group: Rotation
 
    def getRotation(self):
       """Return how far the object is turned.
@@ -2574,7 +2569,6 @@ class Drawable(Interactable):
       self.setRotation(currentRotation + angle)
 
    # ── Hit Testing ────────────────────────────────────────────────────────────
-   # doc-group: Hit Testing
 
    def _sceneHitOutline(self):
       """"""
@@ -2634,7 +2628,6 @@ class Drawable(Interactable):
       return otherIsInside
 
    # ── Visibility ─────────────────────────────────────────────────────────────
-   # doc-group: Visibility
 
    def _show(self):
       """"""
@@ -2688,7 +2681,6 @@ class Graphics(Drawable):
       self._thickness = int(thickness)   # outline width
 
    # ── Color ────────────────────────────────────────────────────────────────
-   # doc-group: Color
 
    def getColor(self):
       """Return the shape's color.
@@ -2960,7 +2952,6 @@ class Circle(Oval):
       self.setSize(height, height)
 
    # ── Radius ────────────────────────────────────────────────────────────────
-   # doc-group: Size
 
    def getRadius(self):
       """Return the circle's radius.
@@ -3225,7 +3216,6 @@ class ArcCircle(Arc):
       Arc.setSize(self, width, width)
 
    # ── Radius ────────────────────────────────────────────────────────────────
-   # doc-group: Size
 
    def getRadius(self):
       """Return the arc-circle's radius.
@@ -3442,7 +3432,6 @@ class Line(Polyline):
               f'rotation = {self.getRotation()})')
 
    # ── Length ────────────────────────────────────────────────────────────────
-   # doc-group: Size
 
    def getLength(self):
       """Return the line's length.
@@ -3562,12 +3551,15 @@ class Icon(Graphics):
        filename (str): The image file to load, ending in ".jpg" or ".png".
        width (int or float, optional): The width to scale the image to, in pixels. Defaults to the image's own width.
        height (int or float, optional): The height to scale the image to, in pixels. Defaults to the image's own height.
+       backgroundColor (Color, optional): The color of the rectangle behind the image. Defaults to clear (no backing).
+       fill (bool, optional): Whether the backing rectangle is filled in (True) or just an outline (False).
+       thickness (int, optional): The backing rectangle's outline thickness, in pixels.
        rotation (int or float, optional): How far to turn the image, in degrees, counter-clockwise.
        visibility (int, optional): How visible the image is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, filename, width=None, height=None, rotation=0, visibility=100):
+   def __init__(self, filename, width=None, height=None, backgroundColor=Color.CLEAR, fill=True, thickness=0, rotation=0, visibility=100):
       """"""
-      Graphics.__init__(self, Color.CLEAR, False, 0)
+      Graphics.__init__(self, backgroundColor, fill, thickness)
 
       self._filename   = filename
       self._rotation   = float(rotation)
@@ -3580,7 +3572,9 @@ class Icon(Graphics):
          'width':      width,
          'height':     height,
          'rotation':   rotation,
-         'color':      self._color,   # Color.CLEAR: leaves the image's own colors untinted
+         'color':      self._color,       # styles the rectangle behind the image
+         'fill':       self._fill,
+         'thickness':  self._thickness,
          'visibility': self._visibility,
       })
 
@@ -3603,6 +3597,27 @@ class Icon(Graphics):
       width, height = self.getSize()
       return (f'Icon(filename = "{self._filename}", width = {width}, height = {height}, '
               f'rotation = {self.getRotation()})')
+
+   # ── Background color ──────────────────────────────────────────────────────
+   # An Icon's color, fill, and thickness style a rectangle behind the image; these read
+   # more clearly named after the background, and forward to the inherited color methods.
+
+   def getBackgroundColor(self):
+      """Return the color of the rectangle behind the image.
+
+      Returns:
+          color (Color): The background color.
+      """
+      color = self.getColor()
+      return color
+
+   def setBackgroundColor(self, color=None):
+      """Set the color of the rectangle behind the image.
+
+      Args:
+          color (Color, optional): The new background color. If omitted, a color-selection dialog opens.
+      """
+      self.setColor(color)
 
    # ── Save ────────────────────────────────────────────────────────────────
 
@@ -4020,7 +4035,6 @@ class Group(Drawable):
 
    # ── Adding and removing items ───────────────────────────────────────────────────
 
-   # doc-group: Grouping
    def add(self, item, x=None, y=None):
       """Add an object to the group at the given position.
 
@@ -4212,7 +4226,6 @@ class MusicControl(Group):
          if (self._action is not None) and callable(self._action):
             self._action(self._value)  # call user function
 
-   # doc-group: Events
    def onAction(self, action):
       """Set up a function to call when the control's value changes.
 
@@ -4228,7 +4241,6 @@ class MusicControl(Group):
    # A MusicControl is drawn from a foreground part (the part that shows the value), a
    # background part behind it, and an outline around it.  Each part is its own shape, so
    # each can be colored on its own.
-   # doc-group: Color
 
    def _foregroundShapes(self):
       """"""
@@ -4319,7 +4331,6 @@ class MusicControl(Group):
       self._colorShapes([self._outlineShape], color, 'setOutlineColor')
 
    # ── Fill ────────────────────────────────────────────────────────────────
-   # doc-group: Fill
 
    def getFill(self):
       """Report whether the control's background is filled in.
@@ -4341,7 +4352,6 @@ class MusicControl(Group):
       self._backgroundShape.setFill(fill)
 
    # ── Thickness ────────────────────────────────────────────────────────────────
-   # doc-group: Thickness
 
    def getThickness(self):
       """Return the thickness of the control's outline.
@@ -5054,7 +5064,6 @@ class Control(Drawable):
       Drawable.__init__(self)
       self._action = None   # the function called when the user uses this control
 
-   # doc-group: Events
    def onAction(self, action):
       """Set up a function to call when the user uses this control.
 

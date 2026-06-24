@@ -1,6 +1,6 @@
 # save()
 
-Save the icon to a JPG or PNG file.
+Save the icon to a JPG or PNG file.  Includes the Icon's background, if present (to remove the background before saving, use [`setColor()`](../common/color/setColor.md) to set the background color to `Color.CLEAR`).
 
 ## Parameters
 

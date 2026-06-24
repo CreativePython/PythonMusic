@@ -674,9 +674,6 @@ class _QLineItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsLineItem):
 class _QPolygonItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPolygonItem):
    pass
 
-class _QPixmapItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPixmapItem):
-   pass
-
 class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
    pass
 
@@ -2471,15 +2468,17 @@ def _qColorFromChannels(channels):
 
 class IconMirror(_GraphicsMirror):
    """
-   Mirror of gui.py's Icon.  Backed by a QGraphicsPixmapItem.
+   Mirror of gui.py's Icon.  Backed by a QGraphicsItemGroup holding a backing
+   QGraphicsRectItem (behind) and a QGraphicsPixmapItem (the image, in front).
 
    Unlike other mirrors, Icon does most of its work on the Qt side because pixel
    operations must happen where the QPixmap lives.  This means IconMirror has
    getters (getPixel, getPixels) that send responses back through the pipe.
 
-   Extends _GraphicsMirror for rotation support.  Overrides _applyColor to
-   flood-fill the pixmap (since QGraphicsPixmapItem has no brush to recolor)
-   and _applyThickness as a no-op (no pen either).
+   A QGraphicsPixmapItem has no pen or brush, so color/fill/thickness can't act on
+   the image the way they act on a shape.  Instead they style the backing rectangle
+   (like LabelMirror's background): _applyColor sets its pen/brush, _applyThickness
+   its border width.  The image's own pixels are left untouched.
 
    Constructor args expected in the 'args' dict:
      filename   — path to image file (str)
@@ -2525,7 +2524,18 @@ class IconMirror(_GraphicsMirror):
       self._sx       = args.get('sx',       1.0)
       self._sy       = args.get('sy',       1.0)
 
-      self.qObject = _QPixmapItem()
+      # the image itself; its pixels keep their own colors
+      self._qPixmapObject = QtWidgets.QGraphicsPixmapItem()
+
+      # a rectangle glued behind the image that color/fill/thickness style, just like
+      # any other shape (a QGraphicsPixmapItem has no pen or brush of its own)
+      self._qBackgroundObject = QtWidgets.QGraphicsRectItem()
+
+      # group the backing rectangle (behind) and the image (in front) together
+      self.qObject = _QGroupItem()
+      self.qObject.setHandlesChildEvents(False)
+      self.qObject.addToGroup(self._qBackgroundObject)
+      self.qObject.addToGroup(self._qPixmapObject)
 
       # add Icon-specific command handlers
       self._commandHandlers.update({
@@ -2538,33 +2548,36 @@ class IconMirror(_GraphicsMirror):
          'write':     self._write,
       })
 
-      self._applyColor()
-      self._applyExtent()      # scale the pixmap to size and center it on the origin
+      self._applyColor()       # color the backing rectangle (pen, plus brush if filled)
+      self._applyThickness()   # the backing rectangle's border width
+      self._applyExtent()      # scale the image to size and size the backing to match
       self._applyTransform()   # place, rotate, and scale about the center
 
    def _applyColor(self):
       """
-      Overrides _GraphicsMirror._applyColor.  Floods every pixel of self._pixmap with
-      self._color — including its alpha channel — so the icon becomes a solid block of
-      that color and the original image's own transparency (silhouette) is discarded.
-      The fill is permanent — self._pixmap is updated in place — so later _setSize
-      rescales keep the new color.
-
-      Fully-transparent colors (alpha 0, including the default Color.CLEAR) are skipped:
-      this lets construction (and the inherited _setFill) leave the icon in its original
-      colors.  Use setVisibility(0) to hide an Icon by transparency.
+      Overrides _GraphicsMirror._applyColor to color the backing rectangle rather than the
+      image: its pen (outline) always, and its brush (fill) when self._fill.  The image's
+      own pixels are left untouched.  The inherited _setFill re-calls this, so toggling
+      fill switches the backing between a solid block and an empty frame.
       """
       r, g, b, a = self._color
-      if a > 0:
-         image = QtGui.QImage(self._pixmap.size(), QtGui.QImage.Format.Format_ARGB32)
-         image.fill(QtGui.QColor(r, g, b, a))
+      qColor     = QtGui.QColor(r, g, b, a)
 
-         self._pixmap = QtGui.QPixmap.fromImage(image)
-         self.qObject.setPixmap(self._pixmap.scaled(self._width, self._height))
+      qPen = self._qBackgroundObject.pen()
+      qPen.setColor(qColor)
+      self._qBackgroundObject.setPen(qPen)
+
+      if self._fill:
+         qBrush = QtGui.QBrush(qColor)
+      else:
+         qBrush = QtGui.QBrush(QtGui.QColor(0, 0, 0, 0))   # fully transparent
+      self._qBackgroundObject.setBrush(qBrush)
 
    def _applyThickness(self):
-      """No-op — QGraphicsPixmapItem has no pen or brush."""
-      pass
+      """Sets the backing rectangle's border (pen) width."""
+      qPen = self._qBackgroundObject.pen()
+      qPen.setWidth(self._thickness)
+      self._qBackgroundObject.setPen(qPen)
 
    # ── Size ───────────────────────────────────────────────────────────────────
 
@@ -2577,14 +2590,16 @@ class IconMirror(_GraphicsMirror):
 
    def _applyExtent(self):
       """
-      Scales the pixmap from the original to the current size and centers it on the
-      origin, so the item's transform turns and scales it about its center.
+      Scales the image from the original to the current size and centers both it and the
+      backing rectangle on the origin, so the item's transform turns and scales them about
+      their center.
       """
       width  = max(1, int(self._width))
       height = max(1, int(self._height))
       scaledPixmap = self._pixmap.scaled(width, height)
-      self.qObject.setPixmap(scaledPixmap)
-      self.qObject.setOffset(-width / 2.0, -height / 2.0)
+      self._qPixmapObject.setPixmap(scaledPixmap)
+      self._qPixmapObject.setOffset(-width / 2.0, -height / 2.0)
+      self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
 
    # ── Crop ───────────────────────────────────────────────────────────────────
 
@@ -2629,7 +2644,7 @@ class IconMirror(_GraphicsMirror):
       self._pixmap = QtGui.QPixmap.fromImage(image)
 
       scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self.qObject.setPixmap(scaledPixmap)
+      self._qPixmapObject.setPixmap(scaledPixmap)
 
    def _getPixels(self, args, responseId):
       """
@@ -2669,13 +2684,16 @@ class IconMirror(_GraphicsMirror):
 
       self._pixmap = QtGui.QPixmap.fromImage(image)
       scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self.qObject.setPixmap(scaledPixmap)
+      self._qPixmapObject.setPixmap(scaledPixmap)
 
    # ── Write ──────────────────────────────────────────────────────────────────
 
    def _write(self, args, responseId):
       """
-      Saves the icon's original pixmap to a file.
+      Saves the icon as it appears on the Display: the backing rectangle (fill and border)
+      with the image on top, at the icon's current size, faded by its visibility.  Rotation
+      and position are left out (like the rest of the image API, this captures the icon's
+      own frame, not its placement).
       Optional width/height args resize the output; omitting one preserves aspect ratio.
       Sends [success (bool), resolvedPath (str)] back to the parent process.
       """
@@ -2684,7 +2702,33 @@ class IconMirror(_GraphicsMirror):
       width    = args.get('width')
       height   = args.get('height')
 
-      pixmap = self._pixmap
+      iconWidth  = max(1, int(round(self._width)))
+      iconHeight = max(1, int(round(self._height)))
+      thickness  = self._thickness
+      margin     = thickness / 2.0          # the border straddles the rect edge, half outside
+      canvasW    = iconWidth  + thickness   # grow the canvas to hold the whole border
+      canvasH    = iconHeight + thickness
+
+      # 1. composite the backing rectangle (reusing its live pen and brush) and the image
+      #    on top, both at full opacity
+      composite = QtGui.QImage(canvasW, canvasH, QtGui.QImage.Format.Format_ARGB32)
+      composite.fill(QtGui.QColor(0, 0, 0, 0))
+      painter = QtGui.QPainter(composite)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+      painter.setPen(self._qBackgroundObject.pen())
+      painter.setBrush(self._qBackgroundObject.brush())
+      painter.drawRect(QtCore.QRectF(margin, margin, iconWidth, iconHeight))
+      painter.drawPixmap(QtCore.QPointF(margin, margin), self._pixmap.scaled(iconWidth, iconHeight))
+      painter.end()
+
+      # 2. fade the whole composite by the icon's visibility, so overlapping parts fade as
+      #    one (matching the group's opacity on the Display)
+      pixmap = QtGui.QPixmap(canvasW, canvasH)
+      pixmap.fill(QtGui.QColor(0, 0, 0, 0))
+      painter = QtGui.QPainter(pixmap)
+      painter.setOpacity(self._visibility / 100.0)
+      painter.drawImage(0, 0, composite)
+      painter.end()
 
       if width is not None or height is not None:
          origW  = pixmap.width()
