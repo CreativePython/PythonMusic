@@ -43,7 +43,6 @@ Once a CheckBox has been created, the following functions are available:
 | [`check()`](check.md) | Check the checkbox. |
 | [`uncheck()`](uncheck.md) | Uncheck the checkbox. |
 | [`isChecked()`](isChecked.md) | Report whether the checkbox is checked. |
-| [`onAction()`](onAction.md) | Register a function to call when the checkbox is checked or unchecked. |
 
 Additionally, the following common functions are available:
 

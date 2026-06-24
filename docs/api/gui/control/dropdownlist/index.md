@@ -40,7 +40,6 @@ Once a DropDownList has been created, the following functions are available:
 |---|---|
 | [`getColor()`](../../common/color/getColor.md) | Return the dropdown's background color. |
 | [`setColor(color)`](../../common/color/setColor.md) | Set the dropdown's background color. |
-| [`onAction()`](onAction.md) | Register a function to call when an item is picked. |
 
 Additionally, the following common functions are available:
 

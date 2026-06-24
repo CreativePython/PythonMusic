@@ -45,7 +45,6 @@ Once a Slider has been created, the following functions are available:
 | [`setValue(value)`](setValue.md) | Set the slider's value. |
 | [`getColor()`](../../common/color/getColor.md) | Return the slider's handle color. |
 | [`setColor(color)`](../../common/color/setColor.md) | Set the slider's handle color. |
-| [`onAction()`](onAction.md) | Register a function to call when the slider moves. |
 
 Additionally, the following common functions are available:
 

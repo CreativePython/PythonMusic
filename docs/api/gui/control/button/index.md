@@ -44,7 +44,6 @@ Once a Button has been created, the following functions are available:
 | [`setText(text)`](setText.md) | Set the button's text. |
 | [`getColor()`](../../common/color/getColor.md) | Return the button's color. |
 | [`setColor(color)`](../../common/color/setColor.md) | Set the button's color. |
-| [`onAction()`](onAction.md) | Register a function to call when the button is pressed. |
 
 Additionally, the following common functions are available:
 

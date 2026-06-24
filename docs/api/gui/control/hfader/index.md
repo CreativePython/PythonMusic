@@ -57,7 +57,6 @@ Once an HFader has been created, the following functions are available:
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the fader's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the fader's outline color. |
 | [`setOutlineColor()`](setOutlineColor.md) | Set the fader's outline color. |
-| [`onAction()`](onAction.md) | Register a function to call when the fader moves. |
 
 Additionally, the following common functions are available:
 

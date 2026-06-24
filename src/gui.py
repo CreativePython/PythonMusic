@@ -4245,16 +4245,6 @@ class MusicControl(Group):
          if (self._action is not None) and callable(self._action):
             self._action(self._value)  # call user function
 
-   def onAction(self, action):
-      """Set up a function to call when the control's value changes.
-
-      This is the same function you can pass when you create the control. Use it to set
-      that function later, or to change it. Pass None to remove it.
-
-      Args:
-          action (Callable): The function to call; it receives one parameter, the new value.
-      """
-      self._action = action
 
    # ── Color ────────────────────────────────────────────────────────────────
    # A MusicControl is drawn from a foreground part (the part that shows the value), a
@@ -5083,21 +5073,6 @@ class Control(Drawable):
       Drawable.__init__(self)
       self._action = None   # the function called when the user uses this control
 
-   def onAction(self, action):
-      """Set up a function to call when the user uses this control.
-
-      This is the same function you can pass when you create the control. Use it to set
-      that function later, or to change it. Pass None to remove it. A text area has no
-      such action.
-
-      Args:
-          action (Callable): The function to call when the control is used. What it
-              receives depends on the control: a Button's gets nothing, a CheckBox's gets
-              True or False, a Slider's gets the value, a DropDownList's gets the chosen
-              item, and a TextField's gets the typed text.
-      """
-      self._action = action
-
    def _refit(self):
       """"""
       currentLeft, currentTop = self.getPosition()
@@ -5132,7 +5107,7 @@ class Button(Control):
 
       self._refit()
 
-      # always register, so onAction() can set or change the function later
+      # register action callback
       def _onClicked():
          if self._action is not None and callable(self._action):
             self._action()
@@ -5213,7 +5188,7 @@ class CheckBox(Control):
 
       self._refit()
 
-      # always register, so onAction() can set or change the function later
+      # register action callback
       def _onStateChanged(checked):
          if self._action is not None and callable(self._action):
             self._action(checked)
@@ -5332,7 +5307,7 @@ class Slider(Control):
 
       self._refit()
 
-      # always register, so onAction() can set or change the function later
+      # register action callback
       def _onValueChanged(value):
          if self._action is not None and callable(self._action):
             self._action(value)
@@ -5416,7 +5391,7 @@ class DropDownList(Control):
 
       self._refit()
 
-      # always register, so onAction() can set or change the function later
+      # register action callback
       def _onActivated(index):
          if self._action is not None and callable(self._action):
             self._action(self._items[index])
@@ -5488,7 +5463,7 @@ class TextField(Control):
       if font is not None:
          self.setFont(font)
 
-      # always register, so onAction() can set or change the function later
+      # register action callback
       def _onReturnPressed(text):
          if self._action is not None and callable(self._action):
             self._action(text)

@@ -52,7 +52,6 @@ Once a Push button has been created, the following functions are available:
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the button's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the button's outline color. |
 | [`setOutlineColor()`](setOutlineColor.md) | Set the button's outline color. |
-| [`onAction()`](onAction.md) | Register a function to call when the button is pressed or released. |
 
 Additionally, the following common functions are available:
 

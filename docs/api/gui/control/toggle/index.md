@@ -52,7 +52,6 @@ Once a Toggle has been created, the following functions are available:
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the toggle's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the toggle's outline color. |
 | [`setOutlineColor()`](setOutlineColor.md) | Set the toggle's outline color. |
-| [`onAction()`](onAction.md) | Register a function to call when the toggle changes. |
 
 Additionally, the following common functions are available:
 

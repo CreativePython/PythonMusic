@@ -48,7 +48,6 @@ Once a TextField has been created, the following functions are available:
 | [`setColor(color)`](../../common/color/setColor.md) | Set the field's background color. |
 | [`getFont()`](getFont.md) | Return the field's font. |
 | [`setFont(font)`](setFont.md) | Set the field's font. |
-| [`onAction(action)`](onAction.md) | Register a function to call when the user presses Enter in the field. |
 
 Additionally, the following common functions are available:
 
