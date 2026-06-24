@@ -3332,14 +3332,18 @@ class SliderMirror(_ControlMirror):
    def _applyColor(self, color):
       r, g, b, a = color
       fill = f"rgba({r},{g},{b},{a})"
+      # styling the sub-controls makes Qt drop the slider's native background, leaving a
+      # solid (dark-mode: black) fill; force it transparent so the Display shows through
       if self._orientation == 2:   # vertical: the filled part below the handle is add-page
          self._widget.setStyleSheet(
+            f"QSlider {{ background: transparent; }}"
             f"QSlider::groove:vertical {{ width: 6px; background: #c8c8c8; border-radius: 3px; }}"
             f"QSlider::add-page:vertical {{ background: {fill}; border-radius: 3px; }}"
             f"QSlider::handle:vertical {{ background: {fill}; height: 14px; margin: 0 -5px; border-radius: 7px; }}"
          )
       else:                        # horizontal: the filled part left of the handle is sub-page
          self._widget.setStyleSheet(
+            f"QSlider {{ background: transparent; }}"
             f"QSlider::groove:horizontal {{ height: 6px; background: #c8c8c8; border-radius: 3px; }}"
             f"QSlider::sub-page:horizontal {{ background: {fill}; border-radius: 3px; }}"
             f"QSlider::handle:horizontal {{ background: {fill}; width: 14px; margin: -5px 0; border-radius: 7px; }}"

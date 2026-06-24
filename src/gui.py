@@ -2170,6 +2170,20 @@ class Drawable(Interactable):
       yPoints = placedCorners[1]
       return xPoints, yPoints
 
+   def _visibleUnrotatedOutline(self):
+      """"""
+      # the object's outline (its corners, or its actual points for point-defined shapes)
+      # in display coordinates, scaled as it currently appears but with its visible
+      # rotation taken out about its center.  __str__ methods use this so the size and
+      # positions they report are global and post-scale, while rotation is reported on its
+      # own via getRotation().
+      centerX, centerY, rotation, scaleX, scaleY = _decomposeAffine(self._getSceneMatrix())
+      unrotatedPlacement = _affineMatrix(centerX, centerY, 0, scaleX, scaleY)
+      placedOutline = unrotatedPlacement @ self._localHitOutline()
+      xPoints = [self._asNumber(value) for value in placedOutline[0]]
+      yPoints = [self._asNumber(value) for value in placedOutline[1]]
+      return xPoints, yPoints
+
    def getEndpoints(self):
       """Return the object's four corners.
 
@@ -2794,14 +2808,12 @@ class Rectangle(Graphics):
 
    def __str__(self):
       # describe the rectangle the way it was created: the two corners of its upright
-      # (unrotated) shape, centered where it now sits
-      centerX, centerY = self._sceneCenter()
-      halfWidth  = self._baseWidth / 2.0
-      halfHeight = self._baseHeight / 2.0
-      x1 = int(round(centerX - halfWidth))
-      y1 = int(round(centerY - halfHeight))
-      x2 = int(round(centerX + halfWidth))
-      y2 = int(round(centerY + halfHeight))
+      # (unrotated) shape, at the size and place it now appears
+      xPoints, yPoints = self._visibleUnrotatedOutline()
+      x1 = int(round(min(xPoints)))
+      y1 = int(round(min(yPoints)))
+      x2 = int(round(max(xPoints)))
+      y2 = int(round(max(yPoints)))
       return (f'Rectangle(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2851,14 +2863,12 @@ class Oval(Graphics):
 
    def __str__(self):
       # describe the oval the way it was created: the two corners of its upright
-      # (unrotated) box, centered where it now sits
-      centerX, centerY = self._sceneCenter()
-      halfWidth  = self._baseWidth / 2.0
-      halfHeight = self._baseHeight / 2.0
-      x1 = int(round(centerX - halfWidth))
-      y1 = int(round(centerY - halfHeight))
-      x2 = int(round(centerX + halfWidth))
-      y2 = int(round(centerY + halfHeight))
+      # (unrotated) box, at the size and place it now appears
+      xPoints, yPoints = self._visibleUnrotatedOutline()
+      x1 = int(round(min(xPoints)))
+      y1 = int(round(min(yPoints)))
+      x2 = int(round(max(xPoints)))
+      y2 = int(round(max(yPoints)))
       return (f'Oval(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2904,12 +2914,15 @@ class Circle(Oval):
 
    def __str__(self):
       x, y      = self.getCenter()
-      radius    = self.getRadius()
+      # radius from the un-rotated outline, so it stays the circle's true radius even if
+      # the circle has been scaled or turned
+      xPoints   = self._visibleUnrotatedOutline()[0]
+      radius    = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
       color     = self.getColor()
       fill      = self.getFill()
       thickness = self.getThickness()
 
-      return f'Circle(x = {x}, y = {y}, radius = {radius}, color = {color}, fill = {fill}, thickness = {thickness})'
+      return f'Circle(x = {x}, y = {y}, radius = {radius}, color = {color}, fill = {fill}, thickness = {thickness}, visibility = {self.getVisibility()})'
 
    # ── Size ────────────────────────────────────────────────────────────────
 
@@ -3013,7 +3026,7 @@ class Point(Circle):
    def __str__(self):
       x, y  = self.getCenter()
       color = self.getColor()
-      return f'Point(x = {x}, y = {y}, color = {color})'
+      return f'Point(x = {x}, y = {y}, color = {color}, visibility = {self.getVisibility()})'
 
    def getEndpoints(self):
       """Return the point's location.
@@ -3086,14 +3099,12 @@ class Arc(Graphics):
 
    def __str__(self):
       # describe the arc the way it was created: the two corners of its upright
-      # (unrotated) box, centered where it now sits
-      centerX, centerY = self._sceneCenter()
-      halfWidth  = self._baseWidth / 2.0
-      halfHeight = self._baseHeight / 2.0
-      x1 = int(round(centerX - halfWidth))
-      y1 = int(round(centerY - halfHeight))
-      x2 = int(round(centerX + halfWidth))
-      y2 = int(round(centerY + halfHeight))
+      # (unrotated) box, at the size and place it now appears
+      xPoints, yPoints = self._visibleUnrotatedOutline()
+      x1 = int(round(min(xPoints)))
+      y1 = int(round(min(yPoints)))
+      x2 = int(round(max(xPoints)))
+      y2 = int(round(max(yPoints)))
       return (f'Arc(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'startAngle = {self._startAngle}, endAngle = {self._endAngle}, '
               f'style = {self._style}, color = {self.getColor()}, fill = {self.getFill()}, '
@@ -3186,7 +3197,10 @@ class ArcCircle(Arc):
 
    def __str__(self):
       x, y       = self.getCenter()
-      radius     = self.getRadius()
+      # radius from the un-rotated outline, so it stays the circle's true radius even if
+      # the arc has been scaled or turned
+      xPoints    = self._visibleUnrotatedOutline()[0]
+      radius     = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
       startAngle = self._startAngle
       endAngle   = self._endAngle
       style      = self._style
@@ -3194,7 +3208,7 @@ class ArcCircle(Arc):
       color      = self.getColor()
       fill       = self.getFill()
       thickness  = self.getThickness()
-      return f'ArcCircle(x = {x}, y = {y}, radius = {radius}, startAngle = {startAngle}, endAngle = {endAngle}, style = {style}, color = {color}, fill = {fill}, thickness = {thickness}, rotation = {rotation})'
+      return f'ArcCircle(x = {x}, y = {y}, radius = {radius}, startAngle = {startAngle}, endAngle = {endAngle}, style = {style}, color = {color}, fill = {fill}, thickness = {thickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # ── Size ────────────────────────────────────────────────────────────────
 
@@ -3286,10 +3300,10 @@ class Polyline(Graphics):
       })
 
    def __str__(self):
-      xPoints, yPoints = self.getEndpoints()
+      xPoints, yPoints = self._visibleUnrotatedOutline()
       return (f'Polyline(xPoints = {xPoints}, yPoints = {yPoints}, '
               f'color = {self.getColor()}, thickness = {self.getThickness()}, '
-              f'rotation = {self.getRotation()})')
+              f'rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
 
    # ── Shape from points ──────────────────────────────────────────────────────────
    # A point-defined shape works out its own size from its points and, like a Group,
@@ -3424,12 +3438,12 @@ class Line(Polyline):
       })
 
    def __str__(self):
-      xPoints, yPoints = self.getEndpoints()
+      xPoints, yPoints = self._visibleUnrotatedOutline()
       x1, x2 = xPoints
       y1, y2 = yPoints
       return (f'Line(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, thickness = {self.getThickness()}, '
-              f'rotation = {self.getRotation()})')
+              f'rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
 
    # ── Length ────────────────────────────────────────────────────────────────
 
@@ -3519,10 +3533,10 @@ class Polygon(Polyline):
       })
 
    def __str__(self):
-      xPoints, yPoints = self.getEndpoints()
+      xPoints, yPoints = self._visibleUnrotatedOutline()
       return (f'Polygon(xPoints = {xPoints}, yPoints = {yPoints}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
-              f'thickness = {self.getThickness()}, rotation = {self.getRotation()})')
+              f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
 
    # ── Hit Testing ───────────────────────────────────────────────────────────────
 
@@ -3594,9 +3608,14 @@ class Icon(Graphics):
       self._pushTransform()
 
    def __str__(self):
-      width, height = self.getSize()
+      # report the visible (scaled) size with rotation taken out, since that is what the
+      # constructor takes
+      xPoints, yPoints = self._visibleUnrotatedOutline()
+      width  = self._asNumber(max(xPoints) - min(xPoints))
+      height = self._asNumber(max(yPoints) - min(yPoints))
       return (f'Icon(filename = "{self._filename}", width = {width}, height = {height}, '
-              f'rotation = {self.getRotation()})')
+              f'backgroundColor = {self.getBackgroundColor()}, fill = {self.getFill()}, '
+              f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
 
    # ── Background color ──────────────────────────────────────────────────────
    # An Icon's color, fill, and thickness style a rectangle behind the image; these read
@@ -3785,7 +3804,7 @@ class Label(Graphics):
       textColor       = self.getTextColor()
       backgroundColor = self.getBackgroundColor()
       font            = self.getFont()
-      return f'Label(text = "{text}", alignment = {alignment}, textColor = {textColor}, backgroundColor = {backgroundColor}, font = {font})'
+      return f'Label(text = "{text}", alignment = {alignment}, textColor = {textColor}, backgroundColor = {backgroundColor}, font = {font}, visibility = {self.getVisibility()})'
 
    # ── Text ────────────────────────────────────────────────────────────────
 
@@ -4455,7 +4474,7 @@ class HFader(MusicControl):
       outlineColor    = self._outlineShape.getColor()
       thickness       = self._outlineShape.getThickness()
       rotation        = self.getRotation()
-      return f'HFader(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation})'
+      return f'HFader(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _defaultAction(self, ex, ey):
@@ -4538,7 +4557,7 @@ class VFader(HFader):
       outlineColor    = self._outlineShape.getColor()
       thickness       = self._outlineShape.getThickness()
       rotation        = self.getRotation()
-      return f'VFader(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation})'
+      return f'VFader(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _defaultAction(self, ex, ey):
@@ -4683,7 +4702,7 @@ class Rotary(MusicControl):
       outlineColor    = self._outlineShape.getColor()
       thickness       = self._outlineShape.getThickness()
       rotation        = self.getRotation()
-      return f'Rotary(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, arcWidth = {self._arcWidth}, rotation = {rotation})'
+      return f'Rotary(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, arcWidth = {self._arcWidth}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _defaultAction(self, ex, ey):
@@ -4806,7 +4825,7 @@ class Push(MusicControl):
       outlineColor    = self._outlineShape.getColor()
       thickness       = self._outlineShape.getThickness()
       rotation        = self.getRotation()
-      return f'Push(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation})'
+      return f'Push(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _defaultAction(self, ex, ey):
@@ -4882,7 +4901,7 @@ class Toggle(Push):
       outlineColor    = self._outlineShape.getColor()
       thickness       = self._outlineShape.getThickness()
       rotation        = self.getRotation()
-      return f'Toggle(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation})'
+      return f'Toggle(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, thickness = {thickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _defaultAction(self, ex, ey):
@@ -4992,7 +5011,7 @@ class XYPad(MusicControl):
       crosshairThickness = self._foregroundShape.getThickness()
       rotation           = self.getRotation()
 
-      return f'XYPad(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, outlineThickness = {outlineThickness}, trackerRadius = {trackerRadius}, crosshairThickness = {crosshairThickness}, rotation = {rotation})'
+      return f'XYPad(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, outlineThickness = {outlineThickness}, trackerRadius = {trackerRadius}, crosshairThickness = {crosshairThickness}, rotation = {rotation}, visibility = {self.getVisibility()})'
 
    # OVERRIDDEN METHODS
    def _foregroundShapes(self):
@@ -5123,7 +5142,7 @@ class Button(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'Button(text = "{self.getText()}", action = {self._action})'
+      return f'Button(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getText(self):
       """Return the button's text.
@@ -5204,7 +5223,7 @@ class CheckBox(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'CheckBox(text = "{self.getText()}", action = {self._action})'
+      return f'CheckBox(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getText(self):
       """Return the checkbox's text.
@@ -5323,7 +5342,7 @@ class Slider(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'Slider(orientation = {self._orientation}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action})'
+      return f'Slider(orientation = {self._orientation}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the slider's color.
@@ -5407,7 +5426,7 @@ class DropDownList(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'DropDownList(items = {self._items}, action = {self._action})'
+      return f'DropDownList(items = {self._items}, action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the drop-down list's color.
@@ -5479,7 +5498,7 @@ class TextField(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action})'
+      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getText(self):
       """Return the text in the field.
@@ -5587,7 +5606,7 @@ class TextArea(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows})'
+      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getText(self):
       """Return the text in the area.
