@@ -1,7 +1,7 @@
 {#-
   Copied from mkdocs-material's partials/nav-item.html, with ONE change: the
   render() macro now short-circuits separator entries (sentinel "sep:" nav items,
-  tagged is_separator / separator_label by docs/_scripts/navtools.py) and emits a
+  tagged is_separator / separator_label by overrides/navtools.py) and emits a
   styled divider instead of falling through to a broken `<a href="sep:">---</a>`.
   This is the collapsed/mobile drawer's nav tree — the megamenu (top nav) and
   leftnav (sidebar) partials handle the same separators for the desktop views.

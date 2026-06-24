@@ -18,7 +18,6 @@ extra_css:
 
 exclude_docs: |            # files/folders in docs/ that we don't want compiled
   _snippets/*.py
-  _scripts/
 
 not_in_nav: |
   /api/**/*.md
@@ -27,8 +26,8 @@ not_in_nav: |
   /articles/*.md
 
 hooks:
-  - docs/_scripts/navtools.py     # nav rules for the mega-menu + left ToC (shared)
-  - docs/_scripts/zip_examples.py # bundle examples/_snippets into a downloadable .zip (build/deploy only)
+  - overrides/navtools.py     # nav rules for the mega-menu + left ToC (shared)
+  - overrides/zip_examples.py # bundle examples/_snippets into a downloadable .zip (build/deploy only)
 
 markdown_extensions:
   - pymdownx.snippets:
