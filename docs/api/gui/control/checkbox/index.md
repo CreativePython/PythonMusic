@@ -19,6 +19,8 @@ CheckBox(text, action, color)
 | `text` | `str` | `''` | The text shown beside the checkbox. |
 | `action` | `function` | `None` | The function to call when the checkbox changes; it receives one parameter, `True` if it was just checked or `False` if it was just unchecked. |
 | `color` | `Color` | `Color.CLEAR` | The checkbox color. |
+| `rotation` | `int or float` | `0` | How far to turn the checkbox, in degrees, counter-clockwise. |
+| `visibility` | `int` | `100` | How visible the checkbox is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -47,6 +49,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

@@ -4998,7 +4998,13 @@ class Control(Drawable):
 
    Control is a base class. You do not create one yourself. Button, CheckBox, Slider,
    DropDownList, TextField, and TextArea inherit from it. These widgets look like your
-   operating system's own controls and, unlike drawable shapes, cannot be turned.
+   operating system's own controls.
+
+   Like any drawable object, a control can be moved, turned, made bigger or smaller, and
+   faded. Two things to know about its size: resizing a control with setSize() keeps its
+   text at the normal size and just makes the control's box bigger or smaller, while
+   putting a control in a Group and resizing the group scales the whole control, text and
+   all.
    """
    def __init__(self):
       Drawable.__init__(self)
@@ -5020,19 +5026,6 @@ class Control(Drawable):
       """
       self._action = action
 
-   def setRotation(self, rotation, anchorX=None, anchorY=None):
-      """Do nothing, since controls cannot be turned.
-
-      System-styled controls cannot be rotated; calling this prints a message and leaves
-      the control unchanged.
-
-      Args:
-          rotation (int or float): Ignored.
-          anchorX (int or float, optional): Ignored.
-          anchorY (int or float, optional): Ignored.
-      """
-      print(f"{type(self).__name__}.setRotation(): Controls cannot be rotated.")
-
    def _refit(self):
       """"""
       currentLeft, currentTop = self.getPosition()
@@ -5049,8 +5042,10 @@ class Button(Control):
        text (str, optional): The text shown on the button.
        action (Callable, optional): The function to call each time the button is pressed; it receives no parameters.
        color (Color, optional): The button color.
+       rotation (int or float, optional): How far to turn the button, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the button is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.LIGHT_GRAY):
+   def __init__(self, text='', action=None, color=Color.LIGHT_GRAY, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5070,6 +5065,9 @@ class Button(Control):
          if self._action is not None and callable(self._action):
             self._action()
       _handler().registerEvent(self._objectId, 'clicked', _onClicked)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'Button(text = "{self.getText()}", action = {self._action})'
@@ -5123,8 +5121,10 @@ class CheckBox(Control):
        text (str, optional): The text shown beside the checkbox.
        action (Callable, optional): The function to call when the checkbox changes; it receives one parameter, True if it was just checked or False if it was just unchecked.
        color (Color, optional): The checkbox color.
+       rotation (int or float, optional): How far to turn the checkbox, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the checkbox is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.CLEAR):
+   def __init__(self, text='', action=None, color=Color.CLEAR, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5144,6 +5144,9 @@ class CheckBox(Control):
          if self._action is not None and callable(self._action):
             self._action(checked)
       _handler().registerEvent(self._objectId, 'stateChanged', _onStateChanged)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'CheckBox(text = "{self.getText()}", action = {self._action})'
@@ -5226,8 +5229,10 @@ class Slider(Control):
        startValue (int or float, optional): The slider's starting value. Defaults to halfway between minValue and maxValue.
        action (Callable, optional): The function to call when the slider moves; it receives one parameter, the new value.
        color (Color, optional): The color of the slider's handle and the filled part of its track.
+       rotation (int or float, optional): How far to turn the slider, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the slider is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, orientation=HORIZONTAL, minValue=0, maxValue=100, startValue=None, action=None, color=Color.LIGHT_GRAY):
+   def __init__(self, orientation=HORIZONTAL, minValue=0, maxValue=100, startValue=None, action=None, color=Color.LIGHT_GRAY, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5256,6 +5261,9 @@ class Slider(Control):
          if self._action is not None and callable(self._action):
             self._action(value)
       _handler().registerEvent(self._objectId, 'valueChanged', _onValueChanged)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'Slider(orientation = {self._orientation}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action})'
@@ -5311,8 +5319,10 @@ class DropDownList(Control):
        items (list[str], optional): The items to show, for example ["item1", "item2", "item3"].
        action (Callable, optional): The function to call when an item is picked; it receives one parameter, the selected item as a string.
        color (Color, optional): The list color.
+       rotation (int or float, optional): How far to turn the list, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the list is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, items=[], action=None, color=Color.LIGHT_GRAY):
+   def __init__(self, items=[], action=None, color=Color.LIGHT_GRAY, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5333,6 +5343,9 @@ class DropDownList(Control):
          if self._action is not None and callable(self._action):
             self._action(self._items[index])
       _handler().registerEvent(self._objectId, 'activated', _onActivated)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'DropDownList(items = {self._items}, action = {self._action})'
@@ -5370,8 +5383,10 @@ class TextField(Control):
        action (Callable, optional): The function to call when the user presses Enter in the field; it receives one parameter, the field's contents as a string.
        color (Color, optional): The field color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
+       rotation (int or float, optional): How far to turn the field, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the field is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, font=None):
+   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, font=None, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5398,6 +5413,9 @@ class TextField(Control):
          if self._action is not None and callable(self._action):
             self._action(text)
       _handler().registerEvent(self._objectId, 'returnPressed', _onReturnPressed)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action})'
@@ -5476,8 +5494,10 @@ class TextArea(Control):
        rows (int, optional): The height of the area, in lines.
        color (Color, optional): The area color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
+       rotation (int or float, optional): How far to turn the area, in degrees, counter-clockwise.
+       visibility (int, optional): How visible the area is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, font=None):
+   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, font=None, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 
@@ -5499,6 +5519,9 @@ class TextArea(Control):
 
       if font is not None:
          self.setFont(font)
+
+      self.setRotation(rotation)
+      self.setVisibility(visibility)
 
    def __str__(self):
       return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows})'

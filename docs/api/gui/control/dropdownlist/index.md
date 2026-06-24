@@ -19,6 +19,8 @@ DropDownList(items, action, color)
 | `items` | `list[str]` | `[]` | The items to show, for example ["item1", "item2", "item3"]. |
 | `action` | `function` | `None` | The function to call when an item is picked; it receives one parameter, the selected item as a string. |
 | `color` | `Color` | `Color.LIGHT_GRAY` | The dropdown's background color. |
+| `rotation` | `int or float` | `0` | How far to turn the dropdown, in degrees, counter-clockwise (**NOTE:** This can't turn the dropdown items when the list is open - only the box that holds them). |
+| `visibility` | `int` | `100` | How visible the dropdown is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -44,6 +46,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

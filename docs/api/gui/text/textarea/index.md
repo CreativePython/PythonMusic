@@ -23,6 +23,8 @@ TextArea(text, columns, rows, color, font)
 | `rows` | `int` | `5` | The height of the area, in lines. |
 | `color` | `Color` | `Color.WHITE` | The area's background color. |
 | `font` | `Font` | `None` | The font, for example `Font("Serif", Font.ITALIC, 16)`. If omitted, the default font is used. |
+| `rotation` | `int or float` | `0` | How far to turn the area, in degrees, counter-clockwise. |
+| `visibility` | `int` | `100` | How visible the area is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -49,6 +51,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

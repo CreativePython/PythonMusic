@@ -23,6 +23,8 @@ TextField(text, columns, action, color, font)
 | `action` | `function` | `None` | The function to call when the user presses Enter in the field; it receives one parameter, the field's contents as a string. |
 | `color` | `Color` | `Color.WHITE` | The field color. |
 | `font` | `Font` | `None` | The font, for example `Font("Serif", Font.ITALIC, 16)`. If omitted, the default font is used. |
+| `rotation` | `int or float` | `0` | How far to turn the field, in degrees, counter-clockwise. |
+| `visibility` | `int` | `100` | How visible the field is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -52,6 +54,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

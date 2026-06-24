@@ -21,6 +21,8 @@ Button(text, action, color)
 | `text` | `str` | `''` | The text shown on the button. |
 | `action` | `function` | `None` | The function to call each time the button is pressed; it receives no parameters. |
 | `color` | `Color` | `Color.LIGHT_GRAY` | The button color. |
+| `rotation` | `int or float` | `0` | How far to turn the button, in degrees, counter-clockwise. |
+| `visibility` | `int` | `100` | How visible the button is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -48,6 +50,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)

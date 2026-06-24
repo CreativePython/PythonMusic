@@ -681,6 +681,76 @@ class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
    pass
 
 
+class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
+   """
+   QGraphicsProxyWidget that also delivers PythonMusic on* events for Controls.
+
+   A Control's native QWidget needs to keep receiving input (so clicks, dragging, and
+   typing work), so every handler forwards to the embedded widget via the proxy base
+   class AND emits the matching PythonMusic event.  Because the widget accepts the press,
+   the proxy becomes the mouse grabber, so it delivers mouseUp / mouseClick / mouseDrag
+   from its own handlers rather than through QtView's _pressedItems path (which the shape
+   mixin uses).  Unlike the shape mixin, these handlers do NOT call event.ignore(); the
+   grabbing widget is meant to consume the event.
+   """
+
+   def __init__(self):
+      QtWidgets.QGraphicsProxyWidget.__init__(self)
+      self._pressScenePos = None   # scene pos at last press, for click detection
+
+   # ── Mouse ──────────────────────────────────────────────────────────────────
+
+   def mousePressEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.mousePressEvent(self, event)   # let the widget react
+      self._pressScenePos = event.scenePos()
+      self._send('mouseDown', list(_sceneToCoord(event.scenePos())))
+
+   def mouseReleaseEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.mouseReleaseEvent(self, event)
+      x, y = _sceneToCoord(event.scenePos())
+      self._send('mouseUp', [x, y])
+      if self._pressScenePos is not None:
+         dx = abs(event.scenePos().x() - self._pressScenePos.x())
+         dy = abs(event.scenePos().y() - self._pressScenePos.y())
+         if dx <= self._CLICK_THRESHOLD and dy <= self._CLICK_THRESHOLD:
+            self._send('mouseClick', [x, y])
+      self._pressScenePos = None
+
+   def mouseMoveEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.mouseMoveEvent(self, event)
+      if event.buttons() != QtCore.Qt.MouseButton.NoButton:
+         self._send('mouseDrag', list(_sceneToCoord(event.scenePos())))
+
+   # ── Hover ──────────────────────────────────────────────────────────────────
+
+   def hoverEnterEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.hoverEnterEvent(self, event)
+      self._send('mouseEnter', list(_sceneToCoord(event.scenePos())))
+
+   def hoverLeaveEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.hoverLeaveEvent(self, event)
+      self._send('mouseExit', list(_sceneToCoord(event.scenePos())))
+
+   def hoverMoveEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.hoverMoveEvent(self, event)
+      self._send('mouseMove', list(_sceneToCoord(event.scenePos())))
+
+   # ── Keyboard ───────────────────────────────────────────────────────────────
+
+   def keyPressEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.keyPressEvent(self, event)
+      if not event.isAutoRepeat():
+         char = event.text() if event.text() else ""
+         self._send('keyDown', [event.key()])
+         if char:
+            self._send('keyType', [char])
+
+   def keyReleaseEvent(self, event):
+      QtWidgets.QGraphicsProxyWidget.keyReleaseEvent(self, event)
+      if not event.isAutoRepeat():
+         self._send('keyUp', [event.key()])
+
+
 #######################################################################################
 # QtView  —  QGraphicsView subclass for Display-level event delivery
 #######################################################################################
@@ -733,8 +803,14 @@ class QtView(QtWidgets.QGraphicsView):
    def mouseReleaseEvent(self, event):
       x, y = self._sceneXY(event)
 
-      # Items call event.ignore() in mousePressEvent to allow cascade, so Qt never
-      # sets a mouse grabber and mouseReleaseEvent is never routed to items normally.
+      # Control proxies accept the press and become the mouse grabber, so the release
+      # must be routed to them (super); they emit their own mouseUp/mouseClick.  Shapes
+      # ignore() the press and never grab, so super finds no grabber and does nothing for
+      # them — their delivery still goes through the _pressedItems path below.
+      super().mouseReleaseEvent(event)
+
+      # Shape items call event.ignore() in mousePressEvent to allow cascade, so Qt never
+      # sets a mouse grabber and mouseReleaseEvent is never routed to them normally.
       # Manually deliver mouseUp and mouseClick using the objectIds tracked at press time,
       # mirroring the _draggingItems pattern used for mouseDrag.
       registered = self._display.guiRenderer._registeredEvents
@@ -1049,14 +1125,9 @@ class DisplayMirror:
          item.qZValue = qZValue  # store found z-value
 
 
-         if isinstance(item, _ControlMirror):
-            item.qObject.setParent(self._window)  # attach QWidget to window
-            item.qObject.show()
-            item._applyTransform()                 # widgets reset position on reparent, so place it now
-         else:
-            _detachItem(item)                      # detach from any previous parent/scene
-            item.qObject.setZValue(qZValue)
-            self._scene.addItem(item.qObject)      # attach as a top-level scene item
+         _detachItem(item)                      # detach from any previous parent/scene
+         item.qObject.setZValue(qZValue)
+         self._scene.addItem(item.qObject)      # attach as a top-level scene item
 
          # the item's position/rotation/scale arrive separately via setTransform,
          # so there is nothing to position here.
@@ -1066,20 +1137,12 @@ class DisplayMirror:
       item = self.guiRenderer._objectRegistry.get(itemId)
       if item is not None and item in self._itemList:
          self._itemList.remove(item)
-         if isinstance(item, _ControlMirror):
-            item.qObject.setParent(None)     # detach QWidget from window
-            item.qObject.hide()
-         else:
-            _detachItem(item)
+         _detachItem(item)
 
    def _removeAll(self, args, responseId):
       self._view.setUpdatesEnabled(False)
       for item in list(self._itemList):
-         if isinstance(item, _ControlMirror):
-            item.qObject.setParent(None)
-            item.qObject.hide()
-         else:
-            self._scene.removeItem(item.qObject)
+         self._scene.removeItem(item.qObject)
       self._itemList.clear()
       self._view.setUpdatesEnabled(True)
       self._view.viewport().update()
@@ -1250,28 +1313,18 @@ class DisplayMirror:
       """
       Returns the tooltip text that should be shown for the item under vpos
       (viewport-relative QPoint), or None if there is nothing to show.
-      Priority: control widget > topmost scene item > display tooltip.
+      Priority: topmost scene item (controls included, now that they are proxies) >
+      display tooltip.
       """
-      # 1. Control widget under cursor
-      globalPos = self._view.viewport().mapToGlobal(vpos)
-      widget = QtWidgets.QApplication.widgetAt(globalPos)
-      if widget is not None:
-         for item in self._itemList:
-            if isinstance(item, _ControlMirror) and item._toolTipText:
-               w = widget
-               while w is not None:
-                  if w is item.qObject:
-                     return item._toolTipText
-                  w = w.parentWidget()
-
-      # 2. Topmost scene item at cursor position
+      # 1. Topmost scene item at cursor position.  scene.items(scenePos) hit-tests
+      # through each item's transform, so this is correct even for rotated controls.
       scenePos = self._view.mapToScene(vpos)
       for qitem in self._scene.items(scenePos):
          mirror = getattr(qitem, '_mirror', None)
          if mirror is not None and mirror._toolTipText:
             return mirror._toolTipText
 
-      # 3. Display tooltip
+      # 2. Display tooltip
       return self._toolTipText
 
    def _updateNonCoordLabel(self, vpos):
@@ -1718,9 +1771,10 @@ class DisplayMirror:
    def _write(self, args, responseId):
       """
       Saves a screenshot of the display window's current contents to a file:
-      background brush, painted draw layer, all added items, and Controls
-      (QWidgets parented to the window).  Optional width/height args resize
-      the output; omitting one preserves aspect ratio.
+      background brush, painted draw layer, and all added items (Controls
+      included, since they are now proxy items rendered by the QGraphicsView).
+      Optional width/height args resize the output; omitting one preserves
+      aspect ratio.
       Sends [success (bool), resolvedPath (str)] back to the parent process.
       """
       import os
@@ -1734,8 +1788,8 @@ class DisplayMirror:
          self._drawLayer.setPixmap(self._drawPixmap)
          self.guiRenderer._dirtyDisplays.discard(self)
 
-      # grab() synchronously paints the window and all child widgets, so the
-      # captured pixmap covers the QGraphicsView output plus every Control.
+      # grab() synchronously paints the window, including the QGraphicsView, which
+      # renders the scene (every item, controls included) into the captured pixmap.
       pixmap = self._window.grab()
 
       if width is not None or height is not None:
@@ -2949,63 +3003,68 @@ class GroupMirror(_DrawableMirror):
 
 class _ControlMirror(_DrawableMirror):
    """
-   Base class for all Control mirror objects (QWidgets, not QGraphicsItems).
-   Overrides methods that require special handling for QWidgets:
-   - position: setPos() -> move()
-   - dimensions: setRect(), setPath(), etc. -> setFixedSize()
-   - color: [r, g, b] -> stylesheets
+   Base class for all Control mirror objects.
 
-   Controls handle their own input directly via Qt's widget event system.
+   A Control is a native QWidget (QPushButton, QSlider, ...) embedded in a _QProxyWidget
+   (a QGraphicsProxyWidget), so it lives in the same QGraphicsScene as every drawable and
+   shares the standard _DrawableMirror transform / visibility / z-order path.  That is
+   why controls can rotate, scale, interleave by z-order, and nest inside Groups.  The
+   proxy forwards input to the embedded widget (so clicks, dragging, and typing work) and
+   also delivers PythonMusic on* events.
+
+   Two small exceptions to the shared path:
+     - placement is centered (a proxy's content spans (0,0)-(w,h), not centered on the
+       origin like a shape), so _applyTransform offsets and pivots about the center.
+     - size changes resize the widget itself via setFixedSize (so text stays at its
+       native size and sharp); only scale inherited from a transform rasterizes.
 
    Concrete classes must:
      1. Call super().__init__(objectId, args, guiRenderer) first.
-     2. Create self.qObject (the underlying QWidget).
+     2. Build their QWidget and pass it to self._wrapWidget(widget).
    """
-
-   @_DrawableMirror.qObject.setter
-   def qObject(self, qObject):
-      """
-      Overrides _DrawableMirror.qObject.setter to skip the _mirror backlink
-      (QWidgets don't use _QtGraphicsItemEventMixin), while still pushing the
-      cached visibility through _applyVisibility.
-      """
-      self._qObject = qObject
-      if qObject is not None:
-         self._applyVisibility()
 
    def __init__(self, objectId, args, guiRenderer):
       _DrawableMirror.__init__(self, objectId, args, guiRenderer)
+
+      self._widget = None   # the embedded native QWidget (qObject is its proxy)
 
       # add Control-specific command handlers
       self._commandHandlers.update({
          'getSize' : self._getSize
       })
 
-   # ── Placement (a QWidget can move and resize, but not rotate or scale) ────────
+   def _wrapWidget(self, widget):
+      """
+      Embeds a native QWidget in a _QProxyWidget and adopts the proxy as this mirror's
+      qObject.  Assigning self.qObject runs the base setter, which links the _mirror
+      backlink (used for event delivery, tooltips, and hit-testing) and applies the
+      cached visibility.
+      """
+      self._widget = widget
+      proxy = _QProxyWidget()
+      proxy.setWidget(widget)
+      self.qObject = proxy
+
+   # ── Placement (centered proxy) ───────────────────────────────────────────────
 
    def _applyTransform(self):
       """
-      Moves the widget so its center lands at (cx, cy).  Rotation and scale do not
-      apply to a native widget, so they are ignored.
+      Places the proxy so the control's center lands at (cx, cy), pivoting rotation and
+      scale about that center.  The proxy's content spans (0,0)-(w,h), so we build a
+      transform that rotates/scales about (w/2, h/2) and setPos the top-left.
       """
-      left = int(round(self._cx - self._width / 2))
-      top  = int(round(self._cy - self._height / 2))
-      self.qObject.move(left, top)
+      centerX = self._width  / 2
+      centerY = self._height / 2
 
-   # ── Visibility ─────────────────────────────────────────────────────────────
+      t = QtGui.QTransform()
+      t.translate(centerX, centerY)    # pivot about the control's center
+      t.rotate(-self._rotation)        # gui.py degrees are CCW; Qt is CW under y-down
+      t.scale(self._sx, self._sy)
+      t.translate(-centerX, -centerY)
 
-   def _applyVisibility(self):
-      """
-      Overrides _DrawableMirror._applyVisibility for QWidgets.
-      QWidget has no setOpacity(); a QGraphicsOpacityEffect attached to the
-      widget is the standard way to fade it uniformly.  The effect is created
-      lazily on first apply and reused thereafter.
-      """
-      effect = self.qObject.graphicsEffect()
-      if not isinstance(effect, QtWidgets.QGraphicsOpacityEffect):
-         effect = QtWidgets.QGraphicsOpacityEffect(self.qObject)
-         self.qObject.setGraphicsEffect(effect)
-      effect.setOpacity(self._visibility / 100.0)
+      self.qObject.setTransformOriginPoint(0, 0)
+      self.qObject.setTransform(t)
+      self.qObject.setPos(self._cx - centerX, self._cy - centerY)
 
    # ── Size ───────────────────────────────────────────────────────────────────
 
@@ -3014,8 +3073,8 @@ class _ControlMirror(_DrawableMirror):
 
    def _setExtent(self, args, responseId):
       """
-      Overrides _DrawableMirror._setExtent: a QWidget has no prepareGeometryChange()
-      (that is a QGraphicsItem call), and setFixedSize handles the geometry update.
+      A control's own size change resizes the underlying widget (native font, sharp),
+      rather than rebuilding centered-at-origin geometry like a shape.
       """
       self._width  = int(args.get('width',  self._width))
       self._height = int(args.get('height', self._height))
@@ -3023,12 +3082,12 @@ class _ControlMirror(_DrawableMirror):
 
    def _applyExtent(self):
       """
-      Forces the widget to its current size, then re-places it (since we position a
-      widget by its center, its top-left depends on its size).
+      Forces the widget to its current size, then re-places it (the proxy is positioned
+      by its center, so its top-left depends on its size).
       """
       width  = max(1, int(self._width))
       height = max(1, int(self._height))
-      self.qObject.setFixedSize(width, height)
+      self._widget.setFixedSize(width, height)
       self._applyTransform()
 
    # ── Event helper ───────────────────────────────────────────────────────────
@@ -3062,16 +3121,17 @@ class ButtonMirror(_ControlMirror):
       text  = args.get('text', '')
       color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
 
-      self.qObject = QtWidgets.QPushButton()
-      self.qObject.setText(text)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      widget = QtWidgets.QPushButton()
+      widget.setText(text)
+      widget.adjustSize()
+      self._width  = widget.width()
+      self._height = widget.height()
+      self._wrapWidget(widget)
 
       self._applyColor(color)
 
       # wire Qt signal → event forwarding
-      self.qObject.clicked.connect(lambda: self._forwardEvent('clicked'))
+      self._widget.clicked.connect(lambda: self._forwardEvent('clicked'))
 
       # add Button-specific command handlers
       self._commandHandlers.update({
@@ -3085,7 +3145,7 @@ class ButtonMirror(_ControlMirror):
       dr = max(0, int(r * 0.9))
       dg = max(0, int(g * 0.9))
       db = max(0, int(b * 0.9))
-      self.qObject.setStyleSheet(
+      self._widget.setStyleSheet(
          f"QPushButton {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
          f"QPushButton::pressed {{ background-color: rgba({dr},{dg},{db},{a}); }}"
       )
@@ -3096,13 +3156,13 @@ class ButtonMirror(_ControlMirror):
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
-      self.qObject.setText(text)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      self._widget.setText(text)
+      self._widget.adjustSize()
+      self._width  = self._widget.width()
+      self._height = self._widget.height()
 
    def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.text()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
 
 
 #######################################################################################
@@ -3124,14 +3184,15 @@ class CheckBoxMirror(_ControlMirror):
       text  = args.get('text', '')
       color = args.get('color', [0, 0, 0, 0])   # CLEAR default
 
-      self.qObject = QtWidgets.QCheckBox(text)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      widget = QtWidgets.QCheckBox(text)
+      widget.adjustSize()
+      self._width  = widget.width()
+      self._height = widget.height()
+      self._wrapWidget(widget)
 
       self._applyColor(color)
 
-      self.qObject.stateChanged.connect(
+      self._widget.stateChanged.connect(
          lambda state: self._forwardEvent('stateChanged', {'checked': state != 0})
       )
 
@@ -3146,7 +3207,7 @@ class CheckBoxMirror(_ControlMirror):
 
    def _applyColor(self, color):
       r, g, b, a = color
-      self.qObject.setStyleSheet(
+      self._widget.setStyleSheet(
          f"QCheckBox {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
       )
 
@@ -3156,22 +3217,22 @@ class CheckBoxMirror(_ControlMirror):
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
-      self.qObject.setText(text)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      self._widget.setText(text)
+      self._widget.adjustSize()
+      self._width  = self._widget.width()
+      self._height = self._widget.height()
 
    def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.text()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
 
    def _isChecked(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.isChecked()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.isChecked()])
 
    def _check(self, args, responseId):
-      self.qObject.setChecked(True)
+      self._widget.setChecked(True)
 
    def _uncheck(self, args, responseId):
-      self.qObject.setChecked(False)
+      self._widget.setChecked(False)
 
 
 #######################################################################################
@@ -3203,17 +3264,18 @@ class SliderMirror(_ControlMirror):
 
       self._orientation = orientation
       qtOrientation = QtCore.Qt.Orientation(orientation)
-      self.qObject = QtWidgets.QSlider(qtOrientation)
-      self.qObject.setRange(minValue, maxValue)
-      self.qObject.setValue(startValue)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      widget = QtWidgets.QSlider(qtOrientation)
+      widget.setRange(minValue, maxValue)
+      widget.setValue(startValue)
+      widget.adjustSize()
+      self._width  = widget.width()
+      self._height = widget.height()
+      self._wrapWidget(widget)
 
       self._applyColor(color)
 
       # wire Qt signal → event forwarding
-      self.qObject.valueChanged.connect(
+      self._widget.valueChanged.connect(
          lambda value: self._forwardEvent('valueChanged', {'value': value})
       )
 
@@ -3227,13 +3289,13 @@ class SliderMirror(_ControlMirror):
       r, g, b, a = color
       fill = f"rgba({r},{g},{b},{a})"
       if self._orientation == 2:   # vertical: the filled part below the handle is add-page
-         self.qObject.setStyleSheet(
+         self._widget.setStyleSheet(
             f"QSlider::groove:vertical {{ width: 6px; background: #c8c8c8; border-radius: 3px; }}"
             f"QSlider::add-page:vertical {{ background: {fill}; border-radius: 3px; }}"
             f"QSlider::handle:vertical {{ background: {fill}; height: 14px; margin: 0 -5px; border-radius: 7px; }}"
          )
       else:                        # horizontal: the filled part left of the handle is sub-page
-         self.qObject.setStyleSheet(
+         self._widget.setStyleSheet(
             f"QSlider::groove:horizontal {{ height: 6px; background: #c8c8c8; border-radius: 3px; }}"
             f"QSlider::sub-page:horizontal {{ background: {fill}; border-radius: 3px; }}"
             f"QSlider::handle:horizontal {{ background: {fill}; width: 14px; margin: -5px 0; border-radius: 7px; }}"
@@ -3245,10 +3307,10 @@ class SliderMirror(_ControlMirror):
 
    def _setValue(self, args, responseId):
       value = args.get('value', 0)
-      self.qObject.setValue(value)
+      self._widget.setValue(value)
 
    def _getValue(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.value()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.value()])
 
 
 #######################################################################################
@@ -3270,16 +3332,17 @@ class DropDownListMirror(_ControlMirror):
       items = args.get('items', [])
       color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
 
-      self.qObject = QtWidgets.QComboBox()
-      self.qObject.addItems(items)
-      self.qObject.adjustSize()
-      self._width  = self.qObject.width()
-      self._height = self.qObject.height()
+      widget = QtWidgets.QComboBox()
+      widget.addItems(items)
+      widget.adjustSize()
+      self._width  = widget.width()
+      self._height = widget.height()
+      self._wrapWidget(widget)
 
       self._applyColor(color)
 
       # wire Qt signal → event forwarding (sends selected index)
-      self.qObject.activated.connect(
+      self._widget.activated.connect(
          lambda index: self._forwardEvent('activated', {'index': index})
       )
 
@@ -3289,7 +3352,7 @@ class DropDownListMirror(_ControlMirror):
 
    def _applyColor(self, color):
       r, g, b, a = color
-      self.qObject.setStyleSheet(
+      self._widget.setStyleSheet(
          f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
          f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
       )
@@ -3324,7 +3387,8 @@ class TextFieldMirror(_ControlMirror):
       color  = args.get('color', [255, 255, 255, 255])   # WHITE default
       font   = args.get('font')
 
-      self.qObject = QtWidgets.QLineEdit(str(text))
+      widget = QtWidgets.QLineEdit(str(text))
+      self._wrapWidget(widget)
 
       if font is not None:
          self._applyFont(font)
@@ -3332,36 +3396,36 @@ class TextFieldMirror(_ControlMirror):
       columns = args.get('columns')
 
       if width is not None and height is not None:
-         self.qObject.setFixedSize(width, height)
+         widget.setFixedSize(width, height)
          self._width  = width
          self._height = height
       elif columns is not None:
-         fm       = QtGui.QFontMetrics(self.qObject.font())
+         fm       = QtGui.QFontMetrics(widget.font())
          charW    = fm.horizontalAdvance('M')
          charH    = fm.lineSpacing()
-         margins  = self.qObject.textMargins()
+         margins  = widget.textMargins()
          hMargin  = margins.left() + margins.right()
          vMargin  = margins.top()  + margins.bottom()
          frameOpt = QtWidgets.QStyleOptionFrame()
-         self.qObject.initStyleOption(frameOpt)
-         frame    = self.qObject.style().pixelMetric(
-            QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth, frameOpt, self.qObject
+         widget.initStyleOption(frameOpt)
+         frame    = widget.style().pixelMetric(
+            QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth, frameOpt, widget
          )
          w = (charW * columns) + hMargin + (2 * frame)
          h = charH + vMargin + (2 * frame)
-         self.qObject.setFixedSize(w, h)
+         widget.setFixedSize(w, h)
          self._width  = w
          self._height = h
       else:
-         self.qObject.adjustSize()
-         self._width  = self.qObject.width()
-         self._height = self.qObject.height()
+         widget.adjustSize()
+         self._width  = widget.width()
+         self._height = widget.height()
 
       self._applyColor(color)
 
       # wire Qt signal → event forwarding
-      self.qObject.returnPressed.connect(
-         lambda: self._forwardEvent('returnPressed', {'text': self.qObject.text()})
+      self._widget.returnPressed.connect(
+         lambda: self._forwardEvent('returnPressed', {'text': self._widget.text()})
       )
 
       self._commandHandlers.update({
@@ -3373,7 +3437,7 @@ class TextFieldMirror(_ControlMirror):
 
    def _applyColor(self, color):
       r, g, b, a = color
-      self.qObject.setStyleSheet(
+      self._widget.setStyleSheet(
          f"QLineEdit {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
       )
 
@@ -3383,10 +3447,10 @@ class TextFieldMirror(_ControlMirror):
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
-      self.qObject.setText(text)
+      self._widget.setText(text)
 
    def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.text()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
 
    def _applyFont(self, font):
       name, style, size = font
@@ -3394,7 +3458,7 @@ class TextFieldMirror(_ControlMirror):
       qFont = QtGui.QFont(name, size)
       qFont.setWeight(QtGui.QFont.Weight(weight))
       qFont.setItalic(italic)
-      self.qObject.setFont(qFont)
+      self._widget.setFont(qFont)
 
    def _setFont(self, args, responseId):
       font = args.get('font')
@@ -3430,26 +3494,27 @@ class TextAreaMirror(_ControlMirror):
       columns = args.get('columns')
       rows    = args.get('rows')
 
-      self.qObject = QtWidgets.QTextEdit(str(text))
+      widget = QtWidgets.QTextEdit(str(text))
+      self._wrapWidget(widget)
 
       if font is not None:
          self._applyFont(font)
 
       if width is not None and height is not None:
-         self.qObject.setFixedSize(width, height)
+         widget.setFixedSize(width, height)
          self._width  = width
          self._height = height
       elif columns is not None or rows is not None:
-         fm = QtGui.QFontMetrics(self.qObject.font())
+         fm = QtGui.QFontMetrics(widget.font())
          w  = fm.horizontalAdvance('M') * (columns or 8)
          h  = fm.lineSpacing()          * (rows    or 5)
-         self.qObject.setFixedSize(w, h)
+         widget.setFixedSize(w, h)
          self._width  = w
          self._height = h
       else:
-         self.qObject.adjustSize()
-         self._width  = self.qObject.width()
-         self._height = self.qObject.height()
+         widget.adjustSize()
+         self._width  = widget.width()
+         self._height = widget.height()
 
       self._applyColor(color)
 
@@ -3462,7 +3527,7 @@ class TextAreaMirror(_ControlMirror):
 
    def _applyColor(self, color):
       r, g, b, a = color
-      self.qObject.setStyleSheet(
+      self._widget.setStyleSheet(
          f"QTextEdit {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
       )
 
@@ -3472,10 +3537,10 @@ class TextAreaMirror(_ControlMirror):
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
-      self.qObject.setText(text)
+      self._widget.setText(text)
 
    def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self.qObject.toPlainText()])
+      self.guiRenderer.sendResponse(responseId, [self._widget.toPlainText()])
 
    def _applyFont(self, font):
       name, style, size = font
@@ -3483,7 +3548,7 @@ class TextAreaMirror(_ControlMirror):
       qFont = QtGui.QFont(name, size)
       qFont.setWeight(QtGui.QFont.Weight(weight))
       qFont.setItalic(italic)
-      self.qObject.setFont(qFont)
+      self._widget.setFont(qFont)
 
    def _setFont(self, args, responseId):
       font = args.get('font')

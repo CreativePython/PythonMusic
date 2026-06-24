@@ -22,7 +22,8 @@ Slider(orientation, minValue, maxValue, startValue, action)
 | `startValue` | `int or float` | `None` | The slider's starting value. Defaults to halfway between `minValue` and `maxValue`. |
 | `action` | `function` | `None` | The function to call when the slider moves; it receives one parameter, the new value. |
 | `color` | `Color` | `Color.LIGHT_GRAY` | The slider's handle color. |
-
+| `rotation` | `int or float` | `0` | How far to turn the slider, in degrees, counter-clockwise. |
+| `visibility` | `int` | `100` | How visible the slider is, from 0 (invisible) to 100 (fully visible). |
 
 For example,
 
@@ -50,6 +51,7 @@ Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
