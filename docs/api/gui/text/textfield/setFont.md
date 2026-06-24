@@ -4,10 +4,10 @@ Set the field's [Font](../font/index.md).
 
 ## Parameters
 
-Once an object `textfield` has been created, you can use the following function:
+Once an object `field` has been created, you can use the following function:
 
 ```python
-textfield.setFont(font)
+field.setFont(font)
 ```
 
 | Parameter | Type | Default | Description |

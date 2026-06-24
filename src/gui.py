@@ -4212,6 +4212,110 @@ class MusicControl(Group):
          if (self._action is not None) and callable(self._action):
             self._action(self._value)  # call user function
 
+   # doc-group: Events
+   def onAction(self, action):
+      """Set up a function to call when the control's value changes.
+
+      This is the same function you can pass when you create the control. Use it to set
+      that function later, or to change it. Pass None to remove it.
+
+      Args:
+          action (Callable): The function to call; it receives one parameter, the new value.
+      """
+      self._action = action
+
+   # ── Color ────────────────────────────────────────────────────────────────
+   # A MusicControl is drawn from a foreground part (the part that shows the value), a
+   # background part behind it, and an outline around it.  Each part is its own shape, so
+   # each can be colored on its own.
+   # doc-group: Color
+
+   def _foregroundShapes(self):
+      """"""
+      # the shapes that make up the foreground; XYPad adds its crosshair lines to these
+      return [self._foregroundShape]
+
+   def _colorShapes(self, shapes, color, methodName):
+      """"""
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.{methodName}(): color should be a Color object (it was {type(color).__name__})')
+      for shape in shapes:
+         if shape is not None:
+            shape.setColor(color)
+
+   def getColor(self):
+      """Return the control's main color.
+
+      This is the foreground color, the color of the part that shows the value.
+
+      Returns:
+          color (Color): The foreground color.
+      """
+      color = self.getForegroundColor()
+      return color
+
+   def setColor(self, color):
+      """Set the control's main color.
+
+      This colors the foreground, the part that shows the value. To color the other parts,
+      use setBackgroundColor() and setOutlineColor().
+
+      Args:
+          color (Color): The new foreground color.
+      """
+      self.setForegroundColor(color)
+
+   def getForegroundColor(self):
+      """Return the color of the foreground (the part that shows the value).
+
+      Returns:
+          color (Color): The foreground color.
+      """
+      color = self._foregroundShape.getColor()
+      return color
+
+   def setForegroundColor(self, color):
+      """Set the color of the foreground (the part that shows the value).
+
+      Args:
+          color (Color): The new foreground color.
+      """
+      self._colorShapes(self._foregroundShapes(), color, 'setForegroundColor')
+
+   def getBackgroundColor(self):
+      """Return the color of the background (the part behind the foreground).
+
+      Returns:
+          color (Color): The background color.
+      """
+      color = self._backgroundShape.getColor()
+      return color
+
+   def setBackgroundColor(self, color):
+      """Set the color of the background (the part behind the foreground).
+
+      Args:
+          color (Color): The new background color.
+      """
+      self._colorShapes([self._backgroundShape], color, 'setBackgroundColor')
+
+   def getOutlineColor(self):
+      """Return the color of the outline around the control.
+
+      Returns:
+          color (Color): The outline color.
+      """
+      color = self._outlineShape.getColor()
+      return color
+
+   def setOutlineColor(self, color):
+      """Set the color of the outline around the control.
+
+      Args:
+          color (Color): The new outline color.
+      """
+      self._colorShapes([self._outlineShape], color, 'setOutlineColor')
+
 #######################################################################################
 class HFader(MusicControl):
    """Create a horizontal fader (a slider) the user can drag left and right.
@@ -4837,6 +4941,11 @@ class XYPad(MusicControl):
       return f'XYPad(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, action = {self._action}, foreground = {foregroundColor}, background = {backgroundColor}, outline = {outlineColor}, outlineThickness = {outlineThickness}, trackerRadius = {trackerRadius}, crosshairThickness = {crosshairThickness}, rotation = {rotation})'
 
    # OVERRIDDEN METHODS
+   def _foregroundShapes(self):
+      """"""
+      # an XYPad's foreground is the bubble plus its two crosshair lines
+      return [self._foregroundShape, self._trackerXLine, self._trackerYLine]
+
    def _defaultAction(self, ex, ey):
       """"""
       mx, my = self._backgroundShape.getPosition()  # visual XYPad position
@@ -4893,6 +5002,23 @@ class Control(Drawable):
    """
    def __init__(self):
       Drawable.__init__(self)
+      self._action = None   # the function called when the user uses this control
+
+   # doc-group: Events
+   def onAction(self, action):
+      """Set up a function to call when the user uses this control.
+
+      This is the same function you can pass when you create the control. Use it to set
+      that function later, or to change it. Pass None to remove it. A text area has no
+      such action.
+
+      Args:
+          action (Callable): The function to call when the control is used. What it
+              receives depends on the control: a Button's gets nothing, a CheckBox's gets
+              True or False, a Slider's gets the value, a DropDownList's gets the chosen
+              item, and a TextField's gets the typed text.
+      """
+      self._action = action
 
    def setRotation(self, rotation, anchorX=None, anchorY=None):
       """Do nothing, since controls cannot be turned.
@@ -4939,10 +5065,11 @@ class Button(Control):
 
       self._refit()
 
-      if action is not None:
-         def _onClicked():
-            action()
-         _handler().registerEvent(self._objectId, 'clicked', _onClicked)
+      # always register, so onAction() can set or change the function later
+      def _onClicked():
+         if self._action is not None and callable(self._action):
+            self._action()
+      _handler().registerEvent(self._objectId, 'clicked', _onClicked)
 
    def __str__(self):
       return f'Button(text = "{self.getText()}", action = {self._action})'
@@ -4965,11 +5092,22 @@ class Button(Control):
       _handler().sendCommand('setText', self._objectId, {'text': str(text)})
       self._refit()
 
+   def getColor(self):
+      """Return the button's color.
+
+      Returns:
+          color (Color): The button's background color.
+      """
+      color = Color(*self._color)
+      return color
+
    def setColor(self, color):
       """Set the button's color.
 
+      Colors the button's background; its text stays black so it remains easy to read.
+
       Args:
-          color (Color): The new button color.
+          color (Color): The new button background color.
       """
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
@@ -5001,10 +5139,11 @@ class CheckBox(Control):
 
       self._refit()
 
-      if action is not None:
-         def _onStateChanged(checked):
-            action(checked)
-         _handler().registerEvent(self._objectId, 'stateChanged', _onStateChanged)
+      # always register, so onAction() can set or change the function later
+      def _onStateChanged(checked):
+         if self._action is not None and callable(self._action):
+            self._action(checked)
+      _handler().registerEvent(self._objectId, 'stateChanged', _onStateChanged)
 
    def __str__(self):
       return f'CheckBox(text = "{self.getText()}", action = {self._action})'
@@ -5027,8 +5166,20 @@ class CheckBox(Control):
       _handler().sendCommand('setText', self._objectId, {'text': str(text)})
       self._refit()
 
+   def getColor(self):
+      """Return the checkbox's color.
+
+      Returns:
+          color (Color): The color filling the area behind the box and its label.
+      """
+      color = Color(*self._color)
+      return color
+
    def setColor(self, color):
       """Set the checkbox's color.
+
+      Colors the area behind the box and its label; the label text stays black so it
+      remains easy to read.
 
       Args:
           color (Color): The new checkbox color.
@@ -5051,14 +5202,16 @@ class CheckBox(Control):
    def check(self):
       """Check the checkbox.
 
-      Makes the checkbox appear checked. This does not call the checkbox's function.
+      Works just like the user clicking it: if the box was not already checked, it becomes
+      checked and the checkbox's function is called with True.
       """
       _handler().sendCommand('check', self._objectId)
 
    def uncheck(self):
       """Uncheck the checkbox.
 
-      Makes the checkbox appear unchecked. This does not call the checkbox's function.
+      Works just like the user clicking it: if the box was already checked, it becomes
+      unchecked and the checkbox's function is called with False.
       """
       _handler().sendCommand('uncheck', self._objectId)
 
@@ -5072,8 +5225,9 @@ class Slider(Control):
        maxValue (int, optional): The largest value the slider can take.
        startValue (int or float, optional): The slider's starting value. Defaults to halfway between minValue and maxValue.
        action (Callable, optional): The function to call when the slider moves; it receives one parameter, the new value.
+       color (Color, optional): The color of the slider's handle and the filled part of its track.
    """
-   def __init__(self, orientation=HORIZONTAL, minValue=0, maxValue=100, startValue=None, action=None):
+   def __init__(self, orientation=HORIZONTAL, minValue=0, maxValue=100, startValue=None, action=None, color=Color.LIGHT_GRAY):
       """"""
       Control.__init__(self)
 
@@ -5084,6 +5238,7 @@ class Slider(Control):
       self._orientation = orientation
       self._minValue    = minValue
       self._maxValue    = maxValue
+      self._color       = color.getRGBA()
 
       _handler().sendCommand('create', self._objectId, {
          'type':        'Slider',
@@ -5091,17 +5246,42 @@ class Slider(Control):
          'minValue':    minValue,
          'maxValue':    maxValue,
          'startValue':  startValue,
+         'color':       self._color,
       })
 
       self._refit()
 
-      if action is not None:
-         def _onValueChanged(value):
-            action(value)
-         _handler().registerEvent(self._objectId, 'valueChanged', _onValueChanged)
+      # always register, so onAction() can set or change the function later
+      def _onValueChanged(value):
+         if self._action is not None and callable(self._action):
+            self._action(value)
+      _handler().registerEvent(self._objectId, 'valueChanged', _onValueChanged)
 
    def __str__(self):
       return f'Slider(orientation = {self._orientation}, minValue = {self._minValue}, maxValue = {self._maxValue}, startValue = {self.getValue()}, action = {self._action})'
+
+   def getColor(self):
+      """Return the slider's color.
+
+      Returns:
+          color (Color): The color of the handle and the filled part of the track.
+      """
+      color = Color(*self._color)
+      return color
+
+   def setColor(self, color):
+      """Set the slider's color.
+
+      Colors the handle and the filled part of the track (the part up to the handle).
+
+      Args:
+          color (Color): The new slider color.
+      """
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
+      r, g, b, a  = color.getRGBA()
+      self._color  = [r, g, b, a]
+      _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
    def getValue(self):
       """Return the slider's current value.
@@ -5114,6 +5294,9 @@ class Slider(Control):
 
    def setValue(self, value):
       """Set the slider's value.
+
+      Works just like the user dragging the slider: if the value changes, the slider moves
+      to match and the slider's function is called with the new value.
 
       Args:
           value (int or float): The new value, between minValue and maxValue.
@@ -5145,16 +5328,28 @@ class DropDownList(Control):
 
       self._refit()
 
-      if action is not None:
-         def _onActivated(index):
-            action(self._items[index])
-         _handler().registerEvent(self._objectId, 'activated', _onActivated)
+      # always register, so onAction() can set or change the function later
+      def _onActivated(index):
+         if self._action is not None and callable(self._action):
+            self._action(self._items[index])
+      _handler().registerEvent(self._objectId, 'activated', _onActivated)
 
    def __str__(self):
       return f'DropDownList(items = {self._items}, action = {self._action})'
 
+   def getColor(self):
+      """Return the drop-down list's color.
+
+      Returns:
+          color (Color): The list's background color.
+      """
+      color = Color(*self._color)
+      return color
+
    def setColor(self, color):
       """Set the drop-down list's color.
+
+      Colors the list's background; its text stays black so it remains easy to read.
 
       Args:
           color (Color): The new list color.
@@ -5198,10 +5393,11 @@ class TextField(Control):
       if font is not None:
          self.setFont(font)
 
-      if action is not None:
-         def _onReturnPressed(text):
-            action(text)
-         _handler().registerEvent(self._objectId, 'returnPressed', _onReturnPressed)
+      # always register, so onAction() can set or change the function later
+      def _onReturnPressed(text):
+         if self._action is not None and callable(self._action):
+            self._action(text)
+      _handler().registerEvent(self._objectId, 'returnPressed', _onReturnPressed)
 
    def __str__(self):
       return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action})'
@@ -5223,8 +5419,20 @@ class TextField(Control):
       """
       _handler().sendCommand('setText', self._objectId, {'text': str(text)})
 
+   def getColor(self):
+      """Return the field's color.
+
+      Returns:
+          color (Color): The field's background color.
+      """
+      color = Color(*self._color)
+      return color
+
    def setColor(self, color):
       """Set the field's color.
+
+      Colors the field's background; the text you type stays black so it remains easy to
+      read.
 
       Args:
           color (Color): The new field color.
@@ -5312,8 +5520,20 @@ class TextArea(Control):
       """
       _handler().sendCommand('setText', self._objectId, {'text': str(text)})
 
+   def getColor(self):
+      """Return the area's color.
+
+      Returns:
+          color (Color): The area's background color.
+      """
+      color = Color(*self._color)
+      return color
+
    def setColor(self, color):
       """Set the area's color.
+
+      Colors the area's background; the text you type stays black so it remains easy to
+      read.
 
       Args:
           color (Color): The new area color.

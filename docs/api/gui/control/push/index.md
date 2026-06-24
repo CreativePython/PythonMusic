@@ -46,6 +46,7 @@ Once a Push has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Report whether the push button is currently held down. |
 | [`setValue(newValue)`](setValue.md) | Set whether the push button is pressed. |
+| [`onAction()`](onAction.md) | Register a function to call when the button is pressed or released. |
 
 Additionally, the following common functions are available:
 

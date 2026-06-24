@@ -21,6 +21,8 @@ Slider(orientation, minValue, maxValue, startValue, action)
 | `maxValue` | `int` | `100` | The largest value the slider can take. |
 | `startValue` | `int or float` | `None` | The slider's starting value. Defaults to halfway between `minValue` and `maxValue`. |
 | `action` | `function` | `None` | The function to call when the slider moves; it receives one parameter, the new value. |
+| `color` | `Color` | `Color.LIGHT_GRAY` | The slider's handle color. |
+
 
 For example,
 
@@ -40,6 +42,9 @@ Once a Slider has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the slider's current value. |
 | [`setValue(value)`](setValue.md) | Set the slider's value. |
+| [`getColor()`](../../common/color/getColor.md) | Return the slider's handle color. |
+| [`setColor(color)`](../../common/color/setColor.md) | Set the slider's handle color. |
+| [`onAction()`](onAction.md) | Register a function to call when the slider moves. |
 
 Additionally, the following common functions are available:
 

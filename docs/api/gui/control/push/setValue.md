@@ -2,7 +2,7 @@
 
 Set whether the push button is pressed.
 
-Redraws the button and calls its update function.
+Redraws the push button to match, and calls its update function.
 
 ## Parameters
 

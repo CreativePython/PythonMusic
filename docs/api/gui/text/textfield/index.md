@@ -40,16 +40,13 @@ Once a TextField has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`getFont()`](getFont.md) | Return the text field's font. |
-| [`setFont(font)`](setFont.md) | Set the text field's font. |
-| [`setColor(color)`](setColor.md) | Set the text field's background color. |
-
-If you create a TextField without a callback function, it is a passive GUI element.  You can still check the text in the TextField using these functions:
-
-| Function | Description |
-|---|---|
 | [`getText()`](getText.md) | Return the text in the field. |
 | [`setText(text)`](setText.md) | Set the text in the field. |
+| [`getColor()`](../../common/color/getColor.md) | Return the field's background color. |
+| [`setColor(color)`](../../common/color/setColor.md) | Set the field's background color. |
+| [`getFont()`](getFont.md) | Return the field's font. |
+| [`setFont(font)`](setFont.md) | Set the field's font. |
+| [`onAction(action)`](onAction.md) | Register a function to call when the user presses Enter in the field. |
 
 Additionally, the following common functions are available:
 

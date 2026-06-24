@@ -18,7 +18,7 @@ DropDownList(items, action, color)
 |---|---|---|---|
 | `items` | `list[str]` | `[]` | The items to show, for example ["item1", "item2", "item3"]. |
 | `action` | `function` | `None` | The function to call when an item is picked; it receives one parameter, the selected item as a string. |
-| `color` | `Color` | `Color.LIGHT_GRAY` | The list color. |
+| `color` | `Color` | `Color.LIGHT_GRAY` | The dropdown's background color. |
 
 For example,
 
@@ -36,7 +36,9 @@ Once a DropDownList has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`setColor(color)`](setColor.md) | Set the dropdown's color. |
+| [`getColor()`](../../common/color/getColor.md) | Return the dropdown's background color. |
+| [`setColor(color)`](../../common/color/setColor.md) | Set the dropdown's background color. |
+| [`onAction()`](onAction.md) | Register a function to call when an item is picked. |
 
 Additionally, the following common functions are available:
 

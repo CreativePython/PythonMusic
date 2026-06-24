@@ -46,6 +46,7 @@ Once a Toggle has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Report whether the toggle is currently pressed. |
 | [`setValue(newValue)`](setValue.md) | Set whether the toggle is pressed. |
+| [`onAction()`](onAction.md) | Register a function to call when the toggle changes. |
 
 Additionally, the following common functions are available:
 

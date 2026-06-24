@@ -77,6 +77,7 @@ Additionally, the following functions are available:
 | [`setToolTipText()`](setToolTipText.md) | Set the hover text shown over the display. |
 | [`showMouseCoordinates()`](showMouseCoordinates.md) | Show the mouse position in the display's tooltip as the mouse moves. |
 | [`hideMouseCoordinates()`](hideMouseCoordinates.md) | Stop showing the mouse position in the display's tooltip. |
+| [`onClose()`](onClose.md) | Register a function to call when the display is closed. |
 
 ### Adding Menus
 

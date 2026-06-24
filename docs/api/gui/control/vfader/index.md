@@ -51,6 +51,7 @@ Once a VFader has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the fader's current value. |
 | [`setValue(newValue)`](setValue.md) | Set the fader's value. |
+| [`onAction()`](onAction.md) | Register a function to call when the fader moves. |
 
 Additionally, the following common functions are available:
 

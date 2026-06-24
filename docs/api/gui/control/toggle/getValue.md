@@ -16,4 +16,4 @@ toggle.getValue()
 
 | Value | Type | Description |
 |---|---|---|
-| value | `bool` | `True` if the button is held down, `False` otherwise. |
+| value | `bool` | `True` if the toggle is pressed, `False` otherwise. |

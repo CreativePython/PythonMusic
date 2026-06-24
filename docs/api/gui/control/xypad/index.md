@@ -48,6 +48,7 @@ Once an XYPad has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the tracker's position within the pad. |
 | [`setValue(x, y)`](setValue.md) | Set the tracker's position within the pad. |
+| [`onAction()`](onAction.md) | Register a function to call when the tracker moves. |
 
 Additionally, the following common functions are available:
 

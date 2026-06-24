@@ -2,7 +2,7 @@
 
 Set the fader's value.
 
-The value is in the fader's own minValue–maxValue range. The fill moves to match, and the update function is called.
+Moves the fader bar to match, and calls its update function.
 
 ## Parameters
 

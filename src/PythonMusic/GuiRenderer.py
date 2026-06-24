@@ -3196,10 +3196,12 @@ class SliderMirror(_ControlMirror):
       minValue    = args.get('minValue', 0)
       maxValue    = args.get('maxValue', 100)
       startValue  = args.get('startValue')
+      color       = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
 
       if startValue is None:
          startValue = int((minValue + maxValue) / 2)
 
+      self._orientation = orientation
       qtOrientation = QtCore.Qt.Orientation(orientation)
       self.qObject = QtWidgets.QSlider(qtOrientation)
       self.qObject.setRange(minValue, maxValue)
@@ -3207,6 +3209,8 @@ class SliderMirror(_ControlMirror):
       self.qObject.adjustSize()
       self._width  = self.qObject.width()
       self._height = self.qObject.height()
+
+      self._applyColor(color)
 
       # wire Qt signal → event forwarding
       self.qObject.valueChanged.connect(
@@ -3216,7 +3220,28 @@ class SliderMirror(_ControlMirror):
       self._commandHandlers.update({
          'setValue':  self._setValue,
          'getValue':  self._getValue,
+         'setColor':  self._setColor,
       })
+
+   def _applyColor(self, color):
+      r, g, b, a = color
+      fill = f"rgba({r},{g},{b},{a})"
+      if self._orientation == 2:   # vertical: the filled part below the handle is add-page
+         self.qObject.setStyleSheet(
+            f"QSlider::groove:vertical {{ width: 6px; background: #c8c8c8; border-radius: 3px; }}"
+            f"QSlider::add-page:vertical {{ background: {fill}; border-radius: 3px; }}"
+            f"QSlider::handle:vertical {{ background: {fill}; height: 14px; margin: 0 -5px; border-radius: 7px; }}"
+         )
+      else:                        # horizontal: the filled part left of the handle is sub-page
+         self.qObject.setStyleSheet(
+            f"QSlider::groove:horizontal {{ height: 6px; background: #c8c8c8; border-radius: 3px; }}"
+            f"QSlider::sub-page:horizontal {{ background: {fill}; border-radius: 3px; }}"
+            f"QSlider::handle:horizontal {{ background: {fill}; width: 14px; margin: -5px 0; border-radius: 7px; }}"
+         )
+
+   def _setColor(self, args, responseId):
+      color = args.get('color', [211, 211, 211, 255])
+      self._applyColor(color)
 
    def _setValue(self, args, responseId):
       value = args.get('value', 0)

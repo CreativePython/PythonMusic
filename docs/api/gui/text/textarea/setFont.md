@@ -4,10 +4,10 @@ Set the area's [Font](../font/index.md).
 
 ## Parameters
 
-Once an object `textarea` has been created, you can use the following function:
+Once an object `area` has been created, you can use the following function:
 
 ```python
-textarea.setFont(font)
+area.setFont(font)
 ```
 
 | Parameter | Type | Default | Description |

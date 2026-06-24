@@ -17,7 +17,7 @@ CheckBox(text, action, color)
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `text` | `str` | `''` | The text shown beside the checkbox. |
-| `action` | `function` | `None` | The function to call when the checkbox changes; it receives one parameter, True if it was just checked or False if it was just unchecked. |
+| `action` | `function` | `None` | The function to call when the checkbox changes; it receives one parameter, `True` if it was just checked or `False` if it was just unchecked. |
 | `color` | `Color` | `Color.CLEAR` | The checkbox color. |
 
 For example,
@@ -36,15 +36,12 @@ Once a CheckBox has been created, the following functions are available:
 |---|---|
 | [`getText()`](getText.md) | Return the checkbox's text. |
 | [`setText(text)`](setText.md) | Set the checkbox's text. |
-| [`setColor(color)`](setColor.md) | Set the checkbox's color. |
-
-If you create a CheckBox without a callback function, it is a passive GUI element.  You can still check whether the CheckBox is checked or unchecked using these functions:
-
-| Function | Description |
-|---|---|
+| [`getColor()`](../../common/color/getColor.md) | Return the checkbox's color. |
+| [`setColor(color)`](../../common/color/setColor.md) | Set the checkbox's color. |
 | [`check()`](check.md) | Check the checkbox. |
 | [`uncheck()`](uncheck.md) | Uncheck the checkbox. |
 | [`isChecked()`](isChecked.md) | Report whether the checkbox is checked. |
+| [`onAction()`](onAction.md) | Register a function to call when the checkbox is checked or unchecked. |
 
 Additionally, the following common functions are available:
 

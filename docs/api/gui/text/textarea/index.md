@@ -21,7 +21,7 @@ TextArea(text, columns, rows, color, font)
 | `text` | `str` | `''` | The text to start with. |
 | `columns` | `int` | `8` | The width of the area, in characters. |
 | `rows` | `int` | `5` | The height of the area, in lines. |
-| `color` | `Color` | `Color.WHITE` | The area color. |
+| `color` | `Color` | `Color.WHITE` | The area's background color. |
 | `font` | `Font` | `None` | The font, for example `Font("Serif", Font.ITALIC, 16)`. If omitted, the default font is used. |
 
 For example,
@@ -40,9 +40,10 @@ Once a TextArea has been created, the following functions are available:
 |---|---|
 | [`getText()`](getText.md) | Return the text in the area. |
 | [`setText(text)`](setText.md) | Set the text in the area. |
-| [`getFont()`](getFont.md) | Return the text area's font. |
-| [`setFont(font)`](setFont.md) | Set the text area's font. |
-| [`setColor(color)`](setColor.md) | Set the text area's background color. |
+| [`getColor()`](../common/color/getColor.md) | Return the area's background color. |
+| [`setColor(color)`](../common/color/setColor.md) | Set the area's background color. |
+| [`getFont()`](getFont.md) | Return the area's font. |
+| [`setFont(font)`](setFont.md) | Set the area's font. |
 
 Additionally, the following common functions are available:
 

@@ -2,7 +2,7 @@
 
 Set the rotary's value.
 
-The value is in the knob's own minValue–maxValue range. The knob turns to match, and the update function is called.
+Moves the knob to match, and calls its update function.
 
 ## Parameters
 

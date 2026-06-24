@@ -1,8 +1,8 @@
 # setValue()
 
-Set whether the button is pressed.
+Set whether the toggle is pressed.
 
-Redraws the button and calls its update function.
+Redraws the toggle to match, and calls its update function.
 
 ## Parameters
 
@@ -14,4 +14,4 @@ toggle.setValue(newValue)
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `newValue` | `bool` | _required_ | `True` to press the button, `False` to release it. |
+| `newValue` | `bool` | _required_ | `True` to press the toggle, `False` to release it. |

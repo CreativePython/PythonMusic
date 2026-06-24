@@ -4,10 +4,10 @@ Set the text in the field.
 
 ## Parameters
 
-Once an object `textfield` has been created, you can use the following function:
+Once an object `field` has been created, you can use the following function:
 
 ```python
-textfield.setText(text)
+field.setText(text)
 ```
 
 | Parameter | Type | Default | Description |

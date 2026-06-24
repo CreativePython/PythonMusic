@@ -2,7 +2,7 @@
 
 Set the tracker's position within the pad.
 
-Positions outside the pad are clamped to its edges. Moves the tracker and calls the update function.
+Positions outside the pad are clamped to its edges. Moves the tracker to match, and calls its update function.
 
 ## Parameters
 

@@ -50,6 +50,7 @@ Once a Rotary has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the rotary's current value. |
 | [`setValue(newValue)`](setValue.md) | Set the rotary's value. |
+| [`onAction()`](onAction.md) | Register a function to call when the knob turns. |
 
 Additionally, the following common functions are available:
 

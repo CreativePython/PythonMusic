@@ -1,6 +1,8 @@
 # check()
 
-Check the checkbox.  This does not call the checkbox's callback function.
+Check the checkbox.
+
+Checks the checkbox to match, and calls its update function.
 
 ## Parameters
 

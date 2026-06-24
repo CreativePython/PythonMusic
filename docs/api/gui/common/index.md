@@ -106,7 +106,3 @@ See [Keyboard Events](../event/keyboard/index.md) for more information on how to
 | [`onKeyType(action)`](events/keyboard/onKeyType.md) | Register a function to call when a key is typed (pressed and released). |
 | [`onKeyDown(action)`](events/keyboard/onKeyDown.md) | Register a function to call when a key is pressed down. |
 | [`onKeyUp(action)`](events/keyboard/onKeyUp.md) | Register a function to call when a key is released. |
-
-### Display Events
-
-See [Display Events](../event/display/index.md) for more information on how to use display events.
