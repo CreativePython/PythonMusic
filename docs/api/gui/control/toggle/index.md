@@ -46,14 +46,12 @@ Once a Toggle has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Report whether the toggle is currently pressed. |
 | [`setValue(newValue)`](setValue.md) | Set whether the toggle is pressed. |
-| [`getColor()`](../../common/color/getColor.md) | Return the fader's foreground color. |
-| [`setColor()`](../../common/color/setColor.md) | Set the fader's foreground color. |
-| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
-| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
-| [`getBackgroundColor()`](getBackgroundColor.md) | Return the fader's background color. |
-| [`setBackgroundColor()`](setBackgroundColor.md) | Set the fader's background color. |
-| [`getOutlineColor()`](getOutlineColor.md) | Return the fader's outline color. |
-| [`setOutlineColor()`](setOutlineColor.md) | Set the fader's outline color. |
+| [`getForegroundColor()`](getForegroundColor.md) | Return the toggle's foreground color. |
+| [`setForegroundColor()`](setForegroundColor.md) | Set the toggle's foreground color. |
+| [`getBackgroundColor()`](getBackgroundColor.md) | Return the toggle's background color. |
+| [`setBackgroundColor()`](setBackgroundColor.md) | Set the toggle's background color. |
+| [`getOutlineColor()`](getOutlineColor.md) | Return the toggle's outline color. |
+| [`setOutlineColor()`](setOutlineColor.md) | Set the toggle's outline color. |
 | [`onAction()`](onAction.md) | Register a function to call when the toggle changes. |
 
 Additionally, the following common functions are available:
@@ -62,6 +60,7 @@ Additionally, the following common functions are available:
 - [Size](../../common/index.md#size-functions)
 - [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
+- [Color](../../common/index.md#color-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)

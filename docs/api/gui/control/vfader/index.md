@@ -51,10 +51,8 @@ Once a VFader has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the fader's current value. |
 | [`setValue(newValue)`](setValue.md) | Set the fader's value. |
-| [`getColor()`](../../common/color/getColor.md) | Return the fader's foreground color. |
-| [`setColor()`](../../common/color/setColor.md) | Set the fader's foreground color. |
-| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
-| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getForegroundColor()`](getForegroundColor.md) | Return the fader's foreground color. |
+| [`setForegroundColor()`](setForegroundColor.md) | Set the fader's foreground color. |
 | [`getBackgroundColor()`](getBackgroundColor.md) | Return the fader's background color. |
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the fader's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the fader's outline color. |
@@ -67,6 +65,7 @@ Additionally, the following common functions are available:
 - [Size](../../common/index.md#size-functions)
 - [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
+- [Color](../../common/index.md#color-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)

@@ -48,10 +48,8 @@ Once an XYPad has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the tracker's position within the pad. |
 | [`setValue(x, y)`](setValue.md) | Set the tracker's position within the pad. |
-| [`getColor()`](../../common/color/getColor.md) | Return the xypad's foreground color. |
-| [`setColor()`](../../common/color/setColor.md) | Set the xypad's foreground color. |
-| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
-| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getForegroundColor()`](getForegroundColor.md) | Return the xypad's foreground color. |
+| [`setForegroundColor()`](setForegroundColor.md) | Set the xypad's foreground color. |
 | [`getBackgroundColor()`](getBackgroundColor.md) | Return the xypad's background color. |
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the xypad's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the xypad's outline color. |
@@ -64,6 +62,7 @@ Additionally, the following common functions are available:
 - [Size](../../common/index.md#size-functions)
 - [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
+- [Color](../../common/index.md#color-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)

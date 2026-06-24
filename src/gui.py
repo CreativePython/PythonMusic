@@ -4237,6 +4237,8 @@ class MusicControl(Group):
 
    def _colorShapes(self, shapes, color, methodName):
       """"""
+      if color is None:
+         color = Color()  # default color brings up color select dialog (just once for all the shapes)
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.{methodName}(): color should be a Color object (it was {type(color).__name__})')
       for shape in shapes:
@@ -4254,14 +4256,14 @@ class MusicControl(Group):
       color = self.getForegroundColor()
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the control's main color.
 
       This colors the foreground, the part that shows the value. To color the other parts,
       use setBackgroundColor() and setOutlineColor().
 
       Args:
-          color (Color): The new foreground color.
+          color (Color, optional): The new foreground color. If omitted, a color-selection dialog opens.
       """
       self.setForegroundColor(color)
 
@@ -4274,11 +4276,11 @@ class MusicControl(Group):
       color = self._foregroundShape.getColor()
       return color
 
-   def setForegroundColor(self, color):
+   def setForegroundColor(self, color=None):
       """Set the color of the foreground (the part that shows the value).
 
       Args:
-          color (Color): The new foreground color.
+          color (Color, optional): The new foreground color. If omitted, a color-selection dialog opens.
       """
       self._colorShapes(self._foregroundShapes(), color, 'setForegroundColor')
 
@@ -4291,11 +4293,11 @@ class MusicControl(Group):
       color = self._backgroundShape.getColor()
       return color
 
-   def setBackgroundColor(self, color):
+   def setBackgroundColor(self, color=None):
       """Set the color of the background (the part behind the foreground).
 
       Args:
-          color (Color): The new background color.
+          color (Color, optional): The new background color. If omitted, a color-selection dialog opens.
       """
       self._colorShapes([self._backgroundShape], color, 'setBackgroundColor')
 
@@ -4308,13 +4310,55 @@ class MusicControl(Group):
       color = self._outlineShape.getColor()
       return color
 
-   def setOutlineColor(self, color):
+   def setOutlineColor(self, color=None):
       """Set the color of the outline around the control.
 
       Args:
-          color (Color): The new outline color.
+          color (Color, optional): The new outline color. If omitted, a color-selection dialog opens.
       """
       self._colorShapes([self._outlineShape], color, 'setOutlineColor')
+
+   # ── Fill ────────────────────────────────────────────────────────────────
+   # doc-group: Fill
+
+   def getFill(self):
+      """Report whether the control's background is filled in.
+
+      Returns:
+          isFilled (bool): True if the background is filled in, False if it is just an outline.
+      """
+      isFilled = self._backgroundShape.getFill()
+      return isFilled
+
+   def setFill(self, fill):
+      """Set whether the control's background is filled in.
+
+      This colors the area behind the foreground solidly (True) or leaves it empty (False).
+
+      Args:
+          fill (bool): True to fill the background in, False for just an outline.
+      """
+      self._backgroundShape.setFill(fill)
+
+   # ── Thickness ────────────────────────────────────────────────────────────────
+   # doc-group: Thickness
+
+   def getThickness(self):
+      """Return the thickness of the control's outline.
+
+      Returns:
+          thickness (int): The outline thickness, in pixels.
+      """
+      thickness = self._outlineShape.getThickness()
+      return thickness
+
+   def setThickness(self, thickness):
+      """Set the thickness of the control's outline.
+
+      Args:
+          thickness (int): The new outline thickness, in pixels.
+      """
+      self._outlineShape.setThickness(thickness)
 
 #######################################################################################
 class HFader(MusicControl):
@@ -5099,14 +5143,16 @@ class Button(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the button's color.
 
       Colors the button's background; its text stays black so it remains easy to read.
 
       Args:
-          color (Color): The new button background color.
+          color (Color, optional): The new button background color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()
@@ -5178,15 +5224,17 @@ class CheckBox(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the checkbox's color.
 
       Colors the area behind the box and its label; the label text stays black so it
       remains easy to read.
 
       Args:
-          color (Color): The new checkbox color.
+          color (Color, optional): The new checkbox color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()
@@ -5277,14 +5325,16 @@ class Slider(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the slider's color.
 
       Colors the handle and the filled part of the track (the part up to the handle).
 
       Args:
-          color (Color): The new slider color.
+          color (Color, optional): The new slider color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()
@@ -5359,14 +5409,16 @@ class DropDownList(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the drop-down list's color.
 
       Colors the list's background; its text stays black so it remains easy to read.
 
       Args:
-          color (Color): The new list color.
+          color (Color, optional): The new list color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()
@@ -5446,15 +5498,17 @@ class TextField(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the field's color.
 
       Colors the field's background; the text you type stays black so it remains easy to
       read.
 
       Args:
-          color (Color): The new field color.
+          color (Color, optional): The new field color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()
@@ -5552,15 +5606,17 @@ class TextArea(Control):
       color = Color(*self._color)
       return color
 
-   def setColor(self, color):
+   def setColor(self, color=None):
       """Set the area's color.
 
       Colors the area's background; the text you type stays black so it remains easy to
       read.
 
       Args:
-          color (Color): The new area color.
+          color (Color, optional): The new area color. If omitted, a color-selection dialog opens.
       """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
       if not isinstance(color, Color):
          raise TypeError(f'{type(self).__name__}.setColor(): color should be a Color object (it was {type(color).__name__})')
       r, g, b, a  = color.getRGBA()

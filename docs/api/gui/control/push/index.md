@@ -46,10 +46,8 @@ Once a Push button has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Report whether the button is currently held down. |
 | [`setValue(newValue)`](setValue.md) | Set whether the button is pressed. |
-| [`getColor()`](../../common/color/getColor.md) | Return the button's foreground color. |
-| [`setColor()`](../../common/color/setColor.md) | Set the button's foreground color. |
-| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
-| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getForegroundColor()`](getForegroundColor.md) | Return the button's foreground color. |
+| [`setForegroundColor()`](setForegroundColor.md) | Set the button's foreground color. |
 | [`getBackgroundColor()`](getBackgroundColor.md) | Return the button's background color. |
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the button's background color. |
 | [`getOutlineColor()`](getOutlineColor.md) | Return the button's outline color. |
@@ -62,6 +60,7 @@ Additionally, the following common functions are available:
 - [Size](../../common/index.md#size-functions)
 - [Rotation](../common/index.md#rotation-functions)
 - [Visibility](../../common/index.md#visibility-functions)
+- [Color](../../common/index.md#color-functions)
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
