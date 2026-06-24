@@ -36,11 +36,18 @@ For example,
 --8<-- "examples/_snippets/simplePush.py"
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a Push has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`getValue()`](getValue.md) | Report whether the push button is currently held down. |
+| [`setValue(newValue)`](setValue.md) | Set whether the push button is pressed. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -48,10 +55,3 @@ Once a Push has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for Pushes:
-
-| Function | Description |
-|---|---|
-| [`getValue()`](getValue.md) | Report whether the push button is currently held down. |
-| [`setValue(newValue)`](setValue.md) | Set whether the push button is pressed. |

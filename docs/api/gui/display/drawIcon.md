@@ -2,7 +2,7 @@
 
 Draw an icon straight onto the display.
 
-This draws to the canvas and returns nothing, which is fast and best for images you will not change later. To keep a handle you can move or delete, create an [Icon](../icon/index.md) and [add()](../common/collection/add.md) it instead.
+This draws to the canvas and returns nothing, which is fast and best for images you will not change later. To keep a handle you can move or delete, create an [Icon](../icon/index.md) and [add()](add.md) it instead.
 
 Erase these drawings with [clearDrawing()](clearDrawing.md).
 

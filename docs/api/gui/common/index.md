@@ -110,17 +110,3 @@ See [Keyboard Events](../event/keyboard/index.md) for more information on how to
 ### Display Events
 
 See [Display Events](../event/display/index.md) for more information on how to use display events.
-
-## Collection Functions
-
-Collection functions are used by [Displays](../display/index.md) and [Groups](../group/index.md) to manage the objects they contain.
-
-| Function | Description |
-|---|---|
-| [`add(item)`](collection/add.md) | Add an object to the collection. |
-| [`addOrder(item, order)`](collection/addOrder.md) | Add an object to the collection on a given layer. |
-| [`remove(item)`](collection/remove.md) | Remove an object from the collection. |
-| [`removeAll()`](collection/removeAll.md) | Remove every object from the collection. |
-| [`getOrder(item)`](collection/getOrder.md) | Return the layer an object sits on within the collection. |
-| [`setOrder(item, order)`](collection/setOrder.md) | Move an object to a different layer within the collection. |
-| [`getItems()`](collection/getItems.md) | Return the objects currently in the collection. |

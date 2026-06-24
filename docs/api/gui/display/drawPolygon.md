@@ -4,7 +4,7 @@ Draw a polygon straight onto the display.
 
 The xPoints and yPoints lists are parallel: the first corner is (xPoints[0], yPoints[0]), the next is (xPoints[1], yPoints[1]), and so on.
 
-This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create a [Polygon](../shapes/polygon/index.md) and [add()](../common/collection/add.md) it instead.
+This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create a [Polygon](../shapes/polygon/index.md) and [add()](add.md) it instead.
 
 Erase these drawings with [clearDrawing()](clearDrawing.md).
 

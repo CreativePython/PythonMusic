@@ -31,7 +31,7 @@ For example,
 line = Line(100, 100, 200, 200)
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 

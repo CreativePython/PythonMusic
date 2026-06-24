@@ -41,11 +41,18 @@ For example,
 --8<-- "examples/_snippets/simpleFader.py"
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a VFader has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`getValue()`](getValue.md) | Return the fader's current value. |
+| [`setValue(newValue)`](setValue.md) | Set the fader's value. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -53,10 +60,3 @@ Once a VFader has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for VFaders:
-
-| Function | Description |
-|---|---|
-| [`setValue(newValue)`](setValue.md) | Set the fader's value. |
-| [`getValue()`](getValue.md) | Return the fader's current value. |

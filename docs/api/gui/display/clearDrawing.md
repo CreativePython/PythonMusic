@@ -2,7 +2,7 @@
 
 Erase everything drawn with the draw functions (e.g. [drawRectangle()](drawRectangle.md), [drawLine()](drawLine.md), ...).
 
-GUI objects added with [add()](../common/collection/add.md) are not affected.
+GUI objects added with [add()](add.md) are not affected.
 
 ## Parameters
 

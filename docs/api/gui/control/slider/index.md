@@ -30,11 +30,18 @@ slider = Slider(VERTICAL, 0, 127, 50, changeVolume)
 
 where `changeVolume` is a function which expects one parameter, the new value of the slider. When the function is called, it may use this value to update the volume of some musical material, for instance.
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a Slider has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`getValue()`](getValue.md) | Return the slider's current value. |
+| [`setValue(value)`](setValue.md) | Set the slider's value. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -42,10 +49,3 @@ Once a Slider has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for Sliders:
-
-| Function | Description |
-|---|---|
-| [`getValue()`](getValue.md) | Return the slider's current value. |
-| [`setValue(value)`](setValue.md) | Set the slider's value. |

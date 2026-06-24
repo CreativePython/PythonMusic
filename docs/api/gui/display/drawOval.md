@@ -2,7 +2,7 @@
 
 Draw an oval straight onto the display.
 
-The oval fills the box with corners (x1, y1) and (x2, y2). This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [Oval](../shapes/oval/index.md) and [add()](../common/collection/add.md) it instead.
+The oval fills the box with corners (x1, y1) and (x2, y2). This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [Oval](../shapes/oval/index.md) and [add()](add.md) it instead.
 
 Erase these drawings with [clearDrawing()](clearDrawing.md).
 

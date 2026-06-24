@@ -4,7 +4,7 @@ Draw an arc straight onto the display.
 
 The arc is part of the oval that fills the box with corners (x1, y1) and (x2, y2). Angles are in degrees, with 0 at the three o'clock position; a positive angle goes counter-clockwise, a negative one clockwise. The constants `HALF_PI`, `PI`, and `TWO_PI` may be used for the angles.
 
-This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [Arc](../shapes/arc/index.md) and [add()](../common/collection/add.md) it instead.
+This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [Arc](../shapes/arc/index.md) and [add()](add.md) it instead.
 
 Erase these drawings with [clearDrawing()](clearDrawing.md).
 

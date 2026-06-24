@@ -38,11 +38,18 @@ For example,
 --8<-- "examples/_snippets/simpleXYPad.py"
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once an XYPad has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`getValue()`](getValue.md) | Return the tracker's position within the pad. |
+| [`setValue(x, y)`](setValue.md) | Set the tracker's position within the pad. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -50,10 +57,3 @@ Once an XYPad has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for XYPads:
-
-| Function | Description |
-|---|---|
-| [`getValue()`](getValue.md) | Return the tracker's position within the pad. |
-| [`setValue(x, y)`](setValue.md) | Set the tracker's position within the pad. |

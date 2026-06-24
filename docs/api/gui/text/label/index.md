@@ -29,22 +29,11 @@ For example,
 label = Label("Hello World!")
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a Label has been created, the following functions are available:
-
-- [Position](../../common/index.md#position-functions)
-- [Size](../../common/index.md#size-functions)
-- [Rotation](../../common/index.md#rotation-functions)
-- [Visibility](../../common/index.md#visibility-functions)
-- [Color](../../common/index.md#color-functions)
-- [Information](../../common/index.md#information-functions)
-- [Hit Testing](../../common/index.md#hit-testing-functions)
-- [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for Labels:
 
 | Function | Description |
 |---|---|
@@ -58,3 +47,14 @@ Additionally, the following functions are available specially for Labels:
 | [`setTextColor()`](setTextColor.md) | Set the label's text color. |
 | [`getBackgroundColor()`](getBackgroundColor.md) | Return the label's background color. |
 | [`setBackgroundColor()`](setBackgroundColor.md) | Set the label's background color. |
+
+Additionally, the following common functions are available:
+
+- [Position](../../common/index.md#position-functions)
+- [Size](../../common/index.md#size-functions)
+- [Rotation](../../common/index.md#rotation-functions)
+- [Visibility](../../common/index.md#visibility-functions)
+- [Color](../../common/index.md#color-functions)
+- [Information](../../common/index.md#information-functions)
+- [Hit Testing](../../common/index.md#hit-testing-functions)
+- [Events](../../common/index.md#event-functions)

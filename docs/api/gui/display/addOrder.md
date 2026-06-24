@@ -1,19 +1,19 @@
 # addOrder()
 
-Add an object to the collection on a given layer.
+Add an object to the display on a given layer.
 
-Same as [add()](add.md), but also sets the object's layer within the collection. Layers run from smallest to largest, where 0 is closest to the front.
+Same as [add()](add.md), but also sets the object's layer within the display. Layers run from smallest to largest, where 0 is closest to the front.
 
 ## Parameters
 
-Once an object `collection` has been created, you can use the following function:
+Once an object `display` has been created, you can use the following function:
 
 ```python
-collection.addOrder(item, order)
+display.addOrder(item, order)
 ```
 
 ```python
-collection.addOrder(item, order, x, y)
+display.addOrder(item, order, x, y)
 ```
 
 | Parameter | Type | Default | Description |

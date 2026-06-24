@@ -28,22 +28,11 @@ For example,
 icon = Icon("mona-lisa.jpg")
 ```
 
-Once created, you can add it to a [Display](../display/index.md) using the Display's [add()](../common/collection/add.md) function.
+Once created, you can add it to a [Display](../display/index.md) using the Display's [add()](../display/add.md) function.
 
 ## Functions
 
 Once an Icon has been created, the following functions are available:
-
-- [Position](../common/index.md#position-functions)
-- [Size](../common/index.md#size-functions)
-- [Rotation](../common/index.md#rotation-functions)
-- [Visibility](../common/index.md#visibility-functions)
-- [Color](../common/index.md#color-functions)
-- [Information](../common/index.md#information-functions)
-- [Hit Testing](../common/index.md#hit-testing-functions)
-- [Events](../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for Icons:
 
 | Function | Description |
 |---|---|
@@ -53,3 +42,14 @@ Additionally, the following functions are available specially for Icons:
 | [`icon.setPixels(pixels)`](setPixels.md) | Replace every pixel in the icon. |
 | [`icon.crop(x, y, width, height)`](crop.md) | Crop the icon to a rectangular region. |
 | [`icon.save(filename)`](save.md) | Save the icon to a file. |
+
+Additionally, the following common functions are available:
+
+- [Position](../common/index.md#position-functions)
+- [Size](../common/index.md#size-functions)
+- [Rotation](../common/index.md#rotation-functions)
+- [Visibility](../common/index.md#visibility-functions)
+- [Color](../common/index.md#color-functions)
+- [Information](../common/index.md#information-functions)
+- [Hit Testing](../common/index.md#hit-testing-functions)
+- [Events](../common/index.md#event-functions)

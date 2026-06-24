@@ -26,13 +26,33 @@ group = Group(itemList)
 
 where `itemList` is a list of GUI objects.  Moving, resizing, and rotating the group also changes the items within it accordingly.
 
-Once created, you can add it to a [Display](../display/index.md) using the Display's [add()](../common/collection/add.md) function.
+Once created, you can add it to a [Display](../display/index.md) using the Display's [add()](../display/add.md) function.
 
 ## Functions
 
 Once a Group has been created, the following functions are available:
 
-- [Collection](../common/index.md#collection-functions)
+| Function | Description |
+|---|---|
+| [`add(item)`](add.md) | Add an object to the group. |
+| [`remove(item)`](remove.md) | Remove an object from the group. |
+| [`removeAll()`](removeAll.md) | Remove every object from the group. |
+| [`getItems()`](getItems.md) | Return the objects currently in the group. |
+
+### Layering GUI Objects
+
+GUI objects within a Group are layered. Typically, the most recent object sits on top of the others (`order = 0`). You can change the order
+
+| Function | Description |
+|---|---|
+| [`addOrder(item, order)`](addOrder.md) | Add an object to the group on a given layer. |
+| [`getOrder(item)`](getOrder.md) | Return the layer an object sits on within the group. |
+| [`setOrder(item, order)`](setOrder.md) | Move an object to a different layer within the group. |
+
+### Manipulating the Group
+
+Additionally, the following common functions are available:
+
 - [Position](../common/index.md#position-functions)
 - [Size](../common/index.md#size-functions)
 - [Rotation](../common/index.md#rotation-functions)

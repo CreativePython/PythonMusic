@@ -32,20 +32,11 @@ textfield = TextField("type and hit <ENTER> ", 18, processEntry)
 
 where `processEntry` is a function which expects one parameter, the updated text (a string).
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a TextField has been created, the following functions are available:
-
-- [Position](../../common/index.md#position-functions)
-- [Size](../../common/index.md#size-functions)
-- [Visibility](../../common/index.md#visibility-functions)
-- [Information](../../common/index.md#information-functions)
-- [Hit Testing](../../common/index.md#hit-testing-functions)
-- [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for TextFields:
 
 | Function | Description |
 |---|---|
@@ -59,3 +50,14 @@ If you create a TextField without a callback function, it is a passive GUI eleme
 |---|---|
 | [`getText()`](getText.md) | Return the text in the field. |
 | [`setText(text)`](setText.md) | Set the text in the field. |
+
+Additionally, the following common functions are available:
+
+- [Position](../../common/index.md#position-functions)
+- [Size](../../common/index.md#size-functions)
+- [Visibility](../../common/index.md#visibility-functions)
+- [Information](../../common/index.md#information-functions)
+- [Hit Testing](../../common/index.md#hit-testing-functions)
+- [Events](../../common/index.md#event-functions)
+
+

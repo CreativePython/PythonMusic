@@ -28,11 +28,17 @@ dropdown = DropDownList(["item1", "item2", "item3"], itemSelected)
 
 where `itemSelected` is a function which expects one parameter, the selected item (a string).
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a DropDownList has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`setColor(color)`](setColor.md) | Set the dropdown's color. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -40,9 +46,3 @@ Once a DropDownList has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for DropDownLists:
-
-| Function | Description |
-|---|---|
-| [`setColor(color)`](setColor.md) | Set the dropdown's color. |

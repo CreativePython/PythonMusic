@@ -4,7 +4,7 @@ Draw a circular arc straight onto the display.  Like [drawArc()](drawArc.md), bu
 
 Angles are in degrees, with 0 at the three o'clock position; a positive angle goes counter-clockwise, a negative one clockwise. The constants `HALF_PI`, `PI`, and `TWO_PI` may be used for the angles.
 
-This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [ArcCircle](../shapes/arccircle/index.md) and [add()](../common/collection/add.md) it instead.
+This draws to the canvas and returns nothing, which is fast and best for shapes you will not change later. To keep a handle you can move or delete, create an [ArcCircle](../shapes/arccircle/index.md) and [add()](add.md) it instead.
 
 Erase these drawings with [clearDrawing()](clearDrawing.md).
 

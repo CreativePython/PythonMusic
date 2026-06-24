@@ -26,20 +26,11 @@ For example,
 checkbox = Checkbox("Check Me Out!")
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a CheckBox has been created, the following functions are available:
-
-- [Position](../../common/index.md#position-functions)
-- [Size](../../common/index.md#size-functions)
-- [Visibility](../../common/index.md#visibility-functions)
-- [Information](../../common/index.md#information-functions)
-- [Hit Testing](../../common/index.md#hit-testing-functions)
-- [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for CheckBoxes:
 
 | Function | Description |
 |---|---|
@@ -54,3 +45,12 @@ If you create a CheckBox without a callback function, it is a passive GUI elemen
 | [`check()`](check.md) | Check the checkbox. |
 | [`uncheck()`](uncheck.md) | Uncheck the checkbox. |
 | [`isChecked()`](isChecked.md) | Report whether the checkbox is checked. |
+
+Additionally, the following common functions are available:
+
+- [Position](../../common/index.md#position-functions)
+- [Size](../../common/index.md#size-functions)
+- [Visibility](../../common/index.md#visibility-functions)
+- [Information](../../common/index.md#information-functions)
+- [Hit Testing](../../common/index.md#hit-testing-functions)
+- [Events](../../common/index.md#event-functions)

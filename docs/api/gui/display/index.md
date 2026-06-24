@@ -1,6 +1,6 @@
 # Display
 
-A Display is the window your GUI objects appear in. Build a GUI by adding shapes, images, text, and controls to it with [add()](../common/collection/add.md). The window opens as soon as you create it. Inside the display the origin (0, 0) is the top-left corner; x increases to the right and y increases downward.
+A Display is the window your GUI objects appear in. Build a GUI by adding shapes, images, text, and controls to it with [add()](add.md). The window opens as soon as you create it. Inside the display the origin (0, 0) is the top-left corner; x increases to the right and y increases downward.
 
 A program may have several displays open. Displays may contain any number of GUI objects, but they cannot contain another display.
 
@@ -37,16 +37,32 @@ display = Display("Simple GUI", 120, 60)
 
 Once a Display has been created, the following functions are available:
 
-- [Collection](../common/index.md#collection-functions)
+| Function | Description |
+|---|---|
+| [`add(item)`](add.md) | Add an object to the display. |
+| [`remove(item)`](remove.md) | Remove an object from the display. |
+| [`removeAll()`](removeAll.md) | Remove every object from the display. |
+| [`getItems()`](getItems.md) | Return the objects currently in the display. |
+
+### Layering GUI Objects
+
+GUI objects on a Display are layered. Typically, the most recent object sits on top of the others (`order = 0`). You can change the order
+
+| Function | Description |
+|---|---|
+| [`addOrder(item, order)`](addOrder.md) | Add an object to the display on a given layer. |
+| [`getOrder(item)`](getOrder.md) | Return the layer an object sits on within the display. |
+| [`setOrder(item, order)`](setOrder.md) | Move an object to a different layer within the display. |
+
+### Manipulating the Display
+
+These common functions are useful for updating how a Display appears on the screen.
+
 - [Position](../common/index.md#position-functions)
 - [Size](../common/index.md#size-functions)
 - [Events](../common/index.md#event-functions)
 
-Additionally, the following functions are available specially for Displays:
-
-### Manipulating the Display
-
-These functions are useful for updating how a Display appears on the screen.
+Additionally, the following functions are available:
 
 | Function | Description |
 |---|---|

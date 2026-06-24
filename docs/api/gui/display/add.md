@@ -1,21 +1,21 @@
 # add()
 
-Add an object to a collection.
+Add an object to a display.
 
 If x and y are specified, the object is added at that position.  Otherwise, it uses its current position.
 
-If the object is already in another collection, it is removed from there first.
+If the object is already in another Display or [Group](../group/index.md), it is removed from there first.
 
 ## Parameters
 
-Once an object `collection` has been created, you can use the following functions:
+Once an object `display` has been created, you can use the following functions:
 
 ```python
-collection.add(item)
+display.add(item)
 ```
 
 ```python
-collection.add(item, x, y)
+display.add(item, x, y)
 ```
 
 | Parameter | Type | Default | Description |

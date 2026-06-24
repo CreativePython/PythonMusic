@@ -30,7 +30,7 @@ For example,
 polygon = Polygon([312, 366, 510, 443], [244, 210, 312, 346])
 ```
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 

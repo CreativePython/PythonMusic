@@ -30,11 +30,19 @@ button = Button("Play music", playMusic)
 
 where `playMusic` is a function with zero parameters.  This function will be called automatically when the user presses this button.
 
-Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../common/collection/add.md) function.
+Once created, you can add it to a [Display](../../display/index.md) using the Display's [add()](../../display/add.md) function.
 
 ## Functions
 
 Once a Button has been created, the following functions are available:
+
+| Function | Description |
+|---|---|
+| [`getText()`](getText.md) | Return the button's text. |
+| [`setText(text)`](setText.md) | Set the button's text. |
+| [`setColor(color)`](setColor.md) | Set the button's color. |
+
+Additionally, the following common functions are available:
 
 - [Position](../../common/index.md#position-functions)
 - [Size](../../common/index.md#size-functions)
@@ -42,11 +50,3 @@ Once a Button has been created, the following functions are available:
 - [Information](../../common/index.md#information-functions)
 - [Hit Testing](../../common/index.md#hit-testing-functions)
 - [Events](../../common/index.md#event-functions)
-
-Additionally, the following functions are available specially for Buttons:
-
-| Function | Description |
-|---|---|
-| [`getText()`](getText.md) | Return the button's text. |
-| [`setText(text)`](setText.md) | Set the button's text. |
-| [`setColor(color)`](setColor.md) | Set the button's color. |
