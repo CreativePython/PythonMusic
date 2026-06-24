@@ -40,12 +40,20 @@ Once created, you can add it to a [Display](../../display/index.md) using the Di
 
 ## Functions
 
-Once a Push has been created, the following functions are available:
+Once a Push button has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`getValue()`](getValue.md) | Report whether the push button is currently held down. |
-| [`setValue(newValue)`](setValue.md) | Set whether the push button is pressed. |
+| [`getValue()`](getValue.md) | Report whether the button is currently held down. |
+| [`setValue(newValue)`](setValue.md) | Set whether the button is pressed. |
+| [`getColor()`](../../common/color/getColor.md) | Return the button's foreground color. |
+| [`setColor()`](../../common/color/setColor.md) | Set the button's foreground color. |
+| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
+| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getBackgroundColor()`](getBackgroundColor.md) | Return the button's background color. |
+| [`setBackgroundColor()`](setBackgroundColor.md) | Set the button's background color. |
+| [`getOutlineColor()`](getOutlineColor.md) | Return the button's outline color. |
+| [`setOutlineColor()`](setOutlineColor.md) | Set the button's outline color. |
 | [`onAction()`](onAction.md) | Register a function to call when the button is pressed or released. |
 
 Additionally, the following common functions are available:

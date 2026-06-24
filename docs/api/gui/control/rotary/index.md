@@ -50,6 +50,14 @@ Once a Rotary has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the rotary's current value. |
 | [`setValue(newValue)`](setValue.md) | Set the rotary's value. |
+| [`getColor()`](../../common/color/getColor.md) | Return the rotary's foreground color. |
+| [`setColor()`](../../common/color/setColor.md) | Set the rotary's foreground color. |
+| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
+| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getBackgroundColor()`](getBackgroundColor.md) | Return the rotary's background color. |
+| [`setBackgroundColor()`](setBackgroundColor.md) | Set the rotary's background color. |
+| [`getOutlineColor()`](getOutlineColor.md) | Return the rotary's outline color. |
+| [`setOutlineColor()`](setOutlineColor.md) | Set the rotary's outline color. |
 | [`onAction()`](onAction.md) | Register a function to call when the knob turns. |
 
 Additionally, the following common functions are available:

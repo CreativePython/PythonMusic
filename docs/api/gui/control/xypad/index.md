@@ -48,6 +48,14 @@ Once an XYPad has been created, the following functions are available:
 |---|---|
 | [`getValue()`](getValue.md) | Return the tracker's position within the pad. |
 | [`setValue(x, y)`](setValue.md) | Set the tracker's position within the pad. |
+| [`getColor()`](../../common/color/getColor.md) | Return the xypad's foreground color. |
+| [`setColor()`](../../common/color/setColor.md) | Set the xypad's foreground color. |
+| [`getForegroundColor()`](getForegroundColor.md) | Same as getColor(). |
+| [`setForegroundColor()`](setForegroundColor.md) | Same as setColor(). |
+| [`getBackgroundColor()`](getBackgroundColor.md) | Return the xypad's background color. |
+| [`setBackgroundColor()`](setBackgroundColor.md) | Set the xypad's background color. |
+| [`getOutlineColor()`](getOutlineColor.md) | Return the xypad's outline color. |
+| [`setOutlineColor()`](setOutlineColor.md) | Set the xypad's outline color. |
 | [`onAction()`](onAction.md) | Register a function to call when the tracker moves. |
 
 Additionally, the following common functions are available:
