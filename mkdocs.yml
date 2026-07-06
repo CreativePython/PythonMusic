@@ -28,6 +28,7 @@ not_in_nav: |
 hooks:
   - overrides/navtools.py     # nav rules for the mega-menu + left ToC (shared)
   - overrides/zip_examples.py # bundle examples/_snippets into a downloadable .zip (build/deploy only)
+  - overrides/release_info.py # fill %%version%%/%%date%% from the latest GitHub release
 
 markdown_extensions:
   - pymdownx.snippets:
