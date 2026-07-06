@@ -6,6 +6,8 @@ from music import *
 
 To simplify making music, the music library defines many musical parameters and functions.
 
+**NOTE:** The first time you import `music`, PythonMusic will ask to download a high-quality soundfont (FluidR3 G2-2.sf2) for you.  This is necessary to play high quality MIDI sounds, and only needs to happen once.
+
 | Contents | Description |
 |---|---|
 | [Music Constants](constants/index.md) | Useful constants for music, such as pitch, duration, and more.  |

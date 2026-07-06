@@ -54,12 +54,15 @@ Alternatively - after you move PEM to the Applications folder:
 sudo xattr -dr com.apple.quarantine /Applications/PEM.app/
 ```
 
-
 ### Linux (and Intel Mac)
 
 The PEM executable is not available for Linux and Intel-based Macs.
 
 To install PythonMusic see [install via pip](#install-via-pip-advanced).
+
+### Previous Versions
+
+Need an older release?  All previous versions of PEM and PythonMusic are available on the [PythonMusic releases page](https://github.com/ydhadix/PythonMusic/releases) on GitHub.
 
 ---
 
@@ -120,27 +123,7 @@ Some of PythonMusic's dependencies may need to compile C++ code during installat
 
 Restart your computer, then try installing PythonMusic again.
 
-
-
 ---
-
-# Using PythonMusic
-
-PythonMusic's core modules are the [`music`](api/music/index.md), [`gui`](api/gui/index.md), [`timer`](api/timer/index.md), [`osc`](api/osc/index.md), and [`midi`](api/midi/index.md) libraries.  You can import these libraries into your python code using:
-
-```python
-import music
-```
-```python
-from music import *
-```
-```python
-from music import Note, Play, C4, HN
-```
-
-Or a similar statement.  PythonMusic includes a number of useful constants, so we recommend using wildcard imports like `from music import *`.
-
-**NOTE:** The first time you import `music`, PythonMusic will ask to download a high-quality soundfont (FluidR3 G2-2.sf2) for you.  This is necessary to play high quality MIDI sounds, and only needs to happen once.
 
 ## Running PythonMusic Programs
 
@@ -166,6 +149,3 @@ PythonMusic is designed for use in Python's Interactive Mode.  To run a python p
 ```
 python -i <filename.py>
 ```
-
----
-

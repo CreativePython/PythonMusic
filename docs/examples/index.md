@@ -12,6 +12,8 @@ Here is a [“Hello World!”](http://en.wikipedia.org/wiki/%22Hello,_world!%22_
 
 To run it, [download PythonMusic](../download.md).
 
+**NOTE:** The first time you import `music`, PythonMusic will ask to download a high-quality soundfont (FluidR3 G2-2.sf2) for you.  This is necessary to play high quality MIDI sounds, and only needs to happen once.
+
 ---
 
 ### More examples
