@@ -2,11 +2,9 @@
 
 Set the score's key quality (major or minor).
 
-```python
-score.setKeyQuality(quality)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setKeyQuality(quality)

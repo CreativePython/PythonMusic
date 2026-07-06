@@ -37,16 +37,16 @@ Once a Metronome `metronome` has been created, the following functions are avail
 
 | Function | Description |
 |---|---|
-| [`metronome.start()`](start.md) | Start the metronome ticking. |
-| [`metronome.stop()`](stop.md) | Stop the metronome ticking. |
-| [`metronome.add(action)`](add.md) | Schedule a function for the metronome to call on a given beat. |
-| [`metronome.remove(action)`](remove.md) | Remove a scheduled function from the metronome. |
-| [`metronome.removeAll()`](removeAll.md) | Remove every scheduled function from the metronome. |
-| [`metronome.getTempo()`](getTempo.md) | Return the metronome's tempo. |
-| [`metronome.setTempo(tempo)`](setTempo.md) | Set the metronome's tempo. |
-| [`metronome.getTimeSignature()`](getTimeSignature.md) | Return the metronome's time signature. |
-| [`metronome.setTimeSignature(timeSignature)`](setTimeSignature.md) | Set the metronome's time signature. |
-| [`metronome.soundOn()`](soundOn.md) | Play a sound on every metronome tick. |
-| [`metronome.soundOff()`](soundOff.md) | Stop playing a sound on each metronome tick. |
-| [`metronome.show()`](show.md) | Start printing the current beat number to the console on each tick. |
-| [`metronome.hide()`](hide.md) | Stop printing the beat number to the console. |
+| [`start()`](start.md) | Start the metronome ticking. |
+| [`stop()`](stop.md) | Stop the metronome ticking. |
+| [`add(action)`](add.md) | Schedule a function for the metronome to call on a given beat. |
+| [`remove(action)`](remove.md) | Remove a scheduled function from the metronome. |
+| [`removeAll()`](removeAll.md) | Remove every scheduled function from the metronome. |
+| [`getTempo()`](getTempo.md) | Return the metronome's tempo. |
+| [`setTempo(tempo)`](setTempo.md) | Set the metronome's tempo. |
+| [`getTimeSignature()`](getTimeSignature.md) | Return the metronome's time signature. |
+| [`setTimeSignature(timeSignature)`](setTimeSignature.md) | Set the metronome's time signature. |
+| [`soundOn()`](soundOn.md) | Play a sound on every metronome tick. |
+| [`soundOff()`](soundOff.md) | Stop playing a sound on each metronome tick. |
+| [`show()`](show.md) | Start printing the current beat number to the console on each tick. |
+| [`hide()`](hide.md) | Stop printing the beat number to the console. |

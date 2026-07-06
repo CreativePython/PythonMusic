@@ -2,13 +2,11 @@
 
 Repeat a phrase until it holds a set number of notes, in place.
 
-```python
-Mod.cycle(phrase, numberOfNotes)
-```
-
 Like [Mod.repeat()](repeat.md), but the last repetition may be cut short once the note count is reached.
 
 ## Parameters
+
+`Mod.cycle()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.cycle(phrase, numberOfNotes)

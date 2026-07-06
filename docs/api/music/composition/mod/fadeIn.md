@@ -2,11 +2,9 @@
 
 Fade the music up from silence to its normal volume, in place.
 
-```python
-Mod.fadeIn(material, fadeLength)
-```
-
 ## Parameters
+
+`Mod.fadeIn()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.fadeIn(material, fadeLength)

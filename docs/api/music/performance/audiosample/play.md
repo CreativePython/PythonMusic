@@ -2,14 +2,15 @@
 
 Play the sample once.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.play()
 ```
-
-## Parameters
-
 ```python
-audiosample.play(start=0, size=-1, voice=0)
+audiosample.play(start, size, voice)
 ```
 
 | Parameter | Type | Default | Description |

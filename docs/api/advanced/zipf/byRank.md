@@ -2,10 +2,6 @@
 
 Measure the Zipf slope of a set of counts, ranked from largest to smallest.
 
-```python
-byRank(counts)
-```
-
 Ranks the counts from largest to smallest, then fits a trendline to the rank-against- count plot on a log-log scale. A slope close to -1 with a good fit indicates a Zipf-like distribution.
 
 ## Parameters

@@ -2,13 +2,11 @@
 
 Register a function to be called once every frame.
 
-```python
-Automate.add(action)
-```
-
 Use [setRate()](setRate.md) to change how often that is.
 
 ## Parameters
+
+`Automate.add()` is a static utility. Call it on the `Automate` class itself, for example:
 
 ```python
 Automate.add(action)

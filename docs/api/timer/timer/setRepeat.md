@@ -2,11 +2,9 @@
 
 Set whether the timer repeats.
 
-```python
-timer.setRepeat(repeat)
-```
-
 ## Parameters
+
+Once an object `timer` has been created, you can use the following function:
 
 ```python
 timer.setRepeat(repeat)

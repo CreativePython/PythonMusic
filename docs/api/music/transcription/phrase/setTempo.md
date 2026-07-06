@@ -2,11 +2,9 @@
 
 Set the phrase's tempo.
 
-```python
-phrase.setTempo(tempo)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.setTempo(tempo)

@@ -2,16 +2,17 @@
 
 Set the main volume for a channel.
 
-```python
-midiout.setVolume(volume)
-```
-
 This is the channel's overall volume, separate from how loud each note is played (see [noteOn()](noteOn.md)).
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.setVolume(volume, channel=0)
+midiout.setVolume(volume)
+```
+```python
+midiout.setVolume(volume, channel)
 ```
 
 | Parameter | Type | Default | Description |

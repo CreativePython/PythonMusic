@@ -2,6 +2,10 @@
 
 Return how many phrases are in the part.
 
+## Parameters
+
+Once an object `part` has been created, you can use the following function:
+
 ```python
 part.getSize()
 ```

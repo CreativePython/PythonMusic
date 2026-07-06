@@ -2,13 +2,11 @@
 
 Convert a hex color string to RGB.
 
-```python
-Color.HextoRGB(hex)
-```
-
-Color.HextoRGB is a static utility. Call it on the class itself, for example Color.HextoRGB(). The leading "#" is optional.
+The leading "#" is optional.
 
 ## Parameters
+
+`Color.HextoRGB()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.HextoRGB(hex)

@@ -2,13 +2,11 @@
 
 Set the note's pitch from a frequency.
 
-```python
-note.setFrequency(frequency)
-```
-
 Setting a frequency lets the note land between the standard pitches.
 
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setFrequency(frequency)

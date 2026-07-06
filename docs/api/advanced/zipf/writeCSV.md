@@ -2,10 +2,6 @@
 
 Write measurements to a CSV file.
 
-```python
-writeCSV(measurements, filename)
-```
-
 Takes the measurements returned by [measureScore()](measureScore.md) or [measureMidi()](measureMidi.md) and writes them to a spreadsheet file, one row per score.
 
 ## Parameters

@@ -2,16 +2,17 @@
 
 Add many points to a curve in the IanniX score at once.
 
-```python
-iannixout.addPointListToCurve(curveID, listPoints)
-```
-
 Each point is an (x, y, z) tuple. The two control-point lists shape the quadratic Bezier curves between points. Each control-point list must be either the same length as listPoints, or None to skip it.
 
 ## Parameters
 
+Once an object `iannixout` has been created, you can use the following functions:
+
 ```python
-iannixout.addPointListToCurve(curveID, listPoints, listControlPoints1=None, listControlPoints2=None)
+iannixout.addPointListToCurve(curveID, listPoints)
+```
+```python
+iannixout.addPointListToCurve(curveID, listPoints, listControlPoints1, listControlPoints2)
 ```
 
 | Parameter | Type | Default | Description |

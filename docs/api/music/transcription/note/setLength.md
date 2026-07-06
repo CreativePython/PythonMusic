@@ -2,13 +2,11 @@
 
 Set how long the note actually sounds.
 
-```python
-note.setLength(length)
-```
-
 Length is normally about 90% of the duration. Raise it toward the duration to make the note sound legato (smooth), or lower it to make it sound staccato (short).
 
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setLength(length)

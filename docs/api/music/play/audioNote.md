@@ -2,14 +2,15 @@
 
 Schedule a note to play with an audio sample, after a delay and lasting a set time.
 
+## Parameters
+
+`Play.audioNote()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.audioNote(pitch, start, duration, audioSample)
 ```
-
-## Parameters
-
 ```python
-Play.audioNote(pitch, start, duration, audioSample, velocity=127, panning=-1, loopAudioSample=False, envelope=None)
+Play.audioNote(pitch, start, duration, audioSample, velocity, panning, loopAudioSample, envelope)
 ```
 
 | Parameter | Type | Default | Description |

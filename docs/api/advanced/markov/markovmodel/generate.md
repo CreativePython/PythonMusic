@@ -2,16 +2,17 @@
 
 Generate a new sequence in the style the model learned.
 
-```python
-markovmodel.generate()
-```
-
 Starts from startSequence and keeps adding symbols, each chosen at random by the model's odds, until it reaches the end of a sequence. If no start is given, the model picks one it has seen.
 
 ## Parameters
 
+Once an object `markovmodel` has been created, you can use the following functions:
+
 ```python
-markovmodel.generate(startSequence=None)
+markovmodel.generate()
+```
+```python
+markovmodel.generate(startSequence)
 ```
 
 | Parameter | Type | Default | Description |

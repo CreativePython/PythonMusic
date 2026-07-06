@@ -2,11 +2,9 @@
 
 Print the music's data to the screen.
 
-```python
-View.internal(material)
-```
-
 ## Parameters
+
+`View.internal()` is a static utility. Call it on the `View` class itself, for example:
 
 ```python
 View.internal(material)

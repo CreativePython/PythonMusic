@@ -2,16 +2,17 @@
 
 Start a pitch sounding with a pitch bend, and leave it sounding.
 
-```python
-Play.noteOnPitchBend(pitch)
-```
-
 Stop it with [Play.noteOff()](noteOff.md).
 
 ## Parameters
 
+`Play.noteOnPitchBend()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.noteOnPitchBend(pitch, bend=0, velocity=100, channel=0, panning=-1)
+Play.noteOnPitchBend(pitch)
+```
+```python
+Play.noteOnPitchBend(pitch, bend, velocity, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

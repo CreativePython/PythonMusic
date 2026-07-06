@@ -2,11 +2,9 @@
 
 Add a trigger to the IanniX score at the given coordinates.
 
-```python
-iannixout.addTrigger(triggerID, x, y, z)
-```
-
 ## Parameters
+
+Once an object `iannixout` has been created, you can use the following function:
 
 ```python
 iannixout.addTrigger(triggerID, x, y, z)

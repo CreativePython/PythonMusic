@@ -2,13 +2,11 @@
 
 Open a named input MIDI device.
 
-```python
-midiin.openInputDevice(selectedItem)
-```
-
 This is the callback used by the device-selection window; you do not normally call it yourself.
 
 ## Parameters
+
+Once an object `midiin` has been created, you can use the following function:
 
 ```python
 midiin.openInputDevice(selectedItem)

@@ -2,11 +2,9 @@
 
 Set the sequence's playback pitch, transposing the music to match.
 
-```python
-midisequence.setPitch(pitch)
-```
-
 ## Parameters
+
+Once an object `midisequence` has been created, you can use the following function:
 
 ```python
 midisequence.setPitch(pitch)

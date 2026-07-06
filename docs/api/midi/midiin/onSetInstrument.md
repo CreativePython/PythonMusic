@@ -2,11 +2,9 @@
 
 Set up a function to call whenever the instrument is changed on the device.
 
-```python
-midiin.onSetInstrument(action)
-```
-
 ## Parameters
+
+Once an object `midiin` has been created, you can use the following function:
 
 ```python
 midiin.onSetInstrument(action)

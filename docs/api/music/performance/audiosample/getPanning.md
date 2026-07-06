@@ -2,14 +2,15 @@
 
 Return the sample's stereo position.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.getPanning()
 ```
-
-## Parameters
-
 ```python
-audiosample.getPanning(voice=0)
+audiosample.getPanning(voice)
 ```
 
 | Parameter | Type | Default | Description |

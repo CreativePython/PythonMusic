@@ -2,11 +2,9 @@
 
 Change how long the ramp takes.
 
-```python
-linearramp.setDuration(delay)
-```
-
 ## Parameters
+
+Once an object `linearramp` has been created, you can use the following function:
 
 ```python
 linearramp.setDuration(delay)

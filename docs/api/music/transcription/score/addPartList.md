@@ -2,11 +2,9 @@
 
 Add several parts to the score at once.
 
-```python
-score.addPartList(partList)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.addPartList(partList)

@@ -2,11 +2,9 @@
 
 Set the score's title.
 
-```python
-score.setTitle(title)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setTitle(title)

@@ -2,16 +2,17 @@
 
 Play a sound on every metronome tick.
 
-```python
-metronome.soundOn()
-```
-
 The strong (first) beat of each measure sounds at the given volume; the other beats sound softer (about 70% as loud).
 
 ## Parameters
 
+Once an object `metronome` has been created, you can use the following functions:
+
 ```python
-metronome.soundOn(pitch=ACOUSTIC_BASS_DRUM, volume=127, channel=9)
+metronome.soundOn()
+```
+```python
+metronome.soundOn(pitch, volume, channel)
 ```
 
 | Parameter | Type | Default | Description |

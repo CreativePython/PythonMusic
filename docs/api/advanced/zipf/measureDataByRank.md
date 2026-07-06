@@ -2,16 +2,15 @@
 
 Measure a list of count datasets by rank.
 
-```python
-measureDataByRank(datasets)
-```
-
 Runs [byRank()](byRank.md) on each dataset and wraps the result as a measurement.
 
 ## Parameters
 
 ```python
-measureDataByRank(datasets, metricName='ByRank')
+measureDataByRank(datasets)
+```
+```python
+measureDataByRank(datasets, metricName)
 ```
 
 | Parameter | Type | Default | Description |

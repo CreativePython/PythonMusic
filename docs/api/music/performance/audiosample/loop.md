@@ -2,14 +2,15 @@
 
 Play the sample over and over.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.loop()
 ```
-
-## Parameters
-
 ```python
-audiosample.loop(times=-1, start=0, size=-1, voice=0)
+audiosample.loop(times, start, size, voice)
 ```
 
 | Parameter | Type | Default | Description |

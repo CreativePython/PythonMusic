@@ -2,16 +2,17 @@
 
 Stop a pitch from sounding on an audio sample.
 
-```python
-Play.audioOff(pitch, audioSample)
-```
-
 If the pitch is not sounding on this sample, nothing happens.
 
 ## Parameters
 
+`Play.audioOff()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.audioOff(pitch, audioSample, envelope=None)
+Play.audioOff(pitch, audioSample)
+```
+```python
+Play.audioOff(pitch, audioSample, envelope)
 ```
 
 | Parameter | Type | Default | Description |

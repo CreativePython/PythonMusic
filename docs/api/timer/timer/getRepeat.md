@@ -2,6 +2,10 @@
 
 Report whether the timer repeats.
 
+## Parameters
+
+Once an object `timer` has been created, you can use the following function:
+
 ```python
 timer.getRepeat()
 ```

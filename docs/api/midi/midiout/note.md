@@ -2,14 +2,15 @@
 
 Schedule a note on the device to play after a delay and last a set time.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.note(pitch, start, duration)
 ```
-
-## Parameters
-
 ```python
-midiout.note(pitch, start, duration, dynamic=100, channel=0, panning=-1)
+midiout.note(pitch, start, duration, dynamic, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

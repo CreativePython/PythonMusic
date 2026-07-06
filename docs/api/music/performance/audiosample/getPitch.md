@@ -2,16 +2,17 @@
 
 Return the sample's current playback pitch.
 
-```python
-audiosample.getPitch()
-```
-
 This may differ from the sample's base pitch if it has been pitch-shifted.
 
 ## Parameters
 
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
-audiosample.getPitch(voice=0)
+audiosample.getPitch()
+```
+```python
+audiosample.getPitch(voice)
 ```
 
 | Parameter | Type | Default | Description |

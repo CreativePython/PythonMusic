@@ -2,11 +2,9 @@
 
 Set the stereo position of every note in the part.
 
-```python
-part.setPan(panning)
-```
-
 ## Parameters
+
+Once an object `part` has been created, you can use the following function:
 
 ```python
 part.setPan(panning)

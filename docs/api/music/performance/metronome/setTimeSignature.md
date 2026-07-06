@@ -2,11 +2,9 @@
 
 Set the metronome's time signature.
 
-```python
-metronome.setTimeSignature(timeSignature)
-```
-
 ## Parameters
+
+Once an object `metronome` has been created, you can use the following function:
 
 ```python
 metronome.setTimeSignature(timeSignature)

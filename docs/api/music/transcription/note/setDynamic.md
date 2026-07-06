@@ -2,11 +2,9 @@
 
 Set how loud the note is.
 
-```python
-note.setDynamic(dynamic)
-```
-
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setDynamic(dynamic)

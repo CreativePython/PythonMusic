@@ -22,26 +22,29 @@ MidiSequence(material, pitch, volume)
 | `pitch` | `int or float` | `A4` | The pitch to play at, as a MIDI pitch. Defaults to A4. |
 | `volume` | `int` | `127` | How loud to play, from 0 to 127. |
 
+For example,
+
+```python
+sequence = MidiSequence("song.mid")
+```
+
 ## Functions
 
 Once a MidiSequence `sequence` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`sequence.play()`](play.md) | Play the sequence once. |
-| [`sequence.loop()`](loop.md) | Play the sequence over and over, forever. |
-| [`sequence.stop()`](stop.md) | Stop the sequence playing. |
-| [`sequence.pause()`](pause.md) | Pause the sequence, remembering where it is. |
-| [`sequence.resume()`](resume.md) | Resume the sequence from where it was paused. |
-| [`sequence.isPlaying()`](isPlaying.md) | Report whether the sequence is currently playing. |
-| [`sequence.getPitch()`](getPitch.md) | Return the sequence's current playback pitch. |
-| [`sequence.setPitch(pitch)`](setPitch.md) | Set the sequence's playback pitch, transposing the music to match. |
-| [`sequence.getDefaultPitch()`](getDefaultPitch.md) | Return the pitch the sequence was created with. |
-| [`sequence.getTempo()`](getTempo.md) | Return the sequence's current playback tempo. |
-| [`sequence.setTempo(bpm)`](setTempo.md) | Set the sequence's playback tempo. |
-| [`sequence.getDefaultTempo()`](getDefaultTempo.md) | Return the tempo the sequence was created with. |
-<!-- 
-NOTE: These two aren't in the source API - need to add
-| sequence.setVolume(volume) | Set the sequence's volume. |
-| sequence.getVolume() | Return the sequence's current volume. |
--->
+| [`play()`](play.md) | Play the sequence once. |
+| [`loop()`](loop.md) | Play the sequence over and over, forever. |
+| [`stop()`](stop.md) | Stop the sequence playing. |
+| [`pause()`](pause.md) | Pause the sequence, remembering where it is. |
+| [`resume()`](resume.md) | Resume the sequence from where it was paused. |
+| [`isPlaying()`](isPlaying.md) | Report whether the sequence is currently playing. |
+| [`getPitch()`](getPitch.md) | Return the sequence's current playback pitch. |
+| [`setPitch(pitch)`](setPitch.md) | Set the sequence's playback pitch, transposing the music to match. |
+| [`getDefaultPitch()`](getDefaultPitch.md) | Return the pitch the sequence was created with. |
+| [`getVolume()`](getVolume.md) | Return the sequence's current playback volume. |
+| [`setVolume(volume)`](setVolume.md) | Set the sequence's playback volume, making it louder or softer. |
+| [`getTempo()`](getTempo.md) | Return the sequence's current playback tempo. |
+| [`setTempo(bpm)`](setTempo.md) | Set the sequence's playback tempo. |
+| [`getDefaultTempo()`](getDefaultTempo.md) | Return the tempo the sequence was created with. |

@@ -2,6 +2,10 @@
 
 Return the phrase's notes.
 
+## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
+
 ```python
 phrase.getNoteList()
 ```

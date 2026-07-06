@@ -2,13 +2,11 @@
 
 Join neighboring notes of the same pitch into one longer note, in place.
 
-```python
-Mod.tiePitches(material)
-```
-
 Like a musical tie. This lowers the note count.
 
 ## Parameters
+
+`Mod.tiePitches()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.tiePitches(material)

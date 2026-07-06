@@ -2,11 +2,9 @@
 
 Set the stereo position of every note in the score.
 
-```python
-score.setPan(pan)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setPan(pan)

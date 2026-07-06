@@ -2,16 +2,17 @@
 
 Start a frequency sounding on the device, and leave it sounding.
 
-```python
-midiout.frequencyOn(frequency)
-```
-
 Stop it with [frequencyOff()](frequencyOff.md). Play only one frequency per channel at a time: since this uses pitch bend, it affects every other note sounding on the channel.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.frequencyOn(frequency, dynamic=100, channel=0, panning=-1)
+midiout.frequencyOn(frequency)
+```
+```python
+midiout.frequencyOn(frequency, dynamic, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

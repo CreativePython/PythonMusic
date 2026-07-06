@@ -2,14 +2,15 @@
 
 Return the sample's current playback frequency.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.getFrequency()
 ```
-
-## Parameters
-
 ```python
-audiosample.getFrequency(voice=0)
+audiosample.getFrequency(voice)
 ```
 
 | Parameter | Type | Default | Description |

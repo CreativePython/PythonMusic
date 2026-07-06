@@ -2,11 +2,9 @@
 
 Set up a function to call when a given trigger fires in the IanniX score.
 
-```python
-iannixin.onTrigger(triggerID, action)
-```
-
 ## Parameters
+
+Once an object `iannixin` has been created, you can use the following function:
 
 ```python
 iannixin.onTrigger(triggerID, action)

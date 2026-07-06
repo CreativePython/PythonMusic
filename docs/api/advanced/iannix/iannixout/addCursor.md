@@ -2,16 +2,17 @@
 
 Add a cursor to a curve in the IanniX score.
 
-```python
-iannixout.addCursor(curveID, cursorID)
-```
-
 A cursor travels along its curve as the score plays.
 
 ## Parameters
 
+Once an object `iannixout` has been created, you can use the following functions:
+
 ```python
-iannixout.addCursor(curveID, cursorID, offset=0.0)
+iannixout.addCursor(curveID, cursorID)
+```
+```python
+iannixout.addCursor(curveID, cursorID, offset)
 ```
 
 | Parameter | Type | Default | Description |

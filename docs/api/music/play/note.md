@@ -2,14 +2,15 @@
 
 Schedule a note to play after a delay and last a set time.
 
+## Parameters
+
+`Play.note()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.note(pitch, start, duration)
 ```
-
-## Parameters
-
 ```python
-Play.note(pitch, start, duration, velocity=100, channel=0, panning=-1)
+Play.note(pitch, start, duration, velocity, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

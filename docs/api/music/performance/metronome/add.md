@@ -2,14 +2,15 @@
 
 Schedule a function for the metronome to call on a given beat.
 
+## Parameters
+
+Once an object `metronome` has been created, you can use the following functions:
+
 ```python
 metronome.add(action)
 ```
-
-## Parameters
-
 ```python
-metronome.add(action, parameters=[], desiredBeat=0, repeatFlag=False)
+metronome.add(action, parameters, desiredBeat, repeatFlag)
 ```
 
 | Parameter | Type | Default | Description |

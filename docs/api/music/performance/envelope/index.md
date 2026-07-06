@@ -49,16 +49,16 @@ Once an Envelope `envelope` has been created, the following functions are availa
 
 | Function | Description |
 |---|---|
-| [`envelope.getAttackTimesAndVolumes()`](getAttackTimesAndVolumes.md) | Return the envelope's attack times and the volumes reached at them. |
-| [`envelope.setAttackTimesAndVolumes(attackTimes, attackVolumes)`](setAttackTimesAndVolumes.md) | Set the envelope's attack times and the volumes reached at them. |
-| [`envelope.getSustainVolume()`](getSustainVolume.md) | Return the envelope's sustain volume. |
-| [`envelope.setSustainVolume(sustainVolume)`](setSustainVolume.md) | Set the envelope's sustain volume. |
-| [`envelope.getDelayTime()`](getDelayTime.md) | Return the envelope's delay time. |
-| [`envelope.setDelayTime(delayTime)`](setDelayTime.md) | Set the envelope's delay time. |
-| [`envelope.getReleaseTime()`](getReleaseTime.md) | Return the envelope's release time. |
-| [`envelope.setReleaseTime(releaseTime)`](setReleaseTime.md) | Set the envelope's release time. |
-| [`envelope.performAttackDelaySustain(audioSample, volume, voice)`](performAttackDelaySustain.md) | Apply the envelope's attack, delay, and sustain to a voice of an audio sample. |
-| [`envelope.performReleaseAndStop(audioSample, voice)`](performReleaseAndStop.md) | Apply the envelope's release (fade-out) to a voice of an audio sample, then stop it. |
+| [`getAttackTimesAndVolumes()`](getAttackTimesAndVolumes.md) | Return the envelope's attack times and the volumes reached at them. |
+| [`setAttackTimesAndVolumes(attackTimes, attackVolumes)`](setAttackTimesAndVolumes.md) | Set the envelope's attack times and the volumes reached at them. |
+| [`getSustainVolume()`](getSustainVolume.md) | Return the envelope's sustain volume. |
+| [`setSustainVolume(sustainVolume)`](setSustainVolume.md) | Set the envelope's sustain volume. |
+| [`getDelayTime()`](getDelayTime.md) | Return the envelope's delay time. |
+| [`setDelayTime(delayTime)`](setDelayTime.md) | Set the envelope's delay time. |
+| [`getReleaseTime()`](getReleaseTime.md) | Return the envelope's release time. |
+| [`setReleaseTime(releaseTime)`](setReleaseTime.md) | Set the envelope's release time. |
+| [`performAttackDelaySustain(audioSample, volume, voice)`](performAttackDelaySustain.md) | Apply the envelope's attack, delay, and sustain to a voice of an audio sample. |
+| [`performReleaseAndStop(audioSample, voice)`](performReleaseAndStop.md) | Apply the envelope's release (fade-out) to a voice of an audio sample, then stop it. |
 
 ## Example
 

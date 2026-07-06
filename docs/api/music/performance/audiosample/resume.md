@@ -2,14 +2,15 @@
 
 Resume the sample from where it was paused.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.resume()
 ```
-
-## Parameters
-
 ```python
-audiosample.resume(voice=0)
+audiosample.resume(voice)
 ```
 
 | Parameter | Type | Default | Description |

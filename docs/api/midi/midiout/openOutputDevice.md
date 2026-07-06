@@ -2,13 +2,11 @@
 
 Open a named output MIDI device.
 
-```python
-midiout.openOutputDevice(selectedItem)
-```
-
 This is the callback used by the device-selection window; you do not normally call it yourself.
 
 ## Parameters
+
+Once an object `midiout` has been created, you can use the following function:
 
 ```python
 midiout.openOutputDevice(selectedItem)

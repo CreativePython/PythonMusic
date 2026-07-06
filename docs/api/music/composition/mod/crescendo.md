@@ -2,13 +2,11 @@
 
 Slide the volume smoothly from one level to another over a span of time, in place.
 
-```python
-Mod.crescendo(material, startTime, endTime, startVolume, endVolume)
-```
-
 Use a rising volume for a crescendo or a falling one for a diminuendo.
 
 ## Parameters
+
+`Mod.crescendo()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.crescendo(material, startTime, endTime, startVolume, endVolume)

@@ -2,16 +2,15 @@
 
 Measure a list of MIDI files against a list of Zipf metrics.
 
-```python
-measureMidi(files, metrics)
-```
-
 Reads each MIDI file into a score, then measures the scores like [measureScore()](measureScore.md).
 
 ## Parameters
 
 ```python
-measureMidi(files, metrics, quantum=0.25)
+measureMidi(files, metrics)
+```
+```python
+measureMidi(files, metrics, quantum)
 ```
 
 | Parameter | Type | Default | Description |

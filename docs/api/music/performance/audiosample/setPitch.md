@@ -2,14 +2,15 @@
 
 Set the sample's playback pitch, pitch-shifting it from its base pitch.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.setPitch(pitch)
 ```
-
-## Parameters
-
 ```python
-audiosample.setPitch(pitch, voice=0)
+audiosample.setPitch(pitch, voice)
 ```
 
 | Parameter | Type | Default | Description |

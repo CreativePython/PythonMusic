@@ -2,16 +2,15 @@
 
 Measure a list of size-and-count datasets.
 
-```python
-measureDataBySize(datasets)
-```
-
 Runs [bySize()](bySize.md) on each dataset and wraps the result as a measurement.
 
 ## Parameters
 
 ```python
-measureDataBySize(datasets, metricName='BySize')
+measureDataBySize(datasets)
+```
+```python
+measureDataBySize(datasets, metricName)
 ```
 
 | Parameter | Type | Default | Description |

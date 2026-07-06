@@ -2,14 +2,15 @@
 
 Return how loud the sample is.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.getVolume()
 ```
-
-## Parameters
-
 ```python
-audiosample.getVolume(voice=0)
+audiosample.getVolume(voice)
 ```
 
 | Parameter | Type | Default | Description |

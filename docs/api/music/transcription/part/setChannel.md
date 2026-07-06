@@ -2,11 +2,9 @@
 
 Set the part's MIDI channel.
 
-```python
-part.setChannel(channel)
-```
-
 ## Parameters
+
+Once an object `part` has been created, you can use the following function:
 
 ```python
 part.setChannel(channel)

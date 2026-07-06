@@ -2,10 +2,6 @@
 
 Convert a number from one range to another, including values outside the source range.
 
-```python
-map(value, minValue, maxValue, minResult, maxResult)
-```
-
 For example, 5 in the range 0 to 10 maps to 50 in the range 0 to 100. The number may lie outside the source range: it is then carried just as far outside the destination range (for example, 15 in the range 0 to 10 maps to 150 in the range 0 to 100). To require the number to stay within the source range instead, use [mapValue()](mapValue.md).
 
 ## Parameters

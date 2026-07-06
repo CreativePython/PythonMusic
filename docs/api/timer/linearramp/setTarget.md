@@ -2,16 +2,17 @@
 
 Aim the ramp at a new value, starting from where it is now.
 
-```python
-linearramp.setTarget(targetValue)
-```
-
 You can also change how long the ramp takes. If the ramp was not running, this starts it.
 
 ## Parameters
 
+Once an object `linearramp` has been created, you can use the following functions:
+
 ```python
-linearramp.setTarget(targetValue, delay=None)
+linearramp.setTarget(targetValue)
+```
+```python
+linearramp.setTarget(targetValue, delay)
 ```
 
 | Parameter | Type | Default | Description |

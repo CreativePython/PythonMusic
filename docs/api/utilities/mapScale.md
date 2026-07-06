@@ -2,10 +2,6 @@
 
 Map a number from one range to another, snapped to a musical scale.
 
-```python
-mapScale(value, minValue, maxValue, minResult, maxResult)
-```
-
 Works like [mapValue()](mapValue.md), but rounds the result to the nearest pitch in the given
 scale, so the output is always a usable MIDI pitch. A scale is a list of pitch
 classes between 0 and 11 (see the scale constants such as MAJOR_SCALE). The key is
@@ -15,7 +11,10 @@ left out, the key is taken from minResultValue.
 ## Parameters
 
 ```python
-mapScale(value, minValue, maxValue, minResult, maxResult, scale=None, key=None)
+mapScale(value, minValue, maxValue, minResult, maxResult)
+```
+```python
+mapScale(value, minValue, maxValue, minResult, maxResult, scale, key)
 ```
 
 | Parameter | Type | Default | Description |

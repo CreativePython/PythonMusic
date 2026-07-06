@@ -46,35 +46,35 @@ Once a Score `score` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`score.addPart(part)`](addPart.md) | Add a part to the score. |
-| [`score.addPartList(partList)`](addPartList.md) | Add several parts to the score at once. |
+| [`addPart(part)`](addPart.md) | Add a part to the score. |
+| [`addPartList(partList)`](addPartList.md) | Add several parts to the score at once. |
 
 You can also set the tempo, volume, panning, and title of the score.
 
 | Function | Description |
 |---|---|
-| [`score.getTempo()`](getTempo.md) | Return the score's tempo. |
-| [`score.setTempo(tempo)`](setTempo.md) | Set the score's tempo. |
-| [`score.getVolume()`](getVolume.md) | Return the score's volume. |
-| [`score.setVolume(volume)`](setVolume.md) | Set the score's volume. |
-| [`score.setPan(pan)`](setPan.md) | Set the stereo position of every note in the score. |
-| [`score.getTitle()`](getTitle.md) | Return the score's title. |
-| [`score.setTitle(title)`](setTitle.md) | Set the score's title. |
+| [`getTempo()`](getTempo.md) | Return the score's tempo. |
+| [`setTempo(tempo)`](setTempo.md) | Set the score's tempo. |
+| [`getVolume()`](getVolume.md) | Return the score's volume. |
+| [`setVolume(volume)`](setVolume.md) | Set the score's volume. |
+| [`setPan(pan)`](setPan.md) | Set the stereo position of every note in the score. |
+| [`getTitle()`](getTitle.md) | Return the score's title. |
+| [`setTitle(title)`](setTitle.md) | Set the score's title. |
 
 Finally, here are some additional Score functions:
 
 | Function | Description |
 |---|---|
-| [`score.copy()`](copy.md) | Return a copy of the score. |
-| [`score.empty()`](empty.md) | Remove every part from the score. |
-| [`score.getSize()`](getSize.md) | Return how many parts are in the score. |
-| [`score.getPartList()`](getPartList.md) | Return the score's parts. |
-| [`score.getStartTime()`](getStartTime.md) | Return when the score starts. |
-| [`score.getEndTime()`](getEndTime.md) | Return when the score ends. |
-| [`score.setTimeSignature(numerator, denominator)`](setTimeSignature.md) | Set the score's time signature. |
-| [`score.getNumerator()`](getNumerator.md) | Return the top number of the score's time signature. |
-| [`score.getDenominator()`](getDenominator.md) | Return the bottom number of the score's time signature. |
-| [`score.getKeyQuality()`](getKeyQuality.md) | Return the score's key quality (major or minor). |
-| [`score.setKeyQuality(quality)`](setKeyQuality.md) | Set the score's key quality (major or minor). |
-| [`score.getKeySignature()`](getKeySignature.md) | Return the score's key signature. |
-| [`score.setKeySignature(signature)`](setKeySignature.md) | Set the score's key signature. |
+| [`copy()`](copy.md) | Return a copy of the score. |
+| [`empty()`](empty.md) | Remove every part from the score. |
+| [`getSize()`](getSize.md) | Return how many parts are in the score. |
+| [`getPartList()`](getPartList.md) | Return the score's parts. |
+| [`getStartTime()`](getStartTime.md) | Return when the score starts. |
+| [`getEndTime()`](getEndTime.md) | Return when the score ends. |
+| [`setTimeSignature(numerator, denominator)`](setTimeSignature.md) | Set the score's time signature. |
+| [`getNumerator()`](getNumerator.md) | Return the top number of the score's time signature. |
+| [`getDenominator()`](getDenominator.md) | Return the bottom number of the score's time signature. |
+| [`getKeyQuality()`](getKeyQuality.md) | Return the score's key quality (major or minor). |
+| [`setKeyQuality(quality)`](setKeyQuality.md) | Set the score's key quality (major or minor). |
+| [`getKeySignature()`](getKeySignature.md) | Return the score's key signature. |
+| [`setKeySignature(signature)`](setKeySignature.md) | Set the score's key signature. |

@@ -70,11 +70,11 @@ Color has static functions as well - you don't need to create a Color object to 
 
 | Function | Description |
 |---|---|
-| [`Color.select()`](select.md) | Open a color-selection dialog and return the RGB values the user picks. |
-| [`Color.gradient(startColor, endColor, steps)`](gradient.md) | Create a smooth run of colors blending from one color to another. |
-| [`Color.getHSBColor(hue, saturation, brightness)`](getHSBColor.md) | Create a Color from HSB (hue, saturation, brightness) values. |
-| [`Color.HSBtoRGB(hue, saturation, brightness)`](HSBtoRGB.md) | Convert a color from HSB (hue, saturation, brightness) to RGB. |
-| [`Color.RGBtoHSB(red, green, blue)`](RGBtoHSB.md) | Convert a color from RGB to HSB (hue, saturation, brightness). |
-| [`Color.getHexColor(hex)`](getHexColor.md) | Create a Color from a hex color string. |
-| [`Color.HextoRGB(hex)`](HextoRGB.md) | Convert a hex color string to RGB. |
-| [`Color.RGBtoHex(red, green, blue)`](RGBtoHex.md) | Convert red, green, and blue values to a hex color string. |
+| [`select()`](select.md) | Open a color-selection dialog and return the RGB values the user picks. |
+| [`gradient(startColor, endColor, steps)`](gradient.md) | Create a smooth run of colors blending from one color to another. |
+| [`getHSBColor(hue, saturation, brightness)`](getHSBColor.md) | Create a Color from HSB (hue, saturation, brightness) values. |
+| [`HSBtoRGB(hue, saturation, brightness)`](HSBtoRGB.md) | Convert a color from HSB (hue, saturation, brightness) to RGB. |
+| [`RGBtoHSB(red, green, blue)`](RGBtoHSB.md) | Convert a color from RGB to HSB (hue, saturation, brightness). |
+| [`getHexColor(hex)`](getHexColor.md) | Create a Color from a hex color string. |
+| [`HextoRGB(hex)`](HextoRGB.md) | Convert a hex color string to RGB. |
+| [`RGBtoHex(red, green, blue)`](RGBtoHex.md) | Convert red, green, and blue values to a hex color string. |

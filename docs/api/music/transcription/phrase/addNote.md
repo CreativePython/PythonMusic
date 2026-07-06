@@ -2,16 +2,17 @@
 
 Add a note to the end of the phrase.
 
-```python
-phrase.addNote(note)
-```
-
 Give a ready-made Note, or give a pitch and a duration and one is built for you.
 
 ## Parameters
 
+Once an object `phrase` has been created, you can use the following functions:
+
 ```python
-phrase.addNote(note, duration=None)
+phrase.addNote(note)
+```
+```python
+phrase.addNote(note, duration)
 ```
 
 | Parameter | Type | Default | Description |

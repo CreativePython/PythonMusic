@@ -2,6 +2,10 @@
 
 Report whether the envelope is running.
 
+## Parameters
+
+Once an object `envelopetimer` has been created, you can use the following function:
+
 ```python
 envelopetimer.isRunning()
 ```

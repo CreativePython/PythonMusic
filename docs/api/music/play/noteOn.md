@@ -2,16 +2,17 @@
 
 Start a pitch sounding, and leave it sounding.
 
-```python
-Play.noteOn(pitch)
-```
-
 The note keeps playing until you stop it with [Play.noteOff()](noteOff.md).
 
 ## Parameters
 
+`Play.noteOn()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.noteOn(pitch, velocity=100, channel=0, panning=-1)
+Play.noteOn(pitch)
+```
+```python
+Play.noteOn(pitch, velocity, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

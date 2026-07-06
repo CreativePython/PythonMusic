@@ -2,11 +2,9 @@
 
 Set the blue component of the color.
 
-```python
-color.setBlue(blue)
-```
-
 ## Parameters
+
+Once an object `color` has been created, you can use the following function:
 
 ```python
 color.setBlue(blue)

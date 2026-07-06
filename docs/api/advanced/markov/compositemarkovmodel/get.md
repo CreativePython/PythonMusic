@@ -2,13 +2,11 @@
 
 Pick a random symbol to follow a context, using the longest order that fits.
 
-```python
-compositemarkovmodel.get(tupleOfSymbols)
-```
-
 Tries the highest order first and falls back to shorter contexts as needed.
 
 ## Parameters
+
+Once an object `compositemarkovmodel` has been created, you can use the following function:
 
 ```python
 compositemarkovmodel.get(tupleOfSymbols)
@@ -20,6 +18,8 @@ compositemarkovmodel.get(tupleOfSymbols)
 
 ## Returns
 
-```python
-nextSymbol
-```
+`return nextSymbol`
+
+| Value | Type | Description |
+|---|---|---|
+| nextSymbol | `object` | A symbol chosen at random from those that have followed the context, using the longest order that fits. |

@@ -2,11 +2,9 @@
 
 Set the phrase's title.
 
-```python
-phrase.setTitle(title)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.setTitle(title)

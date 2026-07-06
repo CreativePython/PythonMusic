@@ -2,14 +2,15 @@
 
 Stop the sample playing.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.stop()
 ```
-
-## Parameters
-
 ```python
-audiosample.stop(voice=0)
+audiosample.stop(voice)
 ```
 
 | Parameter | Type | Default | Description |

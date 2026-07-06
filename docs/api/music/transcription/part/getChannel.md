@@ -2,6 +2,10 @@
 
 Return the part's MIDI channel.
 
+## Parameters
+
+Once an object `part` has been created, you can use the following function:
+
 ```python
 part.getChannel()
 ```

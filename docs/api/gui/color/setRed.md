@@ -2,11 +2,9 @@
 
 Set the red component of the color.
 
-```python
-color.setRed(red)
-```
-
 ## Parameters
+
+Once an object `color` has been created, you can use the following function:
 
 ```python
 color.setRed(red)

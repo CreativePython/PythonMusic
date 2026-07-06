@@ -2,11 +2,9 @@
 
 Set the phrase's instrument.
 
-```python
-phrase.setInstrument(instrument)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.setInstrument(instrument)

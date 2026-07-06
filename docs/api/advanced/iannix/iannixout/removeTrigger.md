@@ -2,11 +2,9 @@
 
 Remove a trigger from the IanniX score.
 
-```python
-iannixout.removeTrigger(triggerID)
-```
-
 ## Parameters
+
+Once an object `iannixout` has been created, you can use the following function:
 
 ```python
 iannixout.removeTrigger(triggerID)

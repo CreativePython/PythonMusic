@@ -2,11 +2,9 @@
 
 Pan notes hard left and right, alternating from note to note, in place.
 
-```python
-Mod.bounce(material)
-```
-
 ## Parameters
+
+`Mod.bounce()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.bounce(material)

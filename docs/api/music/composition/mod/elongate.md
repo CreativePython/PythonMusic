@@ -2,13 +2,11 @@
 
 Stretch or squeeze every note's length by a scaling factor, in place.
 
-```python
-Mod.elongate(material, scaleFactor)
-```
-
 A factor above 1.0 makes the music longer (slower); below 1.0 makes it shorter (faster). For example, 0.5 halves every duration.
 
 ## Parameters
+
+`Mod.elongate()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.elongate(material, scaleFactor)

@@ -2,14 +2,15 @@
 
 Set the function the timer calls.
 
+## Parameters
+
+Once an object `timer` has been created, you can use the following functions:
+
 ```python
 timer.setFunction(action)
 ```
-
-## Parameters
-
 ```python
-timer.setFunction(action, parameters=None)
+timer.setFunction(action, parameters)
 ```
 
 | Parameter | Type | Default | Description |

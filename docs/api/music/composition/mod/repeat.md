@@ -2,13 +2,11 @@
 
 Repeat the music a set number of times, in place.
 
-```python
-Mod.repeat(material, times)
-```
-
 For example, Mod.repeat(phrase, 2) makes the phrase play twice.
 
 ## Parameters
+
+`Mod.repeat()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.repeat(material, times)

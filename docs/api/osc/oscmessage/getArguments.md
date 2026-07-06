@@ -2,6 +2,10 @@
 
 Return the message's arguments.
 
+## Parameters
+
+Once an object `oscmessage` has been created, you can use the following function:
+
 ```python
 oscmessage.getArguments()
 ```

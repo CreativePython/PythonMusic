@@ -2,13 +2,11 @@
 
 Set the score's time signature.
 
-```python
-score.setTimeSignature(numerator, denominator)
-```
-
 For example, setTimeSignature(3, 4) sets 3/4 time.
 
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setTimeSignature(numerator, denominator)

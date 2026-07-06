@@ -2,6 +2,10 @@
 
 Return the note's pitch as a frequency.
 
+## Parameters
+
+Once an object `note` has been created, you can use the following function:
+
 ```python
 note.getFrequency()
 ```

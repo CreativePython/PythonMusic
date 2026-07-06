@@ -2,11 +2,9 @@
 
 Set the part's title.
 
-```python
-part.setTitle(title)
-```
-
 ## Parameters
+
+Once an object `part` has been created, you can use the following function:
 
 ```python
 part.setTitle(title)

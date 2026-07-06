@@ -2,13 +2,11 @@
 
 Randomly reorder the notes, in place.
 
-```python
-Mod.shuffle(material)
-```
-
 Every note is kept; only their order changes.
 
 ## Parameters
+
+`Mod.shuffle()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.shuffle(material)

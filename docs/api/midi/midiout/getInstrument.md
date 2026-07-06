@@ -2,14 +2,15 @@
 
 Return the instrument set for a channel.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.getInstrument()
 ```
-
-## Parameters
-
 ```python
-midiout.getInstrument(channel=0)
+midiout.getInstrument(channel)
 ```
 
 | Parameter | Type | Default | Description |

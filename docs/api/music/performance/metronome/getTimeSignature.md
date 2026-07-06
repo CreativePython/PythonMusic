@@ -2,6 +2,10 @@
 
 Return the metronome's time signature.
 
+## Parameters
+
+Once an object `metronome` has been created, you can use the following function:
+
 ```python
 metronome.getTimeSignature()
 ```

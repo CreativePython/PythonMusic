@@ -2,13 +2,9 @@
 
 Create a Color from HSB (hue, saturation, brightness) values.
 
-```python
-Color.getHSBColor(hue, saturation, brightness)
-```
-
-Color.getHSBColor is a static utility. Call it on the class itself, for example Color.getHSBColor().
-
 ## Parameters
+
+`Color.getHSBColor()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.getHSBColor(hue, saturation, brightness)

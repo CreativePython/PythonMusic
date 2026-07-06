@@ -2,6 +2,10 @@
 
 Report whether the ramp is running.
 
+## Parameters
+
+Once an object `linearramp` has been created, you can use the following function:
+
 ```python
 linearramp.isRunning()
 ```

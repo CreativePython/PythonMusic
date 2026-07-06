@@ -2,6 +2,10 @@
 
 Return the duration of the shortest note in the phrase.
 
+## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
+
 ```python
 phrase.getShortestDuration()
 ```

@@ -2,6 +2,10 @@
 
 Return the envelope's delay time.
 
+## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
+
 ```python
 envelope.getDelayTime()
 ```

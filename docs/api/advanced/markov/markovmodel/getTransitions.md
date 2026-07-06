@@ -2,13 +2,11 @@
 
 Return every symbol that has followed a context, with how often each did.
 
-```python
-markovmodel.getTransitions(tupleOfSymbols)
-```
-
 The context must already exist in the model. The two lists are parallel.
 
 ## Parameters
+
+Once an object `markovmodel` has been created, you can use the following function:
 
 ```python
 markovmodel.getTransitions(tupleOfSymbols)

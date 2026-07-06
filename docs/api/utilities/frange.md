@@ -2,10 +2,6 @@
 
 Build a list of evenly spaced numbers, allowing fractional steps.
 
-```python
-frange(start, stop, step)
-```
-
 Like Python's range(), but step may be a fraction, for example 0.5. The numbers are rounded to the number of decimal places in step. As with range(), stop is not included, and step may be negative to count down.
 
 ## Parameters

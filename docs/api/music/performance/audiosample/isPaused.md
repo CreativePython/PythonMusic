@@ -2,14 +2,15 @@
 
 Report whether the sample is currently paused.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.isPaused()
 ```
-
-## Parameters
-
 ```python
-audiosample.isPaused(voice=0)
+audiosample.isPaused(voice)
 ```
 
 | Parameter | Type | Default | Description |

@@ -2,6 +2,10 @@
 
 Return the color's red, green, blue, and alpha components together.
 
+## Parameters
+
+Once an object `color` has been created, you can use the following function:
+
 ```python
 color.getRGBA()
 ```

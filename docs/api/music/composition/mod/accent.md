@@ -2,14 +2,15 @@
 
 Make certain beats of each measure louder, in place.
 
+## Parameters
+
+`Mod.accent()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
 Mod.accent(material, meter)
 ```
-
-## Parameters
-
 ```python
-Mod.accent(material, meter, accentedBeats=[0.0], accentAmount=20)
+Mod.accent(material, meter, accentedBeats, accentAmount)
 ```
 
 | Parameter | Type | Default | Description |

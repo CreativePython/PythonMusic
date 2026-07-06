@@ -2,16 +2,17 @@
 
 Pause the sample, remembering where it is.
 
-```python
-audiosample.pause()
-```
-
 Use [resume()](resume.md) to continue from this point.
 
 ## Parameters
 
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
-audiosample.pause(voice=0)
+audiosample.pause()
+```
+```python
+audiosample.pause(voice)
 ```
 
 | Parameter | Type | Default | Description |

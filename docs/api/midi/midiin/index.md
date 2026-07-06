@@ -42,12 +42,12 @@ Once *midiin* has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`midiin.onNoteOn(action)`](onNoteOn.md) | Set up a function to call whenever a note is played on the device. |
-| [`midiin.onNoteOff(action)`](onNoteOff.md) | Set up a function to call whenever a note is released on the device. |
-| [`midiin.onSetInstrument(action)`](onSetInstrument.md) | Set up a function to call whenever the instrument is changed on the device. |
-| [`midiin.onInput(eventType, action)`](onInput.md) | Set up a function to call for a particular kind of MIDI event. |
-| [`midiin.showMessages()`](showMessages.md) | Start printing incoming MIDI messages to the console. |
-| [`midiin.hideMessages()`](hideMessages.md) | Stop printing incoming MIDI messages to the console. |
-| [`midiin.selectMidiInput()`](selectMidiInput.md) | Connect to a preferred input MIDI device, or open a window to pick one. |
-| [`midiin.openInputDevice(selectedItem)`](openInputDevice.md) | Open a named input MIDI device. |
-| [`midiin.close()`](close.md) | Close the input device and free its resources. |
+| [`onNoteOn(action)`](onNoteOn.md) | Set up a function to call whenever a note is played on the device. |
+| [`onNoteOff(action)`](onNoteOff.md) | Set up a function to call whenever a note is released on the device. |
+| [`onSetInstrument(action)`](onSetInstrument.md) | Set up a function to call whenever the instrument is changed on the device. |
+| [`onInput(eventType, action)`](onInput.md) | Set up a function to call for a particular kind of MIDI event. |
+| [`showMessages()`](showMessages.md) | Start printing incoming MIDI messages to the console. |
+| [`hideMessages()`](hideMessages.md) | Stop printing incoming MIDI messages to the console. |
+| [`selectMidiInput()`](selectMidiInput.md) | Connect to a preferred input MIDI device, or open a window to pick one. |
+| [`openInputDevice(selectedItem)`](openInputDevice.md) | Open a named input MIDI device. |
+| [`close()`](close.md) | Close the input device and free its resources. |

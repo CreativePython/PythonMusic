@@ -2,13 +2,11 @@
 
 Send a raw MIDI message to the device.
 
-```python
-midiout.sendMidiMessage(eventType, channel, data1, data2)
-```
-
 For messages the other methods do not cover. See the MIDI standard, or your synthesizer's documentation, for the meaning of each value.
 
 ## Parameters
+
+Once an object `midiout` has been created, you can use the following function:
 
 ```python
 midiout.sendMidiMessage(eventType, channel, data1, data2)

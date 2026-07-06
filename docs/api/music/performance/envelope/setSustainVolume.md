@@ -2,11 +2,9 @@
 
 Set the envelope's sustain volume.
 
-```python
-envelope.setSustainVolume(sustainVolume)
-```
-
 ## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
 
 ```python
 envelope.setSustainVolume(sustainVolume)

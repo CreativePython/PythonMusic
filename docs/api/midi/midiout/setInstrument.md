@@ -2,16 +2,17 @@
 
 Set the instrument for a channel.
 
-```python
-midiout.setInstrument(instrument)
-```
-
 Notes played on this channel will sound using this instrument.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.setInstrument(instrument, channel=0)
+midiout.setInstrument(instrument)
+```
+```python
+midiout.setInstrument(instrument, channel)
 ```
 
 | Parameter | Type | Default | Description |

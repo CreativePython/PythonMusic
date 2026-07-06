@@ -2,13 +2,11 @@
 
 Create a smooth run of colors blending from one color to another.
 
-```python
-Color.gradient(startColor, endColor, steps)
-```
-
-The blend is computed in a perceptual color space, so the steps look evenly spaced to the eye. Color.gradient is a static utility. Call it on the class itself, for example Color.gradient(). Also available as colorGradient().
+The blend is computed in a perceptual color space, so the steps look evenly spaced to the eye. Also available as colorGradient().
 
 ## Parameters
+
+`Color.gradient()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.gradient(startColor, endColor, steps)

@@ -2,14 +2,15 @@
 
 Add a chord (several pitches sounded together) to the end of the phrase.
 
+## Parameters
+
+Once an object `phrase` has been created, you can use the following functions:
+
 ```python
 phrase.addChord(listOfPitches, duration)
 ```
-
-## Parameters
-
 ```python
-phrase.addChord(listOfPitches, duration, dynamic=85, pan=0.5, length=None)
+phrase.addChord(listOfPitches, duration, dynamic, pan, length)
 ```
 
 | Parameter | Type | Default | Description |

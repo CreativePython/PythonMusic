@@ -2,16 +2,17 @@
 
 Connect to a preferred output MIDI device, or open a window to pick one.
 
-```python
-midiout.selectMidiOutput()
-```
-
 If the named device is not available, a window opens listing the output devices found.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.selectMidiOutput(preferredDevice='')
+midiout.selectMidiOutput()
+```
+```python
+midiout.selectMidiOutput(preferredDevice)
 ```
 
 | Parameter | Type | Default | Description |

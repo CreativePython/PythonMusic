@@ -2,16 +2,17 @@
 
 Stop a frequency from sounding on the device.
 
-```python
-midiout.frequencyOff(frequency)
-```
-
 If the frequency is not sounding on this channel, nothing happens.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.frequencyOff(frequency, channel=0)
+midiout.frequencyOff(frequency)
+```
+```python
+midiout.frequencyOff(frequency, channel)
 ```
 
 | Parameter | Type | Default | Description |

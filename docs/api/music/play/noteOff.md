@@ -2,16 +2,17 @@
 
 Stop a pitch from sounding.
 
-```python
-Play.noteOff(pitch)
-```
-
 If the pitch is not sounding on this channel, nothing happens.
 
 ## Parameters
 
+`Play.noteOff()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.noteOff(pitch, channel=0)
+Play.noteOff(pitch)
+```
+```python
+Play.noteOff(pitch, channel)
 ```
 
 | Parameter | Type | Default | Description |

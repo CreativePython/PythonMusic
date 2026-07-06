@@ -2,11 +2,9 @@
 
 Show the music as a piano-roll display.
 
-```python
-View.pianoRoll(material)
-```
-
 ## Parameters
+
+`View.pianoRoll()` is a static utility. Call it on the `View` class itself, for example:
 
 ```python
 View.pianoRoll(material)

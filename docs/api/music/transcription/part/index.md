@@ -53,33 +53,33 @@ Once a Part `part` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`part.addPhrase(phrase)`](addPhrase.md) | Add a phrase to the part. |
-| [`part.addPhraseList(phraseList)`](addPhraseList.md) | Add several phrases to the part at once. |
+| [`addPhrase(phrase)`](addPhrase.md) | Add a phrase to the part. |
+| [`addPhraseList(phraseList)`](addPhraseList.md) | Add several phrases to the part at once. |
 
 You can also set the instrument, tempo, dynamic, volume, panning, and title of the phrase.
 
 | Function | Description |
 |---|---|
-| [`part.getInstrument()`](getInstrument.md) | Return the part's instrument. |
-| [`part.setInstrument(instrument)`](setInstrument.md) | Set the part's instrument. |
-| [`part.getTempo()`](getTempo.md) | Return the part's tempo. |
-| [`part.setTempo(tempo)`](setTempo.md) | Set the part's tempo. |
-| [`part.setDynamic(dynamic)`](setDynamic.md) | Set how loud every note in the part is. |
-| [`part.getVolume()`](getVolume.md) | Return the part's volume. |
-| [`part.setVolume(volume)`](setVolume.md) | Set the part's volume. |
-| [`part.setPan(panning)`](setPan.md) | Set the stereo position of every note in the part. |
-| [`part.getTitle()`](getTitle.md) | Return the part's title. |
-| [`part.setTitle(title)`](setTitle.md) | Set the part's title. |
+| [`getInstrument()`](getInstrument.md) | Return the part's instrument. |
+| [`setInstrument(instrument)`](setInstrument.md) | Set the part's instrument. |
+| [`getTempo()`](getTempo.md) | Return the part's tempo. |
+| [`setTempo(tempo)`](setTempo.md) | Set the part's tempo. |
+| [`setDynamic(dynamic)`](setDynamic.md) | Set how loud every note in the part is. |
+| [`getVolume()`](getVolume.md) | Return the part's volume. |
+| [`setVolume(volume)`](setVolume.md) | Set the part's volume. |
+| [`setPan(panning)`](setPan.md) | Set the stereo position of every note in the part. |
+| [`getTitle()`](getTitle.md) | Return the part's title. |
+| [`setTitle(title)`](setTitle.md) | Set the part's title. |
 
 Finally, here are some additional Part functions:
 
 | Function | Description |
 |---|---|
-| [`part.copy()`](copy.md) | Return a copy of the part. |
-| [`part.empty()`](empty.md) | Remove every phrase from the part. |
-| [`part.getSize()`](getSize.md) | Return how many phrases are in the part. |
-| [`part.getPhraseList()`](getPhraseList.md) | Return the part's phrases. |
-| [`part.getStartTime()`](getStartTime.md) | Return when the part starts. |
-| [`part.getEndTime()`](getEndTime.md) | Return when the part ends. |
-| [`part.getChannel()`](getChannel.md) | Return the part's MIDI channel. |
-| [`part.setChannel(channel)`](setChannel.md) | Set the part's MIDI channel. |
+| [`copy()`](copy.md) | Return a copy of the part. |
+| [`empty()`](empty.md) | Remove every phrase from the part. |
+| [`getSize()`](getSize.md) | Return how many phrases are in the part. |
+| [`getPhraseList()`](getPhraseList.md) | Return the part's phrases. |
+| [`getStartTime()`](getStartTime.md) | Return when the part starts. |
+| [`getEndTime()`](getEndTime.md) | Return when the part ends. |
+| [`getChannel()`](getChannel.md) | Return the part's MIDI channel. |
+| [`setChannel(channel)`](setChannel.md) | Set the part's MIDI channel. |

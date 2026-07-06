@@ -2,13 +2,11 @@
 
 Join neighboring rests into one longer rest, in place.
 
-```python
-Mod.tieRests(material)
-```
-
 This lowers the note count.
 
 ## Parameters
+
+`Mod.tieRests()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.tieRests(material)

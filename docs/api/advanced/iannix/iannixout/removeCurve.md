@@ -2,11 +2,9 @@
 
 Remove a curve from the IanniX score.
 
-```python
-iannixout.removeCurve(curveID)
-```
-
 ## Parameters
+
+Once an object `iannixout` has been created, you can use the following function:
 
 ```python
 iannixout.removeCurve(curveID)

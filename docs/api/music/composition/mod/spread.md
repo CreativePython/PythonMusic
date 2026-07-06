@@ -2,11 +2,9 @@
 
 Randomly pan the notes for an even spread across the stereo field, in place.
 
-```python
-Mod.spread(material)
-```
-
 ## Parameters
+
+`Mod.spread()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.spread(material)

@@ -2,11 +2,9 @@
 
 Set up a function to call as a given cursor moves through the IanniX score.
 
-```python
-iannixin.onCursor(cursorID, action)
-```
-
 ## Parameters
+
+Once an object `iannixin` has been created, you can use the following function:
 
 ```python
 iannixin.onCursor(cursorID, action)

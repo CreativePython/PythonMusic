@@ -2,10 +2,6 @@
 
 Fit a Zipf trendline to a set of ranks and counts.
 
-```python
-getSlopeR2(ranks, counts)
-```
-
 Fits a trendline to the rank-against-count plot on a log-log scale and returns its slope, fit, and y-intercept. If the slope or fit cannot be worked out, zero is returned for it. Two special cases: a single repeated value (a vertical trendline) gives a slope and fit of 0; a perfectly even spread (a horizontal trendline) gives a slope of 0 and a fit of 1.
 
 ## Parameters

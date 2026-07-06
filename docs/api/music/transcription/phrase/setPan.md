@@ -2,11 +2,9 @@
 
 Set the stereo position of every note in the phrase.
 
-```python
-phrase.setPan(pan)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.setPan(pan)

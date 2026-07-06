@@ -2,13 +2,11 @@
 
 Write music library material to a MIDI file.
 
-```python
-Write.midi(material, filename)
-```
-
 If the file already exists, it is overwritten.
 
 ## Parameters
+
+`Write.midi()` is a static utility. Call it on the `Write` class itself, for example:
 
 ```python
 Write.midi(material, filename)

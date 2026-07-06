@@ -2,11 +2,9 @@
 
 Remove the note at a given position from the phrase.
 
-```python
-phrase.removeNote(index)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.removeNote(index)

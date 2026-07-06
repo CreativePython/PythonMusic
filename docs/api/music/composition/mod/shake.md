@@ -2,14 +2,15 @@
 
 Randomly vary the notes' volumes for an uneven, human feel, in place.
 
+## Parameters
+
+`Mod.shake()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
 Mod.shake(material)
 ```
-
-## Parameters
-
 ```python
-Mod.shake(material, amount=20)
+Mod.shake(material, amount)
 ```
 
 | Parameter | Type | Default | Description |

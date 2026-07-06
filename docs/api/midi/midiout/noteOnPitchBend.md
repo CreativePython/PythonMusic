@@ -2,16 +2,17 @@
 
 Start a pitch sounding on the device with a pitch bend, and leave it sounding.
 
-```python
-midiout.noteOnPitchBend(pitch)
-```
-
 Stop it with [noteOff()](noteOff.md).
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.noteOnPitchBend(pitch, bend=0, dynamic=100, channel=0, panning=-1)
+midiout.noteOnPitchBend(pitch)
+```
+```python
+midiout.noteOnPitchBend(pitch, bend, dynamic, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

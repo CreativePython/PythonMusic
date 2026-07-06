@@ -2,16 +2,17 @@
 
 Connect to a preferred input MIDI device, or open a window to pick one.
 
-```python
-midiin.selectMidiInput()
-```
-
 If the named device is not available, a window opens listing the input devices found.
 
 ## Parameters
 
+Once an object `midiin` has been created, you can use the following functions:
+
 ```python
-midiin.selectMidiInput(preferredDevice='')
+midiin.selectMidiInput()
+```
+```python
+midiin.selectMidiInput(preferredDevice)
 ```
 
 | Parameter | Type | Default | Description |

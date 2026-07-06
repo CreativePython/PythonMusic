@@ -2,14 +2,15 @@
 
 Set the pitch bend for a channel, used for notes played next.
 
+## Parameters
+
+`Play.setPitchBend()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.setPitchBend()
 ```
-
-## Parameters
-
 ```python
-Play.setPitchBend(bend=0, channel=0)
+Play.setPitchBend(bend, channel)
 ```
 
 | Parameter | Type | Default | Description |

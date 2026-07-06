@@ -2,10 +2,6 @@
 
 Schedule a function to run after a delay, or to repeat at a fixed interval.
 
-```python
-timer = Timer(timeInterval, action)
-```
-
 A Timer waits the given interval, then calls your function, and can either stop or repeatedly call it at that interval. Start it with [start()](start.md), and stop it with [stop()](stop.md).
 
 For example:
@@ -18,11 +14,14 @@ will print “It’s ticking…” continuously, every half second.
 
 ## Creating a Timer
 
-```python
-Timer(timeInterval, action, parameters=None, repeat=True)
-```
+You can create a Timer using the following functions:
 
-You can create a Timer with the following parameters:
+```python
+Timer(timeInterval, action)
+```
+```python
+Timer(timeInterval, action, parameters, repeat)
+```
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -57,11 +56,11 @@ Once a Timer `timer` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`timer.start()`](start.md) | Start the timer. |
-| [`timer.stop()`](stop.md) | Stop the timer. |
-| [`timer.getDelay()`](getDelay.md) | Return the timer's interval. |
-| [`timer.setDelay(timeInterval)`](setDelay.md) | Set the timer's interval. |
-| [`timer.isRunning()`](isRunning.md) | Report whether the timer is running. |
-| [`timer.setFunction(action)`](setFunction.md) | Set the function the timer calls. |
-| [`timer.getRepeat()`](getRepeat.md) | Report whether the timer repeats. |
-| [`timer.setRepeat(repeat)`](setRepeat.md) | Set whether the timer repeats. |
+| [`start()`](start.md) | Start the timer. |
+| [`stop()`](stop.md) | Stop the timer. |
+| [`getDelay()`](getDelay.md) | Return the timer's interval. |
+| [`setDelay(timeInterval)`](setDelay.md) | Set the timer's interval. |
+| [`isRunning()`](isRunning.md) | Report whether the timer is running. |
+| [`setFunction(action)`](setFunction.md) | Set the function the timer calls. |
+| [`getRepeat()`](getRepeat.md) | Report whether the timer repeats. |
+| [`setRepeat(repeat)`](setRepeat.md) | Set whether the timer repeats. |

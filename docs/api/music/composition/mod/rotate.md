@@ -2,16 +2,17 @@
 
 Shift the notes around the phrase, in place.
 
-```python
-Mod.rotate(phrase)
-```
-
 Each shift moves the last note to the front, so the first note becomes the second, and so on.
 
 ## Parameters
 
+`Mod.rotate()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
-Mod.rotate(phrase, times=1)
+Mod.rotate(phrase)
+```
+```python
+Mod.rotate(phrase, times)
 ```
 
 | Parameter | Type | Default | Description |

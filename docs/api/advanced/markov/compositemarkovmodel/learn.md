@@ -2,13 +2,11 @@
 
 Learn the patterns in a sequence of symbols, at every order.
 
-```python
-compositemarkovmodel.learn(listOfSymbols)
-```
-
 Trains each of the model's orders on the sequence. Call it more than once to keep training on further sequences.
 
 ## Parameters
+
+Once an object `compositemarkovmodel` has been created, you can use the following function:
 
 ```python
 compositemarkovmodel.learn(listOfSymbols)

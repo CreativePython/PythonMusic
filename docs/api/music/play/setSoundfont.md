@@ -2,13 +2,11 @@
 
 Set the soundfont used for playback.
 
-```python
-Play.setSoundfont(soundfont)
-```
-
 A soundfont supplies the instrument sounds the synthesizer plays.
 
 ## Parameters
+
+`Play.setSoundfont()` is a static utility. Call it on the `Play` class itself, for example:
 
 ```python
 Play.setSoundfont(soundfont)

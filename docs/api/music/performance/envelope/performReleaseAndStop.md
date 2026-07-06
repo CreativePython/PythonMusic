@@ -2,13 +2,11 @@
 
 Apply the envelope's release (fade-out) to a voice of an audio sample, then stop it.
 
-```python
-envelope.performReleaseAndStop(audioSample, voice)
-```
-
 Usually called for you by Play.audioOff().
 
 ## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
 
 ```python
 envelope.performReleaseAndStop(audioSample, voice)

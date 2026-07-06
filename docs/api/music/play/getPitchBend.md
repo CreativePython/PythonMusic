@@ -2,14 +2,15 @@
 
 Return the current pitch bend for a channel.
 
+## Parameters
+
+`Play.getPitchBend()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.getPitchBend()
 ```
-
-## Parameters
-
 ```python
-Play.getPitchBend(channel=0)
+Play.getPitchBend(channel)
 ```
 
 | Parameter | Type | Default | Description |

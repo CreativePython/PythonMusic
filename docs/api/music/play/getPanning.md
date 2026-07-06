@@ -2,14 +2,15 @@
 
 Return the main stereo position for a channel.
 
+## Parameters
+
+`Play.getPanning()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.getPanning()
 ```
-
-## Parameters
-
 ```python
-Play.getPanning(channel=0)
+Play.getPanning(channel)
 ```
 
 | Parameter | Type | Default | Description |

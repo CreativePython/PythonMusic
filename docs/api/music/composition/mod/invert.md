@@ -2,16 +2,17 @@
 
 Flip the pitches of a phrase around a center pitch, in place.
 
-```python
-Mod.invert(phrase, pitchAxis)
-```
-
 A note that is some distance above the center pitch ends up the same distance below it, and vice versa. The order of the notes does not change.
 
 ## Parameters
 
+`Mod.invert()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
-Mod.invert(phrase, pitchAxis, scale=CHROMATIC_SCALE, key=0)
+Mod.invert(phrase, pitchAxis)
+```
+```python
+Mod.invert(phrase, pitchAxis, scale, key)
 ```
 
 | Parameter | Type | Default | Description |

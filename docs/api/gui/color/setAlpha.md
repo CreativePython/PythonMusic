@@ -2,11 +2,9 @@
 
 Set the alpha (transparency) component of the color.
 
-```python
-color.setAlpha(alpha)
-```
-
 ## Parameters
+
+Once an object `color` has been created, you can use the following function:
 
 ```python
 color.setAlpha(alpha)

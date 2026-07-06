@@ -2,13 +2,11 @@
 
 Move every phrase's start time earlier or later, in place.
 
-```python
-Mod.shift(material, time)
-```
-
 A positive time moves the music later; a negative time moves it earlier, but not before the start of the piece (0.0).
 
 ## Parameters
+
+`Mod.shift()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.shift(material, time)

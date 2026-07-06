@@ -2,14 +2,15 @@
 
 Fade the music down from its normal volume to silence, in place.
 
+## Parameters
+
+`Mod.fadeOut()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
 Mod.fadeOut(material, fadeLength)
 ```
-
-## Parameters
-
 ```python
-Mod.fadeOut(material, fadeLength, _endTime=None)
+Mod.fadeOut(material, fadeLength, _endTime)
 ```
 
 | Parameter | Type | Default | Description |

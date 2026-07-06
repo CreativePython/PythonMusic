@@ -5742,6 +5742,29 @@ class MidiSequence():
       defaultTempo = self.defaultTempo
       return defaultTempo
 
+   def setVolume(self, volume):
+      """Set the sequence's playback volume, making it louder or softer.
+
+      Args:
+          volume (int): The new volume, from 0 (silent) to 127 (loudest).
+      """
+      try:
+         volume = int(volume)   # convert to integer
+
+      except Exception:
+         return   # invalid volume, so do nothing
+
+      self.volume = max(0, min(127, volume))   # clamp volume to valid MIDI range
+
+   def getVolume(self):
+      """Return the sequence's current playback volume.
+
+      Returns:
+          volume (int): The current volume, from 0 (silent) to 127 (loudest).
+      """
+      volume = self.volume
+      return volume
+
    def _extractEvents(self, score):
       """"""
       events = []
@@ -5850,8 +5873,12 @@ class MidiSequence():
          # calculate remaining duration for this note
          remainingMs = max(0, event['endMs'] - pos)
 
+         # scale this note's loudness by the sequence's overall volume (0 to 127),
+         # so setVolume() can make the whole sequence louder or softer while it plays
+         scaledVelocity = int(event['velocity'] * self.volume / 127)
+
          # use Play.note() which handles noteOn/noteOff automatically with proper timing
-         Play.note(transPitch, 0, remainingMs, event['velocity'], event['channel'], event['panning'])
+         Play.note(transPitch, 0, remainingMs, scaledVelocity, event['channel'], event['panning'])
 
          self._nextEventIndex += 1   # move to next event
 

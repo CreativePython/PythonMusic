@@ -2,11 +2,9 @@
 
 Play music library material through the synthesizer.
 
-```python
-Play.midi(material)
-```
-
 ## Parameters
+
+`Play.midi()` is a static utility. Call it on the `Play` class itself, for example:
 
 ```python
 Play.midi(material)

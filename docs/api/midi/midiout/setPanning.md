@@ -2,16 +2,17 @@
 
 Set the main stereo position for a channel.
 
-```python
-midiout.setPanning(panning)
-```
-
 The default is the middle (64). Note that this does not affect a score played through [play()](play.md).
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.setPanning(panning, channel=0)
+midiout.setPanning(panning)
+```
+```python
+midiout.setPanning(panning, channel)
 ```
 
 | Parameter | Type | Default | Description |

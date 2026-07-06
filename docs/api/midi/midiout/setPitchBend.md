@@ -2,14 +2,15 @@
 
 Set the pitch bend for a channel, used for notes played next.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.setPitchBend()
 ```
-
-## Parameters
-
 ```python
-midiout.setPitchBend(bend=0, channel=0)
+midiout.setPitchBend(bend, channel)
 ```
 
 | Parameter | Type | Default | Description |

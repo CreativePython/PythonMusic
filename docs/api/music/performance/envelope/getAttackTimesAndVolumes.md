@@ -2,6 +2,10 @@
 
 Return the envelope's attack times and the volumes reached at them.
 
+## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
+
 ```python
 envelope.getAttackTimesAndVolumes()
 ```

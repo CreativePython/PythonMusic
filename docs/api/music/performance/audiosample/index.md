@@ -41,21 +41,21 @@ Once an AudioSample `sample` has been created, the following functions are avail
 
 | Function | Description |
 |---|---|
-| [`sample.play()`](play.md) | Play the sample once. |
-| [`sample.loop()`](loop.md) | Play the sample over and over. |
-| [`sample.stop()`](stop.md) | Stop the sample playing. |
-| [`sample.pause()`](pause.md) | Pause the sample, remembering where it is. |
-| [`sample.resume()`](resume.md) | Resume the sample from where it was paused. |
-| [`sample.isPlaying()`](isPlaying.md) | Report whether the sample is currently playing. |
-| [`sample.isPaused()`](isPaused.md) | Report whether the sample is currently paused. |
-| [`sample.getPitch()`](getPitch.md) | Return the sample's current playback pitch. |
-| [`sample.setPitch(pitch)`](setPitch.md) | Set the sample's playback pitch, pitch-shifting it from its base pitch. |
-| [`sample.getFrequency()`](getFrequency.md) | Return the sample's current playback frequency. |
-| [`sample.setFrequency(freq)`](setFrequency.md) | Set the sample's playback frequency, pitch-shifting it. |
-| [`sample.getPanning()`](getPanning.md) | Return the sample's stereo position. |
-| [`sample.setPanning(panning)`](setPanning.md) | Set the sample's stereo position. |
-| [`sample.getVolume()`](getVolume.md) | Return how loud the sample is. |
-| [`sample.setVolume(volume)`](setVolume.md) | Set how loud the sample is. |
-| [`sample.getFrameRate()`](getFrameRate.md) | Return the sample's recording rate. |
+| [`play()`](play.md) | Play the sample once. |
+| [`loop()`](loop.md) | Play the sample over and over. |
+| [`stop()`](stop.md) | Stop the sample playing. |
+| [`pause()`](pause.md) | Pause the sample, remembering where it is. |
+| [`resume()`](resume.md) | Resume the sample from where it was paused. |
+| [`isPlaying()`](isPlaying.md) | Report whether the sample is currently playing. |
+| [`isPaused()`](isPaused.md) | Report whether the sample is currently paused. |
+| [`getPitch()`](getPitch.md) | Return the sample's current playback pitch. |
+| [`setPitch(pitch)`](setPitch.md) | Set the sample's playback pitch, pitch-shifting it from its base pitch. |
+| [`getFrequency()`](getFrequency.md) | Return the sample's current playback frequency. |
+| [`setFrequency(freq)`](setFrequency.md) | Set the sample's playback frequency, pitch-shifting it. |
+| [`getPanning()`](getPanning.md) | Return the sample's stereo position. |
+| [`setPanning(panning)`](setPanning.md) | Set the sample's stereo position. |
+| [`getVolume()`](getVolume.md) | Return how loud the sample is. |
+| [`setVolume(volume)`](setVolume.md) | Set how loud the sample is. |
+| [`getFrameRate()`](getFrameRate.md) | Return the sample's recording rate. |
 
 **NOTE:** All the above functions have an optional parameter, voice – to indicate a particular voice, if desired. For most practical situations this is not necessary to use.

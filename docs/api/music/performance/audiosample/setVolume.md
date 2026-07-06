@@ -2,14 +2,15 @@
 
 Set how loud the sample is.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.setVolume(volume)
 ```
-
-## Parameters
-
 ```python
-audiosample.setVolume(volume, delay=2, voice=0)
+audiosample.setVolume(volume, delay, voice)
 ```
 
 | Parameter | Type | Default | Description |

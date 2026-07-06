@@ -2,13 +2,11 @@
 
 Set the envelope's attack times and the volumes reached at them.
 
-```python
-envelope.setAttackTimesAndVolumes(attackTimes, attackVolumes)
-```
-
 The two lists are parallel and must be the same length.
 
 ## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
 
 ```python
 envelope.setAttackTimesAndVolumes(attackTimes, attackVolumes)

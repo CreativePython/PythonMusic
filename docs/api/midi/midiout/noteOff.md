@@ -2,16 +2,17 @@
 
 Stop a pitch from sounding on the device.
 
-```python
-midiout.noteOff(pitch)
-```
-
 If the pitch is not sounding on this channel, nothing happens.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.noteOff(pitch, channel=0)
+midiout.noteOff(pitch)
+```
+```python
+midiout.noteOff(pitch, channel)
 ```
 
 | Parameter | Type | Default | Description |

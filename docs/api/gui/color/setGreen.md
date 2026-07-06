@@ -2,11 +2,9 @@
 
 Set the green component of the color.
 
-```python
-color.setGreen(green)
-```
-
 ## Parameters
+
+Once an object `color` has been created, you can use the following function:
 
 ```python
 color.setGreen(green)

@@ -2,11 +2,9 @@
 
 Set the sequence's playback tempo.
 
-```python
-midisequence.setTempo(bpm)
-```
-
 ## Parameters
+
+Once an object `midisequence` has been created, you can use the following function:
 
 ```python
 midisequence.setTempo(bpm)

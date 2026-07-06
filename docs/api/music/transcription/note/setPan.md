@@ -2,11 +2,9 @@
 
 Set the note's stereo position.
 
-```python
-note.setPan(pan)
-```
-
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setPan(pan)

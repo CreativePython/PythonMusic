@@ -2,11 +2,9 @@
 
 Set up a function to call whenever a note is played on the device.
 
-```python
-midiin.onNoteOn(action)
-```
-
 ## Parameters
+
+Once an object `midiin` has been created, you can use the following function:
 
 ```python
 midiin.onNoteOn(action)

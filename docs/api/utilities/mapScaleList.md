@@ -2,16 +2,15 @@
 
 Convert a list of numbers from one range to their matching places in another range.
 
-```python
-mapScaleList(valueList, minValue, maxValue, minResult, maxResult)
-```
-
-Like [mapScale()](mapScale.md), but for a whole list.  A new list is returned; the original list is left unchanged.
+Like [mapScale()](mapScale.md), but for a whole list. A new list is returned; the original list is left unchanged.
 
 ## Parameters
 
 ```python
-mapScaleList(valueList, minValue, maxValue, minResult, maxResult, scale=None, key=None)
+mapScaleList(valueList, minValue, maxValue, minResult, maxResult)
+```
+```python
+mapScaleList(valueList, minValue, maxValue, minResult, maxResult, scale, key)
 ```
 
 | Parameter | Type | Default | Description |

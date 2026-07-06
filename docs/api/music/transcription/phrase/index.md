@@ -32,23 +32,23 @@ Once a Phrase `phrase` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`phrase.addNote(note)`](addNote.md) | Add a note to the end of the phrase. |
-| [`phrase.addNote(pitch, duration)`](addNote.md) | Add a new note with pitch and duration to the end of the phrase. |
-| [`phrase.addNoteList(listOfPitches, listOfDurations)`](addNoteList.md) | Add many notes to the end of the phrase at once. |
-| [`phrase.addChord(listOfPitches, duration)`](addChord.md) | Add a chord (several pitches sounded together) to the end of the phrase. |
+| [`addNote(note)`](addNote.md) | Add a note to the end of the phrase. |
+| [`addNote(pitch, duration)`](addNote.md) | Add a new note with pitch and duration to the end of the phrase. |
+| [`addNoteList(listOfPitches, listOfDurations)`](addNoteList.md) | Add many notes to the end of the phrase at once. |
+| [`addChord(listOfPitches, duration)`](addChord.md) | Add a chord (several pitches sounded together) to the end of the phrase. |
 
 You can also set the instrument, tempo, dynamic, panning, and title of the phrase.
 
 | Function | Description |
 |---|---|
-| [`phrase.getInstrument()`](getInstrument.md) | Return the phrase's instrument. |
-| [`phrase.setInstrument(instrument)`](setInstrument.md) | Set the phrase's instrument. |
-| [`phrase.getTempo()`](getTempo.md) | Return the phrase's tempo. |
-| [`phrase.setTempo(tempo)`](setTempo.md) | Set the phrase's tempo. |
-| [`phrase.setDynamic(dynamic)`](setDynamic.md) | Set how loud every note in the phrase is. |
-| [`phrase.setPan(pan)`](setPan.md) | Set the stereo position of every note in the phrase. |
-| [`phrase.getTitle()`](getTitle.md) | Return the phrase's title. |
-| [`phrase.setTitle(title)`](setTitle.md) | Set the phrase's title. |
+| [`getInstrument()`](getInstrument.md) | Return the phrase's instrument. |
+| [`setInstrument(instrument)`](setInstrument.md) | Set the phrase's instrument. |
+| [`getTempo()`](getTempo.md) | Return the phrase's tempo. |
+| [`setTempo(tempo)`](setTempo.md) | Set the phrase's tempo. |
+| [`setDynamic(dynamic)`](setDynamic.md) | Set how loud every note in the phrase is. |
+| [`setPan(pan)`](setPan.md) | Set the stereo position of every note in the phrase. |
+| [`getTitle()`](getTitle.md) | Return the phrase's title. |
+| [`setTitle(title)`](setTitle.md) | Set the phrase's title. |
 
 **NOTE:** You may set the instrument on a single phrase. If you intend to add the phrase to a [Part](../part/index.md), then set the instrument at the Part level.  (If you do both, you may get unexpected results.)
 
@@ -56,17 +56,17 @@ Finally, here are some additional Phrase functions:
 
 | Function | Description |
 |---|---|
-| [`phrase.copy()`](copy.md) | Return a copy of the phrase. |
-| [`phrase.empty()`](empty.md) | Remove every note from the phrase. |
-| [`phrase.getSize()`](getSize.md) | Return how many notes are in the phrase. |
-| [`phrase.getNote(index)`](getNote.md) | Return the note at a given position, without changing the phrase. |
-| [`phrase.getNoteList()`](getNoteList.md) | Return the phrase's notes. |
-| [`phrase.getNoteStartTime(index)`](getNoteStartTime.md) | Return when the note at a given position starts. |
-| [`phrase.getStartTime()`](getStartTime.md) | Return when the phrase starts. |
-| [`phrase.setStartTime(startTime)`](setStartTime.md) | Set when the phrase starts. |
-| [`phrase.getEndTime()`](getEndTime.md) | Return when the phrase ends. |
-| [`phrase.removeNote(index)`](removeNote.md) | Remove the note at a given position from the phrase. |
-| [`phrase.getHighestPitch()`](getHighestPitch.md) | Return the pitch of the highest note in the phrase. |
-| [`phrase.getLowestPitch()`](getLowestPitch.md) | Return the pitch of the lowest note in the phrase. |
-| [`phrase.getLongestDuration()`](getLongestDuration.md) | Return the duration of the longest note in the phrase. |
-| [`phrase.getShortestDuration()`](getShortestDuration.md) | Return the duration of the shortest note in the phrase. |
+| [`copy()`](copy.md) | Return a copy of the phrase. |
+| [`empty()`](empty.md) | Remove every note from the phrase. |
+| [`getSize()`](getSize.md) | Return how many notes are in the phrase. |
+| [`getNote(index)`](getNote.md) | Return the note at a given position, without changing the phrase. |
+| [`getNoteList()`](getNoteList.md) | Return the phrase's notes. |
+| [`getNoteStartTime(index)`](getNoteStartTime.md) | Return when the note at a given position starts. |
+| [`getStartTime()`](getStartTime.md) | Return when the phrase starts. |
+| [`setStartTime(startTime)`](setStartTime.md) | Set when the phrase starts. |
+| [`getEndTime()`](getEndTime.md) | Return when the phrase ends. |
+| [`removeNote(index)`](removeNote.md) | Remove the note at a given position from the phrase. |
+| [`getHighestPitch()`](getHighestPitch.md) | Return the pitch of the highest note in the phrase. |
+| [`getLowestPitch()`](getLowestPitch.md) | Return the pitch of the lowest note in the phrase. |
+| [`getLongestDuration()`](getLongestDuration.md) | Return the duration of the longest note in the phrase. |
+| [`getShortestDuration()`](getShortestDuration.md) | Return the duration of the shortest note in the phrase. |

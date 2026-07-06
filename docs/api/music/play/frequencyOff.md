@@ -2,16 +2,17 @@
 
 Stop a frequency from sounding.
 
-```python
-Play.frequencyOff(frequency)
-```
-
 If the frequency is not sounding on this channel, nothing happens.
 
 ## Parameters
 
+`Play.frequencyOff()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.frequencyOff(frequency, channel=0)
+Play.frequencyOff(frequency)
+```
+```python
+Play.frequencyOff(frequency, channel)
 ```
 
 | Parameter | Type | Default | Description |

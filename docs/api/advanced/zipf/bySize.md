@@ -2,10 +2,6 @@
 
 Measure the Zipf slope of a set of counts plotted against given sizes.
 
-```python
-bySize(sizes, counts)
-```
-
 Like [byRank()](byRank.md), but plots the counts against the sizes you supply rather than against automatic ranks, on a log-log scale, then fits a trendline.
 
 ## Parameters

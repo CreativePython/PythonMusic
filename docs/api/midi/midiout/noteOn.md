@@ -2,16 +2,17 @@
 
 Start a pitch sounding on the device, and leave it sounding.
 
-```python
-midiout.noteOn(pitch)
-```
-
 The note keeps playing until you stop it with [noteOff()](noteOff.md).
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.noteOn(pitch, dynamic=100, channel=0, panning=-1)
+midiout.noteOn(pitch)
+```
+```python
+midiout.noteOn(pitch, dynamic, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

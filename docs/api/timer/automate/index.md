@@ -26,11 +26,11 @@ The following Automate functions are always available:
 
 | Function | Description |
 |---|---|
-| [`Automate.add(action)`](add.md) | Calls a function repeatedly based on automation rate (see [setRate()](setRate.md)). |
-| [`Automate.remove(action)`](remove.md) | Stop calling a registered function. |
-| [`Automate.resume()`](resume.md) | Resume automation after a pause. |
-| [`Automate.pause()`](pause.md) | Pause automation. |
-| [`Automate.getRate()`](getRate.md) | Return how often automation runs.  Default is 60 times per second. |
-| [`Automate.setRate()`](setRate.md) | Set how often automation runs. |
-| [`Automate.addWithValues(action, values)`](addWithValues.md) | Step a function through a list of values, evenly spaced over time. |
-| [`Automate.addWithTimedValues(action, values, times)`](addWithTimedValues.md) | Step a function through a list of values, each delivered at its own time. |
+| [`add(action)`](add.md) | Calls a function repeatedly based on automation rate (see [setRate()](setRate.md)). |
+| [`remove(action)`](remove.md) | Stop calling a registered function. |
+| [`resume()`](resume.md) | Resume automation after a pause. |
+| [`pause()`](pause.md) | Pause automation. |
+| [`getRate()`](getRate.md) | Return how often automation runs.  Default is 60 times per second. |
+| [`setRate()`](setRate.md) | Set how often automation runs. |
+| [`addWithValues(action, values)`](addWithValues.md) | Step a function through a list of values, evenly spaced over time. |
+| [`addWithTimedValues(action, values, times)`](addWithTimedValues.md) | Step a function through a list of values, each delivered at its own time. |

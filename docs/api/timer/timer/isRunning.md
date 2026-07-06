@@ -2,6 +2,10 @@
 
 Report whether the timer is running.
 
+## Parameters
+
+Once an object `timer` has been created, you can use the following function:
+
 ```python
 timer.isRunning()
 ```

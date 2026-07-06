@@ -2,14 +2,15 @@
 
 Return the main volume for a channel.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.getVolume()
 ```
-
-## Parameters
-
 ```python
-midiout.getVolume(channel=0)
+midiout.getVolume(channel)
 ```
 
 | Parameter | Type | Default | Description |

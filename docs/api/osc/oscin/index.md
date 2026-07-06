@@ -34,6 +34,6 @@ Once an OscIn `oscin` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`oscin.onInput(oscAddress, action)`](onInput.md) | Set up a function to call when a message arrives at a given address. |
-| [`oscin.showMessages()`](showMessages.md) | Start printing incoming OSC messages to the console. |
-| [`oscin.hideMessages()`](hideMessages.md) | Stop printing incoming OSC messages to the console. |
+| [`onInput(oscAddress, action)`](onInput.md) | Set up a function to call when a message arrives at a given address. |
+| [`showMessages()`](showMessages.md) | Start printing incoming OSC messages to the console. |
+| [`hideMessages()`](hideMessages.md) | Stop printing incoming OSC messages to the console. |

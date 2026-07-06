@@ -2,17 +2,18 @@
 
 Schedule a frequency to play after a delay and last a set time.
 
-```python
-Play.frequency(frequency, start, duration)
-```
-
 Play only one frequency per channel at a time: since this uses pitch bend, it affects
 every other note sounding on the channel.
 
 ## Parameters
 
+`Play.frequency()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.frequency(frequency, start, duration, velocity=100, channel=0, panning=-1)
+Play.frequency(frequency, start, duration)
+```
+```python
+Play.frequency(frequency, start, duration, velocity, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

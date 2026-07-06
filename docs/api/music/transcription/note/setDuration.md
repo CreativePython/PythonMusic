@@ -2,13 +2,11 @@
 
 Set how long the note lasts in the written score.
 
-```python
-note.setDuration(duration)
-```
-
 The note's length is adjusted to keep the same proportion to the duration.
 
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setDuration(duration)

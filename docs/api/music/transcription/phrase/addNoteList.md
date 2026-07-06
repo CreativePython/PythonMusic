@@ -2,16 +2,17 @@
 
 Add many notes to the end of the phrase at once.
 
-```python
-phrase.addNoteList(listOfPitches, listOfDurations)
-```
-
 The lists are parallel: the first note takes the first pitch, the first duration, and so on. A pitch may itself be a list, which adds a chord. The dynamic, panning, and length lists are optional.
 
 ## Parameters
 
+Once an object `phrase` has been created, you can use the following functions:
+
 ```python
-phrase.addNoteList(listOfPitches, listOfDurations, listOfDynamics=[], listOfPannings=[], listOfLengths=[])
+phrase.addNoteList(listOfPitches, listOfDurations)
+```
+```python
+phrase.addNoteList(listOfPitches, listOfDurations, listOfDynamics, listOfPannings, listOfLengths)
 ```
 
 | Parameter | Type | Default | Description |

@@ -2,10 +2,6 @@
 
 Step through evenly spaced numbers one at a time, allowing fractional steps.
 
-```python
-xfrange(start, stop, step)
-```
-
 A generator version of [frange()](frange.md): instead of building the whole list at once, it produces each number as you loop over it. This is handy for long ranges. As with range(), stop is not included, and step may be negative to count down.
 
 ## Parameters

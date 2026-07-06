@@ -24,11 +24,11 @@ model = CompositeMarkovModel(4)
 
 ## Functions
 
-Once a CompositeMarkovModel `model` has been created, the following functions are available.
+Once a CompositeMarkovModel `model` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`model.learn(listOfSymbols)`](learn.md) | Learn the patterns in a sequence of symbols, at every order. |
-| [`model.get(tupleOfSymbols)`](get.md) | Pick a random symbol to follow a context, using the longest order that fits. |
-| [`model.generate()`](generate.md) | Generate a new sequence in the style the model learned. |
-| [`model.isConnected(context)`](isConnected.md) | Report whether the model can continue from a context. |
+| [`learn(listOfSymbols)`](learn.md) | Learn the patterns in a sequence of symbols, at every order. |
+| [`get(tupleOfSymbols)`](get.md) | Pick a random symbol to follow a context, using the longest order that fits. |
+| [`generate()`](generate.md) | Generate a new sequence in the style the model learned. |
+| [`isConnected(context)`](isConnected.md) | Report whether the model can continue from a context. |

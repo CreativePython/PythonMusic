@@ -2,16 +2,17 @@
 
 Schedule a frequency on the device to play after a delay and last a set time.
 
-```python
-midiout.frequency(frequency, start, duration)
-```
-
 Play only one frequency per channel at a time: since this uses pitch bend, it affects every other note sounding on the channel.
 
 ## Parameters
 
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
-midiout.frequency(frequency, start, duration, dynamic=100, channel=0, panning=-1)
+midiout.frequency(frequency, start, duration)
+```
+```python
+midiout.frequency(frequency, start, duration, dynamic, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

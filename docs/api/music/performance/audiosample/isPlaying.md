@@ -2,14 +2,15 @@
 
 Report whether the sample is currently playing.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.isPlaying()
 ```
-
-## Parameters
-
 ```python
-audiosample.isPlaying(voice=0)
+audiosample.isPlaying(voice)
 ```
 
 | Parameter | Type | Default | Description |

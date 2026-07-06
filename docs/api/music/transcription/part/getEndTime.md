@@ -2,6 +2,10 @@
 
 Return when the part ends.
 
+## Parameters
+
+Once an object `part` has been created, you can use the following function:
+
 ```python
 part.getEndTime()
 ```

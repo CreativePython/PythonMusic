@@ -2,10 +2,6 @@
 
 Convert a list of numbers from one range to their matching places relative to another range.
 
-```python
-mapList(valueList, minValue, maxValue, minResult, maxResult)
-```
-
 Like [map()](map.md), but for a whole list, so numbers may lie outside the source range. A new list is returned; the original list is left unchanged.
 
 ## Parameters

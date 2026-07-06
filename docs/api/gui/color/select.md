@@ -2,16 +2,15 @@
 
 Open a color-selection dialog and return the color the user picks.
 
+## Parameters
+
+`Color.select()` is a static utility. Call it on the `Color` class itself, for example:
+
 ```python
 Color.select()
 ```
-
-Color.select is a static utility. Call it on the class itself, for example Color.select().
-
-## Parameters
-
 ```python
-Color.select(red=255, green=255, blue=255)
+Color.select(red, green, blue)
 ```
 
 | Parameter | Type | Default | Description |

@@ -2,16 +2,17 @@
 
 Shift the pitch of every note, in place.
 
-```python
-Mod.transpose(material, steps)
-```
-
 With no scale, steps are semitones (for example, 12 raises everything by an octave). With a scale and key, steps are scale degrees instead, keeping the music in that key.
 
 ## Parameters
 
+`Mod.transpose()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
-Mod.transpose(material, steps, scale=CHROMATIC_SCALE, key=0)
+Mod.transpose(material, steps)
+```
+```python
+Mod.transpose(material, steps, scale, key)
 ```
 
 | Parameter | Type | Default | Description |

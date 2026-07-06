@@ -2,16 +2,17 @@
 
 Start a pitch sounding with an audio sample, and leave it sounding.
 
-```python
-Play.audioOn(pitch, audioSample)
-```
-
 Stop it with [Play.audioOff()](audioOff.md).
 
 ## Parameters
 
+`Play.audioOn()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.audioOn(pitch, audioSample, velocity=127, panning=-1, loopAudioSample=False, envelope=None)
+Play.audioOn(pitch, audioSample)
+```
+```python
+Play.audioOn(pitch, audioSample, velocity, panning, loopAudioSample, envelope)
 ```
 
 | Parameter | Type | Default | Description |

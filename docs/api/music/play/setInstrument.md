@@ -2,16 +2,17 @@
 
 Set the instrument for a channel.
 
-```python
-Play.setInstrument(instrument)
-```
-
 Notes played on this channel will sound using this instrument.
 
 ## Parameters
 
+`Play.setInstrument()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.setInstrument(instrument, channel=0)
+Play.setInstrument(instrument)
+```
+```python
+Play.setInstrument(instrument, channel)
 ```
 
 | Parameter | Type | Default | Description |

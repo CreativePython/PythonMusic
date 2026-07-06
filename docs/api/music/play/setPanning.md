@@ -2,17 +2,18 @@
 
 Set the main stereo position for a channel.
 
-```python
-Play.setPanning(panning)
-```
-
 The default is the middle (64). Note that this does not affect a score played through
 [Play.midi()](midi.md) or [Play.audio()](audio.md).
 
 ## Parameters
 
+`Play.setPanning()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.setPanning(panning, channel=0)
+Play.setPanning(panning)
+```
+```python
+Play.setPanning(panning, channel)
 ```
 
 | Parameter | Type | Default | Description |

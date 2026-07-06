@@ -2,16 +2,17 @@
 
 Nudge each note's pitch, duration, and volume by random amounts, in place.
 
-```python
-Mod.randomize(material, pitchAmount)
-```
-
 Each value changes by a random amount within plus or minus the amount you give. Set an amount to 0 to leave that property alone.
 
 ## Parameters
 
+`Mod.randomize()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
-Mod.randomize(material, pitchAmount, durationAmount=0, volumeAmount=0)
+Mod.randomize(material, pitchAmount)
+```
+```python
+Mod.randomize(material, pitchAmount, durationAmount, volumeAmount)
 ```
 
 | Parameter | Type | Default | Description |

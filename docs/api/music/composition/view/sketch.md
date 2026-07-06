@@ -2,11 +2,9 @@
 
 Show the music as a small piano-roll display.
 
-```python
-View.sketch(material)
-```
-
 ## Parameters
+
+`View.sketch()` is a static utility. Call it on the `View` class itself, for example:
 
 ```python
 View.sketch(material)

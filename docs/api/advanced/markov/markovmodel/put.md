@@ -2,16 +2,17 @@
 
 Add a single transition to the model by hand.
 
-```python
-markovmodel.put(tupleOfSymbols)
-```
-
 Records that symbol can follow tupleOfSymbols. [learn()](learn.md) builds these for you, so use put() only to add transitions directly.
 
 ## Parameters
 
+Once an object `markovmodel` has been created, you can use the following functions:
+
 ```python
-markovmodel.put(tupleOfSymbols, symbol=None)
+markovmodel.put(tupleOfSymbols)
+```
+```python
+markovmodel.put(tupleOfSymbols, symbol)
 ```
 
 | Parameter | Type | Default | Description |

@@ -16,7 +16,7 @@ The following View functions are always available:
 
 | Function | Description |
 |---|---|
-| [`View.pianoRoll(material)`](pianoRoll.md) | Show the music as a piano-roll display. |
-| [`View.sketch(material)`](sketch.md) | Show the music as a small piano-roll display. |
-| [`View.notate(material)`](notate.md) | Show the music as staff notation. |
-| [`View.internal(material)`](internal.md) | Print the music's data to the screen. |
+| [`pianoRoll(material)`](pianoRoll.md) | Show the music as a piano-roll display. |
+| [`sketch(material)`](sketch.md) | Show the music as a small piano-roll display. |
+| [`notate(material)`](notate.md) | Show the music as staff notation. |
+| [`internal(material)`](internal.md) | Print the music's data to the screen. |

@@ -2,6 +2,10 @@
 
 Return how many parts are in the score.
 
+## Parameters
+
+Once an object `score` has been created, you can use the following function:
+
 ```python
 score.getSize()
 ```

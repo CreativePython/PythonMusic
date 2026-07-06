@@ -2,11 +2,9 @@
 
 Remove a cursor from the IanniX score.
 
-```python
-iannixout.removeCursor(cursorID)
-```
-
 ## Parameters
+
+Once an object `iannixout` has been created, you can use the following function:
 
 ```python
 iannixout.removeCursor(cursorID)

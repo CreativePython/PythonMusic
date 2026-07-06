@@ -2,14 +2,15 @@
 
 Set the sample's stereo position.
 
+## Parameters
+
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
 audiosample.setPanning(panning)
 ```
-
-## Parameters
-
 ```python
-audiosample.setPanning(panning, voice=0)
+audiosample.setPanning(panning, voice)
 ```
 
 | Parameter | Type | Default | Description |

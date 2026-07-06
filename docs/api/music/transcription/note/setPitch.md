@@ -2,11 +2,9 @@
 
 Set the note's pitch.
 
-```python
-note.setPitch(pitch)
-```
-
 ## Parameters
+
+Once an object `note` has been created, you can use the following function:
 
 ```python
 note.setPitch(pitch)

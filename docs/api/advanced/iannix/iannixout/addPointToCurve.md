@@ -2,16 +2,17 @@
 
 Add a point to a curve in the IanniX score.
 
-```python
-iannixout.addPointToCurve(curveID)
-```
-
 The control points shape a quadratic Bezier curve between this point and the previous point on the curve.
 
 ## Parameters
 
+Once an object `iannixout` has been created, you can use the following functions:
+
 ```python
-iannixout.addPointToCurve(curveID, x=0.0, y=0.0, z=0.0, cx1=0.0, cy1=0.0, cz1=0.0, cx2=0.0, cy2=0.0, cz2=0.0)
+iannixout.addPointToCurve(curveID)
+```
+```python
+iannixout.addPointToCurve(curveID, x, y, z, cx1, cy1, cz1, cx2, cy2, cz2)
 ```
 
 | Parameter | Type | Default | Description |

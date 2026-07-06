@@ -2,11 +2,15 @@
 
 Return a brighter version of the color.
 
+The original color is left unchanged.
+
+## Parameters
+
+Once an object `color` has been created, you can use the following function:
+
 ```python
 color.brighter()
 ```
-
-The original color is left unchanged.
 
 ## Returns
 

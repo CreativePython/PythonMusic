@@ -26,15 +26,15 @@ iannixin = IannixIn(57800)
 
 ## Functions
 
-Once a IannixIn `iannixin` has been created, the following functions are available.
+Once a IannixIn `iannixin` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`iannixin.onTrigger(triggerID, action)`](onTrigger.md) | Set up a function to call when a given trigger fires in the IanniX score. |
-| [`iannixin.onCursor(cursorID, action)`](onCursor.md) | Set up a function to call as a given cursor moves through the IanniX score. |
-| [`iannixin.onPlay(action)`](onPlay.md) | Set up a function to call when IanniX starts playing. |
-| [`iannixin.onStop(action)`](onStop.md) | Set up a function to call when IanniX stops. |
-| [`iannixin.onFastRewind(action)`](onFastRewind.md) | Set up a function to call when IanniX fast-rewinds. |
-| [`iannixin.onInput(oscAddress, action)`](onInput.md) | Set up a function to call when a message arrives at a given address. |
-| [`iannixin.showMessages()`](showMessages.md) | Start printing incoming OSC messages to the console. |
-| [`iannixin.hideMessages()`](hideMessages.md) | Stop printing incoming OSC messages to the console. |
+| [`onTrigger(triggerID, action)`](onTrigger.md) | Set up a function to call when a given trigger fires in the IanniX score. |
+| [`onCursor(cursorID, action)`](onCursor.md) | Set up a function to call as a given cursor moves through the IanniX score. |
+| [`onPlay(action)`](onPlay.md) | Set up a function to call when IanniX starts playing. |
+| [`onStop(action)`](onStop.md) | Set up a function to call when IanniX stops. |
+| [`onFastRewind(action)`](onFastRewind.md) | Set up a function to call when IanniX fast-rewinds. |
+| [`onInput(oscAddress, action)`](onInput.md) | Set up a function to call when a message arrives at a given address. |
+| [`showMessages()`](showMessages.md) | Start printing incoming OSC messages to the console. |
+| [`hideMessages()`](hideMessages.md) | Stop printing incoming OSC messages to the console. |

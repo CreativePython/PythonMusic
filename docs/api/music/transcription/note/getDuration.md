@@ -2,6 +2,10 @@
 
 Return how long the note lasts in the written score.
 
+## Parameters
+
+Once an object `note` has been created, you can use the following function:
+
 ```python
 note.getDuration()
 ```

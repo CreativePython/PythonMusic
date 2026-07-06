@@ -2,11 +2,9 @@
 
 Stop calling a registered function.
 
-```python
-Automate.remove(action)
-```
-
 ## Parameters
+
+`Automate.remove()` is a static utility. Call it on the `Automate` class itself, for example:
 
 ```python
 Automate.remove(action)

@@ -2,11 +2,9 @@
 
 Set how loud every note in the phrase is.
 
-```python
-phrase.setDynamic(dynamic)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.setDynamic(dynamic)

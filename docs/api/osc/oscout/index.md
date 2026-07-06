@@ -9,9 +9,8 @@ OSC (Open Sound Control) is a way for programs and devices to send each other me
 You can create an OscOut using the following functions:
 
 ```python
-oscout = OscOut()
+OscOut()
 ```
-
 ```python
 OscOut(ipAddress, port)
 ```
@@ -21,10 +20,16 @@ OscOut(ipAddress, port)
 | `ipAddress` | `str` | `'localhost'` | The device's IP address, for example "192.168.1.223". Use "localhost" for a program on this same computer. |
 | `port` | `int` | `57110` | The port the device is listening on, a number from 1024 to 65535. |
 
+For example,
+
+```python
+oscout = OscOut("192.168.1.223", 57110)
+```
+
 ## Functions
 
 Once an OscOut `oscout` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`oscout.sendMessage(oscAddress)`](sendMessage.md) | Send an OSC message to the connected device. |
+| [`sendMessage(oscAddress)`](sendMessage.md) | Send an OSC message to the connected device. |

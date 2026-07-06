@@ -2,11 +2,9 @@
 
 Return the note at a given position, without changing the phrase.
 
-```python
-phrase.getNote(index)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.getNote(index)

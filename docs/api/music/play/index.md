@@ -18,40 +18,40 @@ The following Play functions are always available:
 
 | Function | Description |
 |---|---|
-| [`Play.midi(material)`](midi.md) | Play music library material through the synthesizer. |
-| [`Play.stop()`](stop.md) | Stop all music started through Play from sounding. |
-| [`Play.note(pitch, start, duration)`](note.md) | Schedule a note to play after a delay and last a set time. |
-| [`Play.noteOn(pitch)`](noteOn.md) | Start a pitch sounding, and leave it sounding. |
-| [`Play.noteOnPitchBend(pitch)`](noteOnPitchBend.md) | Start a pitch sounding with a pitch bend, and leave it sounding. |
-| [`Play.noteOff(pitch)`](noteOff.md) | Stop a pitch from sounding. |
-| [`Play.allNotesOff()`](allNotesOff.md) | Stop every note from sounding, on all channels. |
-| [`Play.frequency(frequency, start, duration)`](frequency.md) | Schedule a frequency to play after a delay and last a set time. |
-| [`Play.frequencyOn(frequency)`](frequencyOn.md) | Start a frequency sounding, and leave it sounding. |
-| [`Play.frequencyOff(frequency)`](frequencyOff.md) | Stop a frequency from sounding. |
-| [`Play.allFrequenciesOff()`](allFrequenciesOff.md) | Stop every frequency from sounding, on all channels. |
-| [`Play.setPitchBend()`](setPitchBend.md) | Set the pitch bend for a channel, used for notes played next. |
-| [`Play.getPitchBend()`](getPitchBend.md) | Return the current pitch bend for a channel. |
-| [`Play.setInstrument(instrument)`](setInstrument.md) | Set the instrument for a channel. |
-| [`Play.getInstrument()`](getInstrument.md) | Return the instrument set for a channel. |
-| [`Play.setVolume(volume)`](setVolume.md) | Set the main volume for a channel. |
-| [`Play.getVolume()`](getVolume.md) | Return the main volume for a channel. |
-| [`Play.setPanning(panning)`](setPanning.md) | Set the main stereo position for a channel. |
-| [`Play.getPanning()`](getPanning.md) | Return the main stereo position for a channel. |
-| [`Play.getSoundfont()`](getSoundfont.md) | Return the path of the soundfont currently used for playback. |
-| [`Play.setSoundfont(soundfont)`](setSoundfont.md) | Set the soundfont used for playback. |
+| [`midi(material)`](midi.md) | Play music library material through the synthesizer. |
+| [`stop()`](stop.md) | Stop all music started through Play from sounding. |
+| [`note(pitch, start, duration)`](note.md) | Schedule a note to play after a delay and last a set time. |
+| [`noteOn(pitch)`](noteOn.md) | Start a pitch sounding, and leave it sounding. |
+| [`noteOnPitchBend(pitch)`](noteOnPitchBend.md) | Start a pitch sounding with a pitch bend, and leave it sounding. |
+| [`noteOff(pitch)`](noteOff.md) | Stop a pitch from sounding. |
+| [`allNotesOff()`](allNotesOff.md) | Stop every note from sounding, on all channels. |
+| [`frequency(frequency, start, duration)`](frequency.md) | Schedule a frequency to play after a delay and last a set time. |
+| [`frequencyOn(frequency)`](frequencyOn.md) | Start a frequency sounding, and leave it sounding. |
+| [`frequencyOff(frequency)`](frequencyOff.md) | Stop a frequency from sounding. |
+| [`allFrequenciesOff()`](allFrequenciesOff.md) | Stop every frequency from sounding, on all channels. |
+| [`setPitchBend()`](setPitchBend.md) | Set the pitch bend for a channel, used for notes played next. |
+| [`getPitchBend()`](getPitchBend.md) | Return the current pitch bend for a channel. |
+| [`setInstrument(instrument)`](setInstrument.md) | Set the instrument for a channel. |
+| [`getInstrument()`](getInstrument.md) | Return the instrument set for a channel. |
+| [`setVolume(volume)`](setVolume.md) | Set the main volume for a channel. |
+| [`getVolume()`](getVolume.md) | Return the main volume for a channel. |
+| [`setPanning(panning)`](setPanning.md) | Set the main stereo position for a channel. |
+| [`getPanning()`](getPanning.md) | Return the main stereo position for a channel. |
+| [`getSoundfont()`](getSoundfont.md) | Return the path of the soundfont currently used for playback. |
+| [`setSoundfont(soundfont)`](setSoundfont.md) | Set the soundfont used for playback. |
 
 ### Playing Musical Material with AudioSamples
 
 | Function | Description |
 |---|---|
-| [`Play.audio(material, audioSamples)`](audio.md) | Play music library material using audio samples as the instruments. |
-| [`Play.audioNote(pitch, start, duration, audioSample)`](audioNote.md) | Schedule a note to play with an audio sample, after a delay and lasting a set time. |
-| [`Play.audioOn(pitch, audioSample)`](audioOn.md) | Start a pitch sounding with an audio sample, and leave it sounding. |
-| [`Play.audioOff(pitch, audioSample)`](audioOff.md) | Stop a pitch from sounding on an audio sample. |
-| [`Play.allAudioNotesOff()`](allAudioNotesOff.md) | Stop every note from sounding on all audio samples. |
+| [`audio(material, audioSamples)`](audio.md) | Play music library material using audio samples as the instruments. |
+| [`audioNote(pitch, start, duration, audioSample)`](audioNote.md) | Schedule a note to play with an audio sample, after a delay and lasting a set time. |
+| [`audioOn(pitch, audioSample)`](audioOn.md) | Start a pitch sounding with an audio sample, and leave it sounding. |
+| [`audioOff(pitch, audioSample)`](audioOff.md) | Stop a pitch from sounding on an audio sample. |
+| [`allAudioNotesOff()`](allAudioNotesOff.md) | Stop every note from sounding on all audio samples. |
 
 ### Running Code with Musical Material
 
 | Function | Description |
 |---|---|
-| [`Play.code(material, actions)`](code.md) | Run your own functions in time with music library material. |
+| [`code(material, actions)`](code.md) | Run your own functions in time with music library material. |

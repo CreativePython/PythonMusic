@@ -2,14 +2,15 @@
 
 Return the current pitch bend for a channel.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.getPitchBend()
 ```
-
-## Parameters
-
 ```python
-midiout.getPitchBend(channel=0)
+midiout.getPitchBend(channel)
 ```
 
 | Parameter | Type | Default | Description |

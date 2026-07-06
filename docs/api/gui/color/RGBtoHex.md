@@ -2,13 +2,9 @@
 
 Convert red, green, and blue values to a hex color string.
 
-```python
-Color.RGBtoHex(red, green, blue)
-```
-
-Color.RGBtoHex is a static utility. Call it on the class itself, for example Color.RGBtoHex().
-
 ## Parameters
+
+`Color.RGBtoHex()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.RGBtoHex(red, green, blue)

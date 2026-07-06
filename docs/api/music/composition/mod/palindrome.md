@@ -2,13 +2,11 @@
 
 Double the music by adding a reversed copy of itself onto the end, in place.
 
-```python
-Mod.palindrome(material)
-```
-
 The result plays forward and then backward.
 
 ## Parameters
+
+`Mod.palindrome()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.palindrome(material)

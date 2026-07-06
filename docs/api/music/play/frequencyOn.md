@@ -2,17 +2,18 @@
 
 Start a frequency sounding, and leave it sounding.
 
-```python
-Play.frequencyOn(frequency)
-```
-
 Stop it with [Play.frequencyOff()](frequencyOff.md). Play only one frequency per channel at a time:
 since this uses pitch bend, it affects every other note sounding on the channel.
 
 ## Parameters
 
+`Play.frequencyOn()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
-Play.frequencyOn(frequency, velocity=100, channel=0, panning=-1)
+Play.frequencyOn(frequency)
+```
+```python
+Play.frequencyOn(frequency, velocity, channel, panning)
 ```
 
 | Parameter | Type | Default | Description |

@@ -2,11 +2,9 @@
 
 Set the score's tempo.
 
-```python
-score.setTempo(tempo)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setTempo(tempo)

@@ -2,16 +2,17 @@
 
 Round note start times and durations to a grid, in place.
 
-```python
-Mod.quantize(material, quantum)
-```
-
 Each note's start time and duration are rounded to the nearest multiple of quantum. A smaller quantum changes the music less; a larger one makes it sound more mechanical. If a scale is given, pitches are also snapped to it.
 
 ## Parameters
 
+`Mod.quantize()` is a static utility. Call it on the `Mod` class itself, for example:
+
 ```python
-Mod.quantize(material, quantum, scale=CHROMATIC_SCALE, key=0)
+Mod.quantize(material, quantum)
+```
+```python
+Mod.quantize(material, quantum, scale, key)
 ```
 
 | Parameter | Type | Default | Description |

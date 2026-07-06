@@ -2,13 +2,11 @@
 
 Convert a color from HSB (hue, saturation, brightness) to RGB.
 
-```python
-Color.HSBtoRGB(hue, saturation, brightness)
-```
-
-Color.HSBtoRGB is a static utility. Call it on the class itself, for example Color.HSBtoRGB(). Values outside 0.0 to 1.0 are clamped to that range.
+Values outside 0.0 to 1.0 are clamped to that range.
 
 ## Parameters
+
+`Color.HSBtoRGB()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.HSBtoRGB(hue, saturation, brightness)

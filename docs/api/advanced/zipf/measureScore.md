@@ -2,16 +2,15 @@
 
 Measure a list of scores against a list of Zipf metrics.
 
-```python
-measureScore(scores, metrics)
-```
-
 Runs every metric on every score and collects the results.
 
 ## Parameters
 
 ```python
-measureScore(scores, metrics, quantum=0.25)
+measureScore(scores, metrics)
+```
+```python
+measureScore(scores, metrics, quantum)
 ```
 
 | Parameter | Type | Default | Description |

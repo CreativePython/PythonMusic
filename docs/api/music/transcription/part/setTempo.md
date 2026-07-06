@@ -2,11 +2,9 @@
 
 Set the part's tempo.
 
-```python
-part.setTempo(tempo)
-```
-
 ## Parameters
+
+Once an object `part` has been created, you can use the following function:
 
 ```python
 part.setTempo(tempo)

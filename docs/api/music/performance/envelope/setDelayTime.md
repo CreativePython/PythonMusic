@@ -2,11 +2,9 @@
 
 Set the envelope's delay time.
 
-```python
-envelope.setDelayTime(delayTime)
-```
-
 ## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
 
 ```python
 envelope.setDelayTime(delayTime)

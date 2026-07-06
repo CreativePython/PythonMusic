@@ -28,15 +28,15 @@ model = MarkovModel(3)
 
 ## Functions
 
-Once a MarkovModel `model` has been created, the following functions are available.
+Once a MarkovModel `model` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`model.clear()`](clear.md) | Empty the model, forgetting everything it has learned. |
-| [`model.learn(listOfSymbols)`](learn.md) | Learn the patterns in a sequence of symbols. |
-| [`model.put(tupleOfSymbols)`](put.md) | Add a single transition to the model by hand. |
-| [`model.get(tupleOfSymbols)`](get.md) | Pick a random symbol to follow a context, weighted by how often each was seen. |
-| [`model.getTransitions(tupleOfSymbols)`](getTransitions.md) | Return every symbol that has followed a context, with how often each did. |
-| [`model.generate()`](generate.md) | Generate a new sequence in the style the model learned. |
-| [`model.getNumberOfSymbols()`](getNumberOfSymbols.md) | Return how many different symbols the model has learned. |
-| [`model.getNumberOfTransitions()`](getNumberOfTransitions.md) | Return how many transitions the model has learned. |
+| [`clear()`](clear.md) | Empty the model, forgetting everything it has learned. |
+| [`learn(listOfSymbols)`](learn.md) | Learn the patterns in a sequence of symbols. |
+| [`put(tupleOfSymbols)`](put.md) | Add a single transition to the model by hand. |
+| [`get(tupleOfSymbols)`](get.md) | Pick a random symbol to follow a context, weighted by how often each was seen. |
+| [`getTransitions(tupleOfSymbols)`](getTransitions.md) | Return every symbol that has followed a context, with how often each did. |
+| [`generate()`](generate.md) | Generate a new sequence in the style the model learned. |
+| [`getNumberOfSymbols()`](getNumberOfSymbols.md) | Return how many different symbols the model has learned. |
+| [`getNumberOfTransitions()`](getNumberOfTransitions.md) | Return how many transitions the model has learned. |

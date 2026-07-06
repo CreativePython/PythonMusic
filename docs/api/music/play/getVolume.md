@@ -2,14 +2,15 @@
 
 Return the main volume for a channel.
 
+## Parameters
+
+`Play.getVolume()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.getVolume()
 ```
-
-## Parameters
-
 ```python
-Play.getVolume(channel=0)
+Play.getVolume(channel)
 ```
 
 | Parameter | Type | Default | Description |

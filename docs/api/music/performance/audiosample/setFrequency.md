@@ -2,16 +2,17 @@
 
 Set the sample's playback frequency, pitch-shifting it.
 
-```python
-audiosample.setFrequency(freq)
-```
-
 Like [setPitch()](setPitch.md), but finer. This lets the sound land between the standard pitches. For example, frequency 440 Hz is the same as pitch A4.
 
 ## Parameters
 
+Once an object `audiosample` has been created, you can use the following functions:
+
 ```python
-audiosample.setFrequency(freq, voice=0)
+audiosample.setFrequency(freq)
+```
+```python
+audiosample.setFrequency(freq, voice)
 ```
 
 | Parameter | Type | Default | Description |

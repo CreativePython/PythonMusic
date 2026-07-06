@@ -2,11 +2,9 @@
 
 Reverse the order of the notes, in place.
 
-```python
-Mod.retrograde(material)
-```
-
 ## Parameters
+
+`Mod.retrograde()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.retrograde(material)

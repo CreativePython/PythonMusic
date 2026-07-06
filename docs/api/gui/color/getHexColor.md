@@ -2,13 +2,11 @@
 
 Create a Color from a hex color string.
 
-```python
-Color.getHexColor(hex)
-```
-
-Color.getHexColor is a static utility. Call it on the class itself, for example Color.getHexColor(). The leading "#" is optional.
+The leading "#" is optional.
 
 ## Parameters
+
+`Color.getHexColor()` is a static utility. Call it on the `Color` class itself, for example:
 
 ```python
 Color.getHexColor(hex)

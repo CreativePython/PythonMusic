@@ -2,10 +2,6 @@
 
 Convert a number from one range to its matching place in another range.
 
-```python
-mapValue(value, minValue, maxValue, minResult, maxResult)
-```
-
 For example, 5 in the range 0 to 10 maps to 50 in the range 0 to 100. The number must lie within the source range; to allow numbers outside it, use [map()](map.md) instead.
 
 ## Parameters

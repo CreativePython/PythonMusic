@@ -2,11 +2,9 @@
 
 Return when the note at a given position starts.
 
-```python
-phrase.getNoteStartTime(index)
-```
-
 ## Parameters
+
+Once an object `phrase` has been created, you can use the following function:
 
 ```python
 phrase.getNoteStartTime(index)

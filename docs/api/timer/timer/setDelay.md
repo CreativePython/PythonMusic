@@ -2,13 +2,11 @@
 
 Set the timer's interval.
 
-```python
-timer.setDelay(timeInterval)
-```
-
 If the timer is running, the new interval takes effect right away.
 
 ## Parameters
+
+Once an object `timer` has been created, you can use the following function:
 
 ```python
 timer.setDelay(timeInterval)

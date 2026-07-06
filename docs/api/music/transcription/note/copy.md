@@ -2,11 +2,15 @@
 
 Return a copy of the note.
 
+Use this to make a version you can change while leaving the original untouched.
+
+## Parameters
+
+Once an object `note` has been created, you can use the following function:
+
 ```python
 note.copy()
 ```
-
-Use this to make a version you can change while leaving the original untouched.
 
 ## Returns
 

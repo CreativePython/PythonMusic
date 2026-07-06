@@ -2,11 +2,9 @@
 
 Set the metronome's tempo.
 
-```python
-metronome.setTempo(tempo)
-```
-
 ## Parameters
+
+Once an object `metronome` has been created, you can use the following function:
 
 ```python
 metronome.setTempo(tempo)

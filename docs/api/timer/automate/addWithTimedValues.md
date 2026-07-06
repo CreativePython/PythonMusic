@@ -2,16 +2,17 @@
 
 Step a function through a list of values, each delivered at its own time.
 
-```python
-Automate.addWithTimedValues(action, values, times)
-```
-
 Like [addWithValues()](addWithValues.md), but you give the exact moment for each value instead of spacing them evenly. The values and times lists are parallel, and the times must increase.
 
 ## Parameters
 
+`Automate.addWithTimedValues()` is a static utility. Call it on the `Automate` class itself, for example:
+
 ```python
-Automate.addWithTimedValues(action, values, times, duration=None, repeat=1, whenDone=None)
+Automate.addWithTimedValues(action, values, times)
+```
+```python
+Automate.addWithTimedValues(action, values, times, duration, repeat, whenDone)
 ```
 
 | Parameter | Type | Default | Description |

@@ -2,14 +2,15 @@
 
 Read a MIDI file into a score, replacing the score's contents.
 
+## Parameters
+
+`Read.midi()` is a static utility. Call it on the `Read` class itself, for example:
+
 ```python
 Read.midi(score, filename)
 ```
-
-## Parameters
-
 ```python
-Read.midi(score, filename, humanize=False)
+Read.midi(score, filename, humanize)
 ```
 
 | Parameter | Type | Default | Description |

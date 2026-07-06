@@ -2,6 +2,10 @@
 
 Return the bottom number of the score's time signature.
 
+## Parameters
+
+Once an object `score` has been created, you can use the following function:
+
 ```python
 score.getDenominator()
 ```

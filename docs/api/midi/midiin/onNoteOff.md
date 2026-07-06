@@ -2,11 +2,9 @@
 
 Set up a function to call whenever a note is released on the device.
 
-```python
-midiin.onNoteOff(action)
-```
-
 ## Parameters
+
+Once an object `midiin` has been created, you can use the following function:
 
 ```python
 midiin.onNoteOff(action)

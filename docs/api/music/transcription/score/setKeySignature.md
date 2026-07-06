@@ -2,11 +2,9 @@
 
 Set the score's key signature.
 
-```python
-score.setKeySignature(signature)
-```
-
 ## Parameters
+
+Once an object `score` has been created, you can use the following function:
 
 ```python
 score.setKeySignature(signature)

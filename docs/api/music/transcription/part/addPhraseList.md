@@ -2,13 +2,11 @@
 
 Add several phrases to the part at once.
 
-```python
-part.addPhraseList(phraseList)
-```
-
 Any phrase with no set start time is placed at the end of the part.
 
 ## Parameters
+
+Once an object `part` has been created, you can use the following function:
 
 ```python
 part.addPhraseList(phraseList)

@@ -2,13 +2,11 @@
 
 Add a new curve to the IanniX score.
 
-```python
-iannixout.addCurve(curveID, x, y, z)
-```
-
 The curve starts with no points. Add points to it with [addPointToCurve()](addPointToCurve.md) or [addPointListToCurve()](addPointListToCurve.md).
 
 ## Parameters
+
+Once an object `iannixout` has been created, you can use the following function:
 
 ```python
 iannixout.addCurve(curveID, x, y, z)

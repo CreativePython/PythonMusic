@@ -46,7 +46,7 @@ The first function, [midiout.play()](play.md), is used to play musical material 
 
 | Function | Description |
 |---|---|
-| [`midiout.play(material)`](play.md) | Play music library material through the output device. |
+| [`play(material)`](play.md) | Play music library material through the output device. |
 
 ### Playing Musical Notes Interactively
 
@@ -54,24 +54,24 @@ This functionality can be used to perform live, or to build interactive musical 
 
 | Function | Description |
 |---|---|
-| [`midiout.noteOn(pitch)`](noteOn.md) | Start a pitch sounding on the device, and leave it sounding. |
-| [`midiout.noteOnPitchBend(pitch)`](noteOnPitchBend.md) | Start a pitch sounding on the device with a pitch bend, and leave it sounding. |
-| [`midiout.noteOff(pitch)`](noteOff.md) | Stop a pitch from sounding on the device. |
-| [`midiout.note(pitch, start, duration)`](note.md) | Schedule a note on the device to play after a delay and last a set time. |
-| [`midiout.allNotesOff()`](allNotesOff.md) | Stop every note from sounding, on all channels. |
+| [`noteOn(pitch)`](noteOn.md) | Start a pitch sounding on the device, and leave it sounding. |
+| [`noteOnPitchBend(pitch)`](noteOnPitchBend.md) | Start a pitch sounding on the device with a pitch bend, and leave it sounding. |
+| [`noteOff(pitch)`](noteOff.md) | Stop a pitch from sounding on the device. |
+| [`note(pitch, start, duration)`](note.md) | Schedule a note on the device to play after a delay and last a set time. |
+| [`allNotesOff()`](allNotesOff.md) | Stop every note from sounding, on all channels. |
 
 You can also make global changes interactively on instrument, volume, panning, and pitch bend.
 
 | Function | Description |
 |---|---|
-| [`midiout.getInstrument()`](getInstrument.md) | Return the instrument set for a channel. |
-| [`midiout.setInstrument(instrument)`](setInstrument.md) | Set the instrument for a channel. |
-| [`midiout.getVolume()`](getVolume.md) | Return the main volume for a channel. |
-| [`midiout.setVolume(volume)`](setVolume.md) | Set the main volume for a channel. |
-| [`midiout.getPanning()`](getPanning.md) | Return the main stereo position for a channel. |
-| [`midiout.setPanning(panning)`](setPanning.md) | Set the main stereo position for a channel. |
-| [`midiout.getPitchBend()`](getPitchBend.md) | Return the current pitch bend for a channel. |
-| [`midiout.setPitchBend()`](setPitchBend.md) | Set the pitch bend for a channel, used for notes played next. |
+| [`getInstrument()`](getInstrument.md) | Return the instrument set for a channel. |
+| [`setInstrument(instrument)`](setInstrument.md) | Set the instrument for a channel. |
+| [`getVolume()`](getVolume.md) | Return the main volume for a channel. |
+| [`setVolume(volume)`](setVolume.md) | Set the main volume for a channel. |
+| [`getPanning()`](getPanning.md) | Return the main stereo position for a channel. |
+| [`setPanning(panning)`](setPanning.md) | Set the main stereo position for a channel. |
+| [`getPitchBend()`](getPitchBend.md) | Return the current pitch bend for a channel. |
+| [`setPitchBend()`](setPitchBend.md) | Set the pitch bend for a channel, used for notes played next. |
 
 ### Playing Microtonal Material
 
@@ -79,10 +79,10 @@ To play microtonal material, simply create [Note](../../music/transcription/note
 
 | Function | Description |
 |---|---|
-| [`midiout.frequencyOn(frequency)`](frequencyOn.md) | Start a frequency sounding on the device, and leave it sounding. |
-| [`midiout.frequencyOff(frequency)`](frequencyOff.md) | Stop a frequency from sounding on the device. |
-| [`midiout.frequency(frequency, start, duration)`](frequency.md) | Schedule a frequency on the device to play after a delay and last a set time. |
-| [`midiout.allFrequenciesOff()`](allFrequenciesOff.md) | Stop every frequency from sounding, on all channels. |
+| [`frequencyOn(frequency)`](frequencyOn.md) | Start a frequency sounding on the device, and leave it sounding. |
+| [`frequencyOff(frequency)`](frequencyOff.md) | Stop a frequency from sounding on the device. |
+| [`frequency(frequency, start, duration)`](frequency.md) | Schedule a frequency on the device to play after a delay and last a set time. |
+| [`allFrequenciesOff()`](allFrequenciesOff.md) | Stop every frequency from sounding, on all channels. |
 
 **WARNING:** For polyphony (to play concurrent microtonal notes), you must play notes on different MIDI channels.
 
@@ -94,7 +94,7 @@ You can send arbitrary MIDI messages (e.g., CC – control change, etc.) to an e
 
 | Function | Description |
 |---|---|
-| [`midiout.sendMidiMessage(eventType, channel, data1, data2)`](sendMidiMessage.md) | Send a raw MIDI message to the device. |
+| [`sendMidiMessage(eventType, channel, data1, data2)`](sendMidiMessage.md) | Send a raw MIDI message to the device. |
 
 **WARNING:** If you use an automated MIDI learn feature in your external program (or device) to connect MIDI messages sent from PEM to arbitrary functionality, **do NOT press PEM's stop button**, while your program is in learn mode.
 
@@ -108,7 +108,7 @@ You can connect and disconnect from MIDI devices after a MidiOut has been create
 
 | Function | Description |
 |---|---|
-| [`midiout.stop()`](stop.md) | Stop all MIDI music on the device from sounding. |
-| [`midiout.selectMidiOutput()`](selectMidiOutput.md) | Connect to a preferred output MIDI device, or open a window to pick one. |
-| [`midiout.openOutputDevice(selectedItem)`](openOutputDevice.md) | Open a named output MIDI device. |
-| [`midiout.close()`](close.md) | Close the output device. |
+| [`stop()`](stop.md) | Stop all MIDI music on the device from sounding. |
+| [`selectMidiOutput()`](selectMidiOutput.md) | Connect to a preferred output MIDI device, or open a window to pick one. |
+| [`openOutputDevice(selectedItem)`](openOutputDevice.md) | Open a named output MIDI device. |
+| [`close()`](close.md) | Close the output device. |

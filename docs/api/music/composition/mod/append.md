@@ -2,13 +2,11 @@
 
 Add the second material onto the end of the first, in place.
 
-```python
-Mod.append(material1, material2)
-```
-
 Both materials must be the same kind. For two notes, the first note's duration is extended (its pitch is unchanged).
 
 ## Parameters
+
+`Mod.append()` is a static utility. Call it on the `Mod` class itself, for example:
 
 ```python
 Mod.append(material1, material2)

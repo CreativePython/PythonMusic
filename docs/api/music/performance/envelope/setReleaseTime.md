@@ -2,11 +2,9 @@
 
 Set the envelope's release time.
 
-```python
-envelope.setReleaseTime(releaseTime)
-```
-
 ## Parameters
+
+Once an object `envelope` has been created, you can use the following function:
 
 ```python
 envelope.setReleaseTime(releaseTime)

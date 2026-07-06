@@ -2,14 +2,15 @@
 
 Return the main stereo position for a channel.
 
+## Parameters
+
+Once an object `midiout` has been created, you can use the following functions:
+
 ```python
 midiout.getPanning()
 ```
-
-## Parameters
-
 ```python
-midiout.getPanning(channel=0)
+midiout.getPanning(channel)
 ```
 
 | Parameter | Type | Default | Description |

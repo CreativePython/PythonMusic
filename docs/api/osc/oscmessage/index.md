@@ -35,5 +35,5 @@ Once an OscMessage `message` has been created, the following functions are avail
 
 | Function | Description |
 |---|---|
-| [`message.getAddress()`](getAddress.md) | Return the message's OSC address. |
-| [`message.getArguments()`](getArguments.md) | Return the message's arguments. |
+| [`getAddress()`](getAddress.md) | Return the message's OSC address. |
+| [`getArguments()`](getArguments.md) | Return the message's arguments. |

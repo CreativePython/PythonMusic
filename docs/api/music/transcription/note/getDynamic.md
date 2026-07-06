@@ -2,6 +2,10 @@
 
 Return how loud the note is.
 
+## Parameters
+
+Once an object `note` has been created, you can use the following function:
+
 ```python
 note.getDynamic()
 ```

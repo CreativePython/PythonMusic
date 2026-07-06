@@ -2,13 +2,11 @@
 
 Set up a function to call for a particular kind of MIDI event.
 
-```python
-midiin.onInput(eventType, action)
-```
-
 Call this again with different event types to handle each kind separately (one function per event type). Using ALL_EVENTS catches every event not already handled.
 
 ## Parameters
+
+Once an object `midiin` has been created, you can use the following function:
 
 ```python
 midiin.onInput(eventType, action)

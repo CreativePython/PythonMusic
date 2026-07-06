@@ -2,14 +2,15 @@
 
 Return the instrument set for a channel.
 
+## Parameters
+
+`Play.getInstrument()` is a static utility. Call it on the `Play` class itself, for example:
+
 ```python
 Play.getInstrument()
 ```
-
-## Parameters
-
 ```python
-Play.getInstrument(channel=0)
+Play.getInstrument(channel)
 ```
 
 | Parameter | Type | Default | Description |

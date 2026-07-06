@@ -2,6 +2,10 @@
 
 Return the ramp's current value.
 
+## Parameters
+
+Once an object `linearramp` has been created, you can use the following function:
+
 ```python
 linearramp.getCurrentValue()
 ```

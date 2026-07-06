@@ -32,27 +32,27 @@ note = Note(A4, HN)
 
 ## Functions
 
-Once a Note `note` has been created, the following functions are available.
+Once a Note `note` has been created, the following functions are available:
 
 | Function | Description |
 |---|---|
-| [`note.getPitch()`](getPitch.md) | Return the note's pitch. |
-| [`note.getDuration()`](getDuration.md) | Return how long the note lasts in the written score. |
-| [`note.getDynamic()`](getDynamic.md) | Return how loud the note is. |
-| [`note.getPan()`](getPan.md) | Return the note's stereo position. |
-| [`note.getLength()`](getLength.md) | Return how long the note actually sounds. |
-| [`note.setPitch(pitch)`](setPitch.md) | Set the note's pitch. |
-| [`note.setDuration(duration)`](setDuration.md) | Set how long the note lasts in the written score. |
-| [`note.setDynamic(dynamic)`](setDynamic.md) | Set how loud the note is. |
-| [`note.setPan(pan)`](setPan.md) | Set the note's stereo position. |
-| [`note.setLength(length)`](setLength.md) | Set how long the note actually sounds. |
-| [`note.isRest()`](isRest.md) | Report whether the note is a rest. |
-| [`note.copy()`](copy.md) | Return a copy of the note. |
+| [`getPitch()`](getPitch.md) | Return the note's pitch. |
+| [`getDuration()`](getDuration.md) | Return how long the note lasts in the written score. |
+| [`getDynamic()`](getDynamic.md) | Return how loud the note is. |
+| [`getPan()`](getPan.md) | Return the note's stereo position. |
+| [`getLength()`](getLength.md) | Return how long the note actually sounds. |
+| [`setPitch(pitch)`](setPitch.md) | Set the note's pitch. |
+| [`setDuration(duration)`](setDuration.md) | Set how long the note lasts in the written score. |
+| [`setDynamic(dynamic)`](setDynamic.md) | Set how loud the note is. |
+| [`setPan(pan)`](setPan.md) | Set the note's stereo position. |
+| [`setLength(length)`](setLength.md) | Set how long the note actually sounds. |
+| [`isRest()`](isRest.md) | Report whether the note is a rest. |
+| [`copy()`](copy.md) | Return a copy of the note. |
 
 When working with frequencies, the following functions may also be used:
 
 | Function | Description |
 |---|---|
-| [`note.getFrequency()`](getFrequency.md) | Return the note's pitch as a frequency. |
-| [`note.setFrequency(frequency)`](setFrequency.md) | Set the note's pitch from a frequency. |
-| [`note.getPitchBend()`](getPitchBend.md) | Return the note's pitch bend, the gap between its pitch and its exact frequency. |
+| [`getFrequency()`](getFrequency.md) | Return the note's pitch as a frequency. |
+| [`setFrequency(frequency)`](setFrequency.md) | Set the note's pitch from a frequency. |
+| [`getPitchBend()`](getPitchBend.md) | Return the note's pitch bend, the gap between its pitch and its exact frequency. |

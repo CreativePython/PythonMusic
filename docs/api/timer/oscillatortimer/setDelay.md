@@ -2,11 +2,9 @@
 
 Set how long the oscillator waits between updates.
 
-```python
-oscillatortimer.setDelay(delay)
-```
-
 ## Parameters
+
+Once an object `oscillatortimer` has been created, you can use the following function:
 
 ```python
 oscillatortimer.setDelay(delay)
