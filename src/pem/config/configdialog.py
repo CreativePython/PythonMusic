@@ -311,6 +311,8 @@ class GeneralPage(Frame):
         self.highlight_current_line = tracers.add(BooleanVar(self), ('main', 'EditorWindow', 'highlight-current-line'))
         self.code_context_default = tracers.add(BooleanVar(self), ('main', 'EditorWindow', 'code-context-default'))
         self.autosave = tracers.add(BooleanVar(self), ('main', 'General', 'autosave'))
+        self.exe_console = tracers.add(BooleanVar(self), ('main', 'CreateExecutable', 'console'))
+        self.exe_quit_on_close = tracers.add(BooleanVar(self), ('main', 'CreateExecutable', 'quit-on-window-close'))
 
         # Create widgets
         frame = Frame(self, borderwidth=0)
@@ -362,6 +364,28 @@ class GeneralPage(Frame):
         self.autosave_cb = Checkbutton(frame_file, text="Auto Save Before Run", variable=self.autosave)
         self.autosave_cb.pack(anchor=W, padx=8, pady=4)
 
+        # Create Executable Group
+        frame_exe = LabelFrame(frame, text=' Create Executable ')
+        frame_exe.pack(fill=X, padx=5, pady=5)
+
+        # 7. Show Console -- when on, built programs open a terminal window so
+        # they can use print() and input().  Off keeps them windowed.
+        self.exe_console_cb = Checkbutton(frame_exe, text="Show Console", variable=self.exe_console)
+        self.exe_console_cb.pack(anchor=W, padx=8, pady=(4, 0))
+        Label(frame_exe,
+              text="Give built programs a text console for print() and input().",
+              foreground="gray40").pack(anchor=W, padx=28, pady=(0, 4))
+
+        # 8. Quit When Last Window Closes -- when on, a built window program ends
+        # once its last window closes.  Off by default: some features (e.g.
+        # MidiIn's device chooser) open and close a window while the program runs.
+        self.exe_quit_on_close_cb = Checkbutton(frame_exe, text="Quit When Last Window Closes",
+                                                variable=self.exe_quit_on_close)
+        self.exe_quit_on_close_cb.pack(anchor=W, padx=8, pady=(4, 0))
+        Label(frame_exe,
+              text="End a built window program when its last window is closed.",
+              foreground="gray40").pack(anchor=W, padx=28, pady=(0, 4))
+
         # Restore Defaults button
         Button(frame, text="Restore Defaults", command=self.restore_defaults).pack(side=BOTTOM, pady=10)
 
@@ -373,6 +397,8 @@ class GeneralPage(Frame):
         self.highlight_current_line.set(pemConf.GetOption('main', 'EditorWindow', 'highlight-current-line', type='bool', default=False))
         self.code_context_default.set(pemConf.GetOption('main', 'EditorWindow', 'code-context-default', type='bool', default=False))
         self.autosave.set(pemConf.GetOption('main', 'General', 'autosave', type='bool', default=False))
+        self.exe_console.set(pemConf.GetOption('main', 'CreateExecutable', 'console', type='bool', default=False))
+        self.exe_quit_on_close.set(pemConf.GetOption('main', 'CreateExecutable', 'quit-on-window-close', type='bool', default=True))
 
     def restore_defaults(self):
         """Reset all General tab settings to their default values."""
@@ -383,6 +409,8 @@ class GeneralPage(Frame):
         self.highlight_current_line.set(False)
         self.code_context_default.set(False)
         self.autosave.set(False)
+        self.exe_console.set(False)
+        self.exe_quit_on_close.set(True)
 
         # # Implicitly apply changes
         # config_dialog = self.master.winfo_toplevel()

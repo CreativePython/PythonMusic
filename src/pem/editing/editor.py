@@ -764,6 +764,7 @@ class EditorWindow:
         text.bind("<<run-selection>>", scriptbinding.run_selection_event)
         text.bind("<<run-current-line>>", scriptbinding.run_current_line_event)
         text.bind("<<run-current-paragraph>>", scriptbinding.run_current_paragraph_event)
+        text.bind("<<create-executable>>", self.create_executable_event)
         text.bind("<<do-rstrip>>", self.Rstrip(self).do_rstrip)
         text.bind("<<zoom-height>>", self.ZoomHeight(self).zoom_height_event)
         text.bind("<<print-window>>", self.print_window)
@@ -1236,6 +1237,20 @@ class EditorWindow:
                 save_btn.bind('<Button-1>', lambda e: self.toolbar_save())
                 save_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
             Hovertip(save_btn, "Save (Ctrl+S)")
+
+            icon = self.load_toolbar_icon('create_exe', btn_size)
+            if icon:
+                exe_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_create_executable,
+                                                     btn_size, btn_padx, btn_pady)
+            else:
+                exe_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
+                                 highlightthickness=0, relief=FLAT,
+                                 bg=self.toolbar_frame.cget('bg'))
+                exe_btn.create_rectangle(7, 8, 25, 24, outline='black', width=2, fill='white', tags='icon')
+                exe_btn.create_polygon(13, 12, 13, 20, 20, 16, fill='black', tags='icon')
+                exe_btn.bind('<Button-1>', lambda e: self.toolbar_create_executable())
+                exe_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
+            Hovertip(exe_btn, "Create Executable")
 
             sep2 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
             sep2.pack(side=LEFT, padx=sep_padx, pady=btn_pady)

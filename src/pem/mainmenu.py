@@ -26,7 +26,7 @@ menudefs = [
    ('_Save', '<<save-window>>'),
    ('Save _As...', '<<save-window-as-file>>'),
    ('Save _All', '<<save-all-windows>>'),
-   # ('Create _Executable', '<<create-executable>>'),
+   ('Create _Executable', '<<create-executable>>'),
    None,
    ('_Close', '<<close-window>>'),
    ('Close _All', '<<close-all-windows>>'),

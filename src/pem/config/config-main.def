@@ -57,6 +57,15 @@ print-command-posix=lpr %%s
 print-command-win=start /min notepad /p %%s
 delete-exitfunc= 1
 
+[CreateExecutable]
+# When on, executables built by "Create Executable" open a text console so the
+# program can use print() and input(); off keeps them windowed.
+console= 0
+# When on (the default), a built window program quits once its last window
+# closes.  Turn it off for programs that keep working after a window closes
+# (e.g. those using MidiIn, whose device chooser is a window).
+quit-on-window-close= 1
+
 [EditorWindow]
 width= 80
 height= 40
