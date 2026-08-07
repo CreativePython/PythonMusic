@@ -123,49 +123,30 @@ Restart your computer, then try installing PythonMusic again.
 
 
 ---
+## How to Test your Installation
 
-# Using PythonMusic
+To verify that your environment is set up correctly, run the following "Hello, World!" program:
 
-PythonMusic's core modules are the [`music`](api/music/index.md), [`gui`](api/gui/index.md), [`timer`](api/timer/index.md), [`osc`](api/osc/index.md), and [`midi`](api/midi/index.md) libraries.  You can import these libraries into your python code using:
-
-```python
-import music
-```
-```python
-from music import *
-```
-```python
-from music import Note, Play, C4, HN
+```python linenums="1" title="playNote.py"
+--8<-- "examples/_snippets/playNote.py"
 ```
 
-Or a similar statement.  PythonMusic includes a number of useful constants, so we recommend using wildcard imports like `from music import *`.
+You can run this in one of two ways:
 
-**NOTE:** The first time you import `music`, PythonMusic will ask to download a high-quality soundfont (FluidR3 G2-2.sf2) for you.  This is necessary to play high quality MIDI sounds, and only needs to happen once.
+- **Using PEM:** Copy and paste the code above directly into the PEM editor, and click "Run".
 
-## Running PythonMusic Programs
-
-There are several ways to run PythonMusic programs:
-
-- Use provided PEM editor (for beginners – easiest)
-
-- Use Sublime editor (for intermediate users)
-
-- Use VS Code editor (for intermediate users)
-
-- Use Atom editor (for intermediate users)
-
-- Use Atom editor (for advanced users – very customizable)
-
-- Use terminal window (for advanced users – pure freedom!!!)
-
-**NOTE:** Most advanced editors allow customization – by exploring the above instructions, you should be able to make your preferred editor run PythonMusic, as long as it provides a way to specify which run-time environment to use, when running files.
-
-
-PythonMusic is designed for use in Python's Interactive Mode.  To run a python program in interactive mode, use a command like:
+- **Using the command line:** Save the code in a file named ```playNote.py```, and run it from your terminal (notice the "-i", which stands for interactive mode):
 
 ```
-python -i <filename.py>
+python -i playNote.py
 ```
+
+**NOTE**: The first time you import music and run a program, PythonMusic will ask to download a high-quality soundfont (FluidR3 G2-2.sf2) for you. This is necessary to play high-quality MIDI sounds, and only needs to happen once.
+
+If you hear this note playing, everything is perfect!
+
+<audio controls preload="none" src="../../audio/playNote.wav"></audio>
+
 
 ---
 
