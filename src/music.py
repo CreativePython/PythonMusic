@@ -892,7 +892,7 @@ class Phrase():
        arg2 (int or float, optional): A start time in beats, when arg1 is a Note.
    """
 
-   def __init__(self, startTime=None):
+   def __init__(self, arg1=None, arg2=None):
 
       # initialize default phrase properties
       self._noteList      = []
@@ -900,6 +900,24 @@ class Phrase():
       self._instrument    = -1
       self._tempo         = -1
       self._startTime     = None
+
+      # parse arguments by type - (arg1, arg2)
+      # (None,  None)      is an empty phrase
+      # (float, None)      is an empty phrase with a start time
+      # (Note,  None)      is a phrase with a single note
+      # (Note,  float)     is a phrase with a single note and a start time
+
+      if isinstance(arg1, Note):
+         self.addNote(arg1)
+
+         if arg2 is not None:
+            self.setStartTime(arg2)
+
+      elif isinstance(arg1, (int, float)):
+         self.setStartTime(arg1)
+
+         if arg2 is not None:
+            raise TypeError( "Error: 2 arguments were given when 1 was expected." )
 
 
    def __str__(self):
