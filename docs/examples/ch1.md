@@ -12,7 +12,7 @@ Here is code from this chapter.
 
 This code sample ([Ch. 1, p. 22](http://goo.gl/Io4kLk)) demonstrates how to **play a single musical note**.
 
-Run it to test your JythonMusic installation.
+Run it to test your PythonMusic installation.
 
 ```python linenums="1" title="playNote.py"
 --8<-- "examples/_snippets/playNote.py"
