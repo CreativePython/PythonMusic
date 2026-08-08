@@ -156,7 +156,7 @@ brew install portaudio
 Then try installing PythonMusic again.
 
 ---
-## How to Test your Installation
+## Test your Installation
 
 To verify that your environment is set up correctly, run the following "Hello, World!" program:
 

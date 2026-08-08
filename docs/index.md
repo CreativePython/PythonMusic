@@ -69,8 +69,8 @@ PythonMusic comes with a [textbook](https://goo.gl/Y1VM5t).  The textbook is int
 
 For more information, see
 
-- B. Manaris and A. Brown, Making Music with Computers: Creative Programming in Python, Chapman & Hall/CRC Textbooks in Computing, May 2014. (see [Amazon](https://goo.gl/Y1VM5t), and [CRC Press](http://goo.gl/Io4kLk) links)
-- B. Manaris, B. Stevens, and A.R. Brown, “JythonMusic: An environment for teaching algorithmic music composition, dynamic coding and musical performativity”, Journal of Music, Technology & Education, 9: 1, pp. 33–56, May 2016. ([doi: 10.1386/jmte.9.1.33_1](https://doi.org/10.1386/jmte.9.1.33_1))
+- B. Manaris and A. Brown, *Making Music with Computers: Creative Programming in Python*, Chapman & Hall/CRC Textbooks in Computing, May 2014. (see [Amazon](https://goo.gl/Y1VM5t), and [CRC Press](http://goo.gl/Io4kLk) links)
+- B. Manaris, B. Stevens, and A.R. Brown, “JythonMusic: An environment for teaching algorithmic music composition, dynamic coding and musical performativity”, *Journal of Music, Technology & Education*, 9: 1, pp. 33–56, May 2016. ([doi: 10.1386/jmte.9.1.33_1](https://doi.org/10.1386/jmte.9.1.33_1))
 
 This material supports the [AP Computer Science Principles Curriculum](articles/cs-principles.md).
 
@@ -82,6 +82,6 @@ PythonMusic is developed by [Bill Manaris](http://manaris.org/), Taj Ballinger, 
 
 PythonMusic is based on the [jMusic computer-assisted composition framework](http://explodingart.com/jmusic/), created by [Andrew Brown](http://explodingart.com/wp/) and [Andrew Sorensen](https://vimeo.com/andrewsorensen).
 
-The PEM editor is based on the [TigerJython](https://tigerjython.com/en) editor developed by [Tobias Kohn](https://tobiaskohn.ch/) and Python's native [IDLE](https://docs.python.org/3/library/idle.html) editor .
+The PEM editor is based on Python's native [IDLE](https://docs.python.org/3/library/idle.html) editor, as well as the [JEM editor](https://jythonmusic.org/download-3/) by [Tobias Kohn](https://tobiaskohn.ch/) (derived from [TigerJython](https://tigerjython.com/en)).
 
 ![NSF Logo](images/nsflogotrans.png.webp){ align="left" width="50" } Various components have been supported by the US National Science Foundation (DUE-1323605, DUE-1044861, IIS-0736480, IIS-0849499 and IIS-1049554).
