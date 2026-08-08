@@ -82,6 +82,6 @@ PythonMusic is developed by [Bill Manaris](http://manaris.org/), Taj Ballinger, 
 
 PythonMusic is based on the [jMusic computer-assisted composition framework](http://explodingart.com/jmusic/), created by [Andrew Brown](http://explodingart.com/wp/) and [Andrew Sorensen](https://vimeo.com/andrewsorensen).
 
-The PEM editor is based on the [TigerJython](https://tigerjython.com/en) editor developed by [Tobias Kohn](https://tobiaskohn.ch/) and Python's native [IDLE](https://docs.python.org/3/library/idle.html) editor .
+The PEM editor is based on Python's native [IDLE](https://docs.python.org/3/library/idle.html) editor, as well as the [JEM editor](https://jythonmusic.org/download-3/) by [Tobias Kohn](https://tobiaskohn.ch/) (derived from [TigerJython](https://tigerjython.com/en)).
 
 ![NSF Logo](images/nsflogotrans.png.webp){ align="left" width="50" } Various components have been supported by the US National Science Foundation (DUE-1323605, DUE-1044861, IIS-0736480, IIS-0849499 and IIS-1049554).
