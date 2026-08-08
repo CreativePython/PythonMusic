@@ -69,8 +69,8 @@ PythonMusic comes with a [textbook](https://goo.gl/Y1VM5t).  The textbook is int
 
 For more information, see
 
-- B. Manaris and A. Brown, Making Music with Computers: Creative Programming in Python, Chapman & Hall/CRC Textbooks in Computing, May 2014. (see [Amazon](https://goo.gl/Y1VM5t), and [CRC Press](http://goo.gl/Io4kLk) links)
-- B. Manaris, B. Stevens, and A.R. Brown, “JythonMusic: An environment for teaching algorithmic music composition, dynamic coding and musical performativity”, Journal of Music, Technology & Education, 9: 1, pp. 33–56, May 2016. ([doi: 10.1386/jmte.9.1.33_1](https://doi.org/10.1386/jmte.9.1.33_1))
+- B. Manaris and A. Brown, *Making Music with Computers: Creative Programming in Python*, Chapman & Hall/CRC Textbooks in Computing, May 2014. (see [Amazon](https://goo.gl/Y1VM5t), and [CRC Press](http://goo.gl/Io4kLk) links)
+- B. Manaris, B. Stevens, and A.R. Brown, “JythonMusic: An environment for teaching algorithmic music composition, dynamic coding and musical performativity”, *Journal of Music, Technology & Education*, 9: 1, pp. 33–56, May 2016. ([doi: 10.1386/jmte.9.1.33_1](https://doi.org/10.1386/jmte.9.1.33_1))
 
 This material supports the [AP Computer Science Principles Curriculum](articles/cs-principles.md).
 
