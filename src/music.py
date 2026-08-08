@@ -3073,13 +3073,15 @@ def _downloadSoundfont(destination):
    """"""
    from pooch import retrieve  # secure download helper
    SF2_URL    = "https://www.dropbox.com/s/xixtvox70lna6m2/FluidR3%20GM2-2.SF2?dl=1"
+   SF2_NAME   = "FluidR3 GM2-2.SF2"
    SF2_SHA256 = "2ae766ab5c5deb6f7fffacd6316ec9f3699998cce821df3163e7b10a78a64066"
    destination.mkdir(parents=True, exist_ok=True)  # create destination, if it doesn't exist
    downloadPath = retrieve(                        # download soundfont
       url=SF2_URL,
       known_hash=f"sha256:{SF2_SHA256}",
       progressbar=False,  # quietly
-      path=str(destination)
+      path=str(destination),
+      fname=SF2_NAME      # keep the soundfont's original name (otherwise, we get a scrambled one)
    )
    return downloadPath
 
