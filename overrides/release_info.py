@@ -19,7 +19,7 @@ import logging
 import urllib.request
 from datetime import datetime
 
-_LATEST_RELEASE_API = "https://api.github.com/repos/ydhadix/PythonMusic/releases/latest"
+_LATEST_RELEASE_API = "https://api.github.com/repos/CreativePython/PythonMusic/releases/latest"
 
 log = logging.getLogger("mkdocs.hooks.release_info")
 

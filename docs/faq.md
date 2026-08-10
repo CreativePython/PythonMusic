@@ -116,7 +116,7 @@ So, **first turn MIDI learning off in the DAW,** and **then press the stop butto
 
 ## 7. How to find answers to other questions?
 
-Questions, bug reports, feature requests, and contributions can be posted to [the PythonMusic Github](https://github.com/ydhadix/PythonMusic).
+Questions, bug reports, feature requests, and contributions can be posted to [the PythonMusic Github](https://github.com/CreativePython/PythonMusic).
 
 We are working on securing a forum for public collaboration in PythonMusic; it will be ready soon!
 
