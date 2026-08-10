@@ -13,11 +13,6 @@ __pycache__/
 .cursor/
 .kilocode/
 
-.firebase*
-*.json
-
 *venv*/
 build/
 dist/
-site/
-docs/_scripts/_*/

@@ -1,10 +1,9 @@
 name: CI
 
-# Fast sanity checks so problems surface before a release is tagged:
-#   - the package still builds and has valid metadata
-#   - the docs site still builds
-# These never publish anything. The expensive executable builds run only on a
-# release (see release.yml), not on every push.
+# Fast sanity check so problems surface before a release is tagged: the package
+# still builds and has valid metadata. This never publishes anything. The
+# expensive executable builds run only on a release (see release.yml), not on
+# every push.
 on:
   pull_request:
   push:
@@ -28,17 +27,3 @@ jobs:
           python -m pip install --upgrade build twine
           python -m build
           python -m twine check dist/*
-
-  docs:
-    name: Build docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: docs/requirements.txt
-      - run: pip install -r docs/requirements.txt
-      # Add --strict here once the nav and links are fully in sync, to fail on warnings.
-      - run: mkdocs build
