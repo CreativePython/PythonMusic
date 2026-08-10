@@ -1,6 +1,0 @@
-# Documentation toolchain (used only to build/deploy the MkDocs site in CI).
-# Kept separate from the package's runtime dependencies in pyproject.toml —
-# the docs build does not import the package, so none of those are needed here.
-mkdocs==1.6.1
-mkdocs-material==9.7.6
-pymdown-extensions==10.21.3

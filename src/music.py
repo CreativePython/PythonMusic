@@ -892,7 +892,7 @@ class Phrase():
        arg2 (int or float, optional): A start time in beats, when arg1 is a Note.
    """
 
-   def __init__(self, startTime=None):
+   def __init__(self, arg1=None, arg2=None):
 
       # initialize default phrase properties
       self._noteList      = []
@@ -900,6 +900,24 @@ class Phrase():
       self._instrument    = -1
       self._tempo         = -1
       self._startTime     = None
+
+      # parse arguments by type - (arg1, arg2)
+      # (None,  None)      is an empty phrase
+      # (float, None)      is an empty phrase with a start time
+      # (Note,  None)      is a phrase with a single note
+      # (Note,  float)     is a phrase with a single note and a start time
+
+      if isinstance(arg1, Note):
+         self.addNote(arg1)
+
+         if arg2 is not None:
+            self.setStartTime(arg2)
+
+      elif isinstance(arg1, (int, float)):
+         self.setStartTime(arg1)
+
+         if arg2 is not None:
+            raise TypeError( "Error: 2 arguments were given when 1 was expected." )
 
 
    def __str__(self):
@@ -3055,13 +3073,15 @@ def _downloadSoundfont(destination):
    """"""
    from pooch import retrieve  # secure download helper
    SF2_URL    = "https://www.dropbox.com/s/xixtvox70lna6m2/FluidR3%20GM2-2.SF2?dl=1"
+   SF2_NAME   = "FluidR3 GM2-2.SF2"
    SF2_SHA256 = "2ae766ab5c5deb6f7fffacd6316ec9f3699998cce821df3163e7b10a78a64066"
    destination.mkdir(parents=True, exist_ok=True)  # create destination, if it doesn't exist
    downloadPath = retrieve(                        # download soundfont
       url=SF2_URL,
       known_hash=f"sha256:{SF2_SHA256}",
       progressbar=False,  # quietly
-      path=str(destination)
+      path=str(destination),
+      fname=SF2_NAME      # keep the soundfont's original name (otherwise, we get a scrambled one)
    )
    return downloadPath
 

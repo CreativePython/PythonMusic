@@ -1356,9 +1356,6 @@ class PyShell(OutputWindow):
     def short_title(self):
         return self.shell_title
 
-    COPYRIGHT = \
-          'Type "help", "copyright", "credits" or "license()" for more information.'
-
     def begin(self):
         perflog.mark("PyShell.begin: start (will boot execution subprocess)")
         # --- SHUTDOWN FAILSAFE ---
@@ -1386,8 +1383,8 @@ class PyShell(OutputWindow):
         except Exception:
             pass
             
-        self.write("Python %s on %s\n%s\n\n" %
-                   (sys.version, sys.platform, self.COPYRIGHT))
+        self.write("Python %s on %s\n\n" %
+                   (sys.version, sys.platform))
         
         # --- FIX: Ensure the widget still exists before focusing ---
         if self.text is not None and not getattr(self, 'closing', False):
@@ -1736,7 +1733,7 @@ class PyShell(OutputWindow):
         except Exception:
             pass
         try:
-            self.write("Python %s on %s\n%s" % (sys.version, sys.platform, self.COPYRIGHT))
+            self.write("Python %s on %s\n" % (sys.version, sys.platform))
             self.write_to_console("\n======= Reset =======\n", "stdout")
             self.showprompt()
         except Exception:

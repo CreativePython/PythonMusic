@@ -2,4 +2,4 @@ PythonMusic and PEM are free software.  Both are distributed under the [GNU Gene
 
 PythonMusic's development was supported in part by the [United States National Science Foundation](http://www.nsf.gov/).
 
-[PythonMusic on GitHub](https://github.com/ydhadix/pythonmusic)
+[PythonMusic on GitHub](https://github.com/CreativePython/PythonMusic)
