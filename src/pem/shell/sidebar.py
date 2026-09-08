@@ -482,6 +482,20 @@ class ShellSidebar(BaseSideBar):
         if self.is_shown:
             self.update_sidebar()
 
+    def holds_typed_input(self, index):
+        """True if the line at ``index`` is one the user types into.
+
+        Text the user has typed carries the "stdin" tag.  The line being typed
+        right now may still be empty, so it is recognised by sitting at or
+        after the input mark instead.
+        """
+        if "stdin" in self.text.tag_names(index):
+            return True
+        try:
+            return bool(self.text.compare(index, ">=", "iomark"))
+        except tk.TclError:      # no input mark yet, while the Console starts
+            return False
+
     def update_sidebar(self):
         text = self.text
         text_tagnames = text.tag_names
@@ -495,10 +509,16 @@ class ShellSidebar(BaseSideBar):
             index = text.index(f'{index}+1line linestart')
         while (lineinfo := text.dlineinfo(index)) is not None:
             y = lineinfo[1]
+            # The newline that ended the previous line says what came before
+            # this one: a prompt PEM wrote, or something the user typed.  A
+            # continuation prompt also needs this line to be input itself --
+            # a program's output follows typed input just as a continuation
+            # line does, and carries no prompt.
             prev_newline_tagnames = text_tagnames(f"{index} linestart -1c")
             prompt = (
                 '>>>' if "console" in prev_newline_tagnames else
-                '...' if "stdin" in prev_newline_tagnames else
+                '...' if ("stdin" in prev_newline_tagnames
+                          and self.holds_typed_input(index)) else
                 None
             )
             if prompt:

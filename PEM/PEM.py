@@ -17,7 +17,7 @@ import multiprocessing
 from pathlib import Path
 
 LIB_FOLDER_NAME = "pem"
-SUBPROCESS_FLAG = "--pem-subprocess"  # must match pyshell.SUBPROCESS_FLAG
+SUBPROCESS_FLAG = "--pem-subprocess"  # must match interpreter.SUBPROCESS_FLAG
 
 
 def getBundlePath():
@@ -51,10 +51,10 @@ def runSubprocessServer(port):
         if str(rootPath) not in sys.path:
             sys.path.insert(0, str(rootPath))
 
-        # Re-route sys.argv to satisfy the expectations of the execution module
+        # Re-route sys.argv to satisfy the expectations of the interpreter module
         sys.argv = ["pem_subprocess", str(port)]
 
-        from pem.execution.run import main
+        from pem.interpreter.run import main
         main()
 
     except Exception as error:

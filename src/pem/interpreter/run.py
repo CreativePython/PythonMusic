@@ -1,8 +1,8 @@
-""" pem.execution.run -- the PEM execution subprocess (RPC server).
+""" pem.interpreter.run -- the PEM execution subprocess (RPC server).
 
-Spawned by pyshell.ModifiedInterpreter.build_subprocess_arglist():
+Spawned by Interpreter.build_subprocess_arglist():
   * from source / an installed pem:
-        {sys.executable} -c "...; from pem.execution.run import main; main()" <port>
+        {sys.executable} -c "...; from pem.interpreter.run import main; main()" <port>
   * from a frozen build: the bundled executable is re-launched with the
         --pem-subprocess flag, which routes into PEM.py -> run.main().
 This module deliberately imports nothing from PEM except the RPC layer, so
@@ -13,7 +13,6 @@ import contextlib
 import functools
 import io
 import linecache
-import os
 import queue
 import sys
 import textwrap
@@ -27,7 +26,7 @@ from pem import perflog
 perflog.mark("run.py: stdlib imports done; importing pem RPC server")
 
 import pem  # for pem.testing
-from pem.execution import rpc
+from pem.interpreter import rpc, startup
 from pem._encoding import encoding, errors
 import __main__
 perflog.mark("run.py: module-level imports done")
@@ -161,13 +160,9 @@ def main():
         print("PEM Subprocess: no IP port passed in sys.argv.", file=sys.__stderr__)
         return
 
-    # Default matplotlib to the Qt backend (PySide6 is bundled with PEM and
-    # available in any from-source install).  qtagg cooperates with the
-    # PyOS_InputHook pump below: matplotlib registers a Qt hook on first
-    # `pyplot` import, and our idle ticks then keep its windows responsive.
-    # `setdefault` so a user who really wants a different backend can still
-    # set MPLBACKEND before launching PEM.
-    os.environ.setdefault("MPLBACKEND", "qtagg")
+    # Change the interpreter defaults PEM wants changed for user code
+    # this must happen before the socket thread below starts serving the editor's requests.
+    startup.apply_startup_settings()
 
     capture_warnings(True)
     sys.argv[:] = [""]

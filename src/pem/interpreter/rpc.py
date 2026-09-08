@@ -22,7 +22,7 @@ choice GvR wanted for IDLE; with one client per server it costs nothing.
 The RPCServer handler class is expected to provide register/unregister methods.
 RPCHandler inherits the mix-in class SocketIO, which provides these methods.
 
-See pem.execution.run.main() for how the subprocess side drives this.
+See pem.interpreter.run.main() for how the subprocess side drives this.
 """
 import builtins
 import copyreg

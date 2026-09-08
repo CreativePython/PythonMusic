@@ -1,7 +1,7 @@
 """Text-encoding settings shared by PEM's editor I/O and the execution
 subprocess's stdio.
 
-Kept in its own tiny module so the execution subprocess (``pem.execution.run``)
+Kept in its own tiny module so the execution subprocess (``pem.interpreter.run``)
 can import just these constants without pulling in ``iomenu`` -- which would
 drag in tkinter and the whole config system.  ``iomenu`` re-exports the same
 names for backward compatibility.

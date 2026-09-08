@@ -9,6 +9,8 @@ import os
 from tkinter import messagebox, Toplevel, Frame, Canvas
 from tkinter import ttk
 
+from pem.editing.menubar import window_menus
+
 class FileList:
     "Tracks open editor windows and owns the single tabbed master window."
 
@@ -51,6 +53,9 @@ class FileList:
             # Construct the Notebook to hold individual file tabs
             self.notebook = ttk.Notebook(self.master_window)
             self.notebook.pack(fill='both', expand=True)
+
+            # The window carries the menu bar every tab in it works from.
+            window_menus(self.master_window, self.EditorWindow.menu_specs)
 
     def set_run_indicator(self, running):
         """Switch the shared Run toolbar button between its idle (play) and

@@ -36,6 +36,7 @@ from pem.text import pyparse
 from pem.dialogs import query
 from pem.searching import replace
 from pem.searching import search
+from pem.editing.menubar import window_menus, prepstr, get_accelerator
 from pem.editing.tree import wheel_event
 from pem.util import py_extensions
 from pem import window
@@ -73,7 +74,6 @@ class EditorWindow:
     from pem.editing.zoomheight import ZoomHeight
 
     filesystemencoding = sys.getfilesystemencoding()  # for file names
-    help_url = None
 
     allow_code_context = True
     allow_line_numbers = True
@@ -83,42 +83,6 @@ class EditorWindow:
     def __init__(self, flist=None, filename=None, key=None, root=None):
         from pem.editing.runscript import ScriptBinding
 
-        if EditorWindow.help_url is None:
-            dochome =  os.path.join(sys.base_prefix, 'Doc', 'index.html')
-            if sys.platform.count('linux'):
-                pyver = 'python-docs-' + '%s.%s.%s' % sys.version_info[:3]
-                if os.path.isdir('/var/www/html/python/'):  
-                    dochome = '/var/www/html/python/index.html'
-                else:
-                    basepath = '/usr/share/doc/'  
-                    dochome = os.path.join(basepath, pyver,
-                                           'Doc', 'index.html')
-            elif sys.platform[:3] == 'win':
-                import winreg  
-                docfile = ''
-                KEY = (rf"Software\Python\PythonCore\{sys.winver}"
-                        r"\Help\Main Python Documentation")
-                try:
-                    docfile = winreg.QueryValue(winreg.HKEY_CURRENT_USER, KEY)
-                except FileNotFoundError:
-                    try:
-                        docfile = winreg.QueryValue(winreg.HKEY_LOCAL_MACHINE,
-                                                    KEY)
-                    except FileNotFoundError:
-                        pass
-                if os.path.isfile(docfile):
-                    dochome = docfile
-            elif sys.platform == 'darwin':
-                dochome = os.path.join(sys.base_prefix,
-                        'Resources/English.lproj/Documentation/index.html')
-            dochome = os.path.normpath(dochome)
-            if os.path.isfile(dochome):
-                EditorWindow.help_url = dochome
-                if sys.platform == 'darwin':
-                    EditorWindow.help_url = 'file://' + EditorWindow.help_url
-            else:
-                EditorWindow.help_url = ("https://docs.python.org/%d.%d/"
-                                         % sys.version_info[:2])
         self.flist = flist
         root = root or flist.root
         self.root = root
@@ -193,16 +157,15 @@ class EditorWindow:
             flist.notebook.add(self.main_container, text=initial_tab_title)
             flist.notebook.select(self.main_container)
 
-            self.menubar = Menu(top)
-            top.config(menu=self.menubar)
-            
             # --- TAB FOCUS LOGIC ---
+            # The window's menu bar stays attached (see WindowMenus), so a
+            # tab change only records which editor the menus, toolbar and
+            # keys now act on.
             def on_tab_change(event):
                 try:
                     if self.text and self.text.winfo_exists():
                         if flist.notebook.select() == str(self.main_container):
-                            top.current_editor = self  
-                            top.config(menu=self.menubar)
+                            top.current_editor = self
                             self.text.focus_set()
                             self.text.update_idletasks()
                 except Exception:
@@ -276,8 +239,6 @@ class EditorWindow:
                             str(editor.main_container) == clickedTabWidget):
 
                             def safe_close(targetEditor=editor):
-                                # Defer to close(), which closes this tab or --
-                                # if it is the last one -- exits PEM.
                                 targetEditor.close()
 
                             editor.text.after(10, safe_close)
@@ -361,26 +322,26 @@ class EditorWindow:
 
 
         else:
-            # Mount window as a standalone legacy Toplevel
-            self.menubar = Menu(root)
+            # Mount window as a standalone legacy Toplevel.  Its menu bar is
+            # built by adopt_window_menus() below; the Console's stays
+            # unattached until PyShell.show() puts the window on screen, so
+            # its menus don't leak into the editor window while it is hidden.
+            self.top = top = window.ListedToplevel(root)
             if getattr(self, 'is_shell', False):
-                # Don't associate the menubar with the Toplevel while it's hidden —
-                # doing so leaks the shell's menu into the editor's window on some
-                # platforms. _show_and_focus() attaches the menu when the shell
-                # is actually displayed.
-                self.top = top = window.ListedToplevel(root)
                 top.withdraw()
-            else:
-                self.top = top = window.ListedToplevel(root, menu=self.menubar)
 
             self.main_container = top
 
+
+        # A new tab is the one on show, and the window's menus, toolbar and
+        # keys act on whichever editor this points at.
+        self.top.current_editor = self
 
         if flist:
             self.tkinter_vars = flist.vars
             self.top.instance_dict = flist.inversedict
         else:
-            self.tkinter_vars = {}  
+            self.tkinter_vars = {}
             self.top.instance_dict = {}
             
         self.recent_files_path = pemConf.userdir and os.path.join(
@@ -460,7 +421,7 @@ class EditorWindow:
         self.text = text = MultiCallCreator(Text)(text_frame, **text_options)
         self.top.focused_widget = self.text
 
-        self.createmenubar()
+        self.adopt_window_menus()
         self.apply_bindings()
 
 
@@ -512,8 +473,7 @@ class EditorWindow:
         text.bind("<<copy>>", self.copy)
         text.bind("<<paste>>", self.paste)
         text.bind("<<center-insert>>", self.center_insert_event)
-        text.bind("<<jythonmusic-docs>>", self.jythonmusic_docs)
-        text.bind("<<python-docs>>", self.python_docs)
+        text.bind("<<pythonmusic-docs>>", self.pythonmusic_docs)
         text.bind("<<about-pem>>", self.about_dialog)
         text.bind("<<open-config-dialog>>", self.config_dialog)
         text.bind("<<open-module>>", self.open_module_event)
@@ -553,10 +513,6 @@ class EditorWindow:
             if key:
                 flist.dict[key] = self
             text.bind("<<open-new-window>>", self.new_callback)
-            if sys.platform == 'darwin':
-                text.event_add("<<open-new-window>>", "<Command-t>")
-            else:
-                text.event_add("<<open-new-window>>", "<Control-t>")
             text.bind("<<close-all-windows>>", self.flist.close_all_callback)
             text.bind("<<save-all-windows>>", self.save_all_windows_event)
             text.bind("<<quit>>", self.quit_event)
@@ -734,17 +690,6 @@ class EditorWindow:
         self.update_recent_files_list()
         self.load_extensions()
         
-        menu = self.menudict.get('window')
-        if menu:
-            end = menu.index("end")
-            if end is None:
-                end = -1
-            if end >= 0:
-                menu.add_separator()
-                end = end + 1
-            self.wmenu_end = end
-            window.register_callback(self.postwindowsmenu)
-
         self.askinteger = simpledialog.askinteger
         self.askyesno = messagebox.askyesno
         self.showerror = messagebox.showerror
@@ -764,33 +709,14 @@ class EditorWindow:
         text.bind("<<run-selection>>", scriptbinding.run_selection_event)
         text.bind("<<run-current-line>>", scriptbinding.run_current_line_event)
         text.bind("<<run-current-paragraph>>", scriptbinding.run_current_paragraph_event)
+        # Run > Stop and the toolbar's stop button do the same thing.  PyShell
+        # overrides toolbar_stop, so the Console stops without losing its history.
+        text.bind("<<stop-script>>", lambda event: self.toolbar_stop())
+        text.bind("<<create-executable>>", self.create_executable_event)
         text.bind("<<do-rstrip>>", self.Rstrip(self).do_rstrip)
         text.bind("<<zoom-height>>", self.ZoomHeight(self).zoom_height_event)
         text.bind("<<print-window>>", self.print_window)
 
-        # Register Ctrl+P / Cmd+P as the print keyboard shortcut
-        if sys.platform == 'darwin':
-            text.event_add("<<print-window>>", "<Command-p>")
-            _print_accel = "Cmd+P"
-        else:
-            text.event_add("<<print-window>>", "<Control-p>")
-            _print_accel = "Ctrl+P"
-
-        # Display the shortcut on the File ▸ Print menu item
-        file_menu = self.menudict.get('file')
-        if file_menu:
-            end = file_menu.index(END)
-            if end is not None:
-                for i in range(end + 1):
-                    try:
-                        if file_menu.type(i) == 'command':
-                            lbl = file_menu.entrycget(i, 'label')
-                            if 'print' in lbl.lower():
-                                file_menu.entryconfig(i, accelerator=_print_accel)
-                                break
-                    except (TclError, ValueError):
-                        pass
-        
         if self.allow_code_context:
             self.code_context = self.CodeContext(self)
             text.bind("<<toggle-code-context>>",
@@ -983,28 +909,20 @@ class EditorWindow:
         ("help", "_Help"),
     ]
 
-    def createmenubar(self):
-        mbar = self.menubar
-        self.menudict = menudict = {}
-        for name, label in self.menu_specs:
-            underline, label = prepstr(label)
-            postcommand = getattr(self, f'{name}_menu_postcommand', None)
-            menudict[name] = menu = Menu(mbar, name=name, tearoff=0,
-                                         postcommand=postcommand)
-            mbar.add_cascade(label=label, menu=menu, underline=underline)
-        if macosx.isCarbonTk():
-            menudict['application'] = menu = Menu(mbar, name='apple',
-                                                  tearoff=0)
-            mbar.add_cascade(label='PEM', menu=menu)
-        self.fill_menus()
-        self.recent_files_menu = Menu(self.menubar, tearoff=0)
-        if 'file' in self.menudict:
-            self.menudict['file'].insert_cascade(2, label='Open Recent',
-                                                 underline=5,
-                                                 menu=self.recent_files_menu)
-        self.base_helpmenu_length = self.menudict['help'].index(END)
-        self.reset_help_menu_entries()
+    def adopt_window_menus(self):
+        """Take this window's menus, building them if it has none yet.
 
+        Every tab in a window works from the one menu bar the window owns; a
+        command acts on whichever tab is showing.  The Console starts hidden
+        and attaches its own menu bar in PyShell.show(), so its menus reach
+        the screen with it.
+        """
+        self.menus = window_menus(self.top, self.menu_specs,
+                                  attach=not getattr(self, 'is_shell', False))
+        self.menubar = self.menus.menubar
+        self.menudict = self.menus.menudict
+        self.recent_files_menu = self.menus.recent_files_menu
+        self.base_helpmenu_length = self.menus.base_helpmenu_length
 
     def run_menu_postcommand(self):
         """
@@ -1134,6 +1052,20 @@ class EditorWindow:
             btn.pack(side=side, padx=btn_padx, pady=btn_pady)
             return btn
 
+    def toolbar_tip(self, label, eventname=None):
+        """Return a toolbar tooltip, with the command's shortcut if it has one.
+
+        The shortcut comes from the active key set, so the tip reads
+        "Run (Command+R)" on macOS and "Run (Ctrl+R)" elsewhere, and follows
+        any rebinding the user makes in Preferences.
+        """
+        accelerator = ''
+        if eventname:
+            accelerator = get_accelerator(self.mainmenu.default_keydefs, eventname)
+        if accelerator:
+            return f"{label} ({accelerator})"
+        return label
+
     def create_toolbar(self):
         from pem.dialogs.tooltip import Hovertip
         import math
@@ -1159,34 +1091,22 @@ class EditorWindow:
                 run_btn.create_polygon(10, 8, 10, 24, 24, 16, fill='black', tags='icon')
                 run_btn.bind('<Button-1>', lambda e: self.toolbar_run())
                 run_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(run_btn, "Run (Ctrl+R)")
+            Hovertip(run_btn, self.toolbar_tip("Run", "<<run-module>>"))
 
-        if self.is_shell:
-            icon = self.load_toolbar_icon('reset', btn_size)
-            if icon:
-                stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_reset,
-                                                     btn_size, btn_padx, btn_pady)
-            else:
-                stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
-                                highlightthickness=0, relief=FLAT,
-                                bg=self.toolbar_frame.cget('bg'))
-                stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
-                stop_btn.bind('<Button-1>', lambda e: self.toolbar_reset())
-                stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, "Reset Console")
+        # Stop, on both the editor and the Console: the running program is
+        # halted on the spot and a fresh subprocess takes over.
+        icon = self.load_toolbar_icon('stop', btn_size)
+        if icon:
+            stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_stop,
+                                                 btn_size, btn_padx, btn_pady)
         else:
-            icon = self.load_toolbar_icon('stop', btn_size)
-            if icon:
-                stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_stop,
-                                                     btn_size, btn_padx, btn_pady)
-            else:
-                stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
-                                highlightthickness=0, relief=FLAT,
-                                bg=self.toolbar_frame.cget('bg'))
-                stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
-                stop_btn.bind('<Button-1>', lambda e: self.toolbar_stop())
-                stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, "Stop")
+            stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
+                            highlightthickness=0, relief=FLAT,
+                            bg=self.toolbar_frame.cget('bg'))
+            stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
+            stop_btn.bind('<Button-1>', lambda e: self.toolbar_stop())
+            stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
+        Hovertip(stop_btn, self.toolbar_tip("Stop", "<<stop-script>>"))
 
         if not self.is_shell:
             sep1 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
@@ -1205,7 +1125,7 @@ class EditorWindow:
                 new_btn.create_line(18, 13, 24, 13, width=2, fill='black', tags='icon')
                 new_btn.bind('<Button-1>', lambda e: self.toolbar_new_file())
                 new_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(new_btn, "New (Ctrl+N)")
+            Hovertip(new_btn, self.toolbar_tip("New", "<<open-new-window>>"))
 
             icon = self.load_toolbar_icon('open_file', btn_size)
             if icon:
@@ -1219,7 +1139,7 @@ class EditorWindow:
                 open_btn.create_polygon(8, 12, 12, 12, 13, 9, 17, 9, 18, 12, fill='white', outline='black', width=2, tags='icon')
                 open_btn.bind('<Button-1>', lambda e: self.toolbar_open_file())
                 open_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(open_btn, "Open (Ctrl+O)")
+            Hovertip(open_btn, self.toolbar_tip("Open", "<<open-window-from-file>>"))
 
             icon = self.load_toolbar_icon('save', btn_size)
             if icon:
@@ -1235,7 +1155,7 @@ class EditorWindow:
                 save_btn.create_line(19, 6, 19, 11, width=2, fill='black', tags='icon')
                 save_btn.bind('<Button-1>', lambda e: self.toolbar_save())
                 save_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(save_btn, "Save (Ctrl+S)")
+            Hovertip(save_btn, self.toolbar_tip("Save", "<<save-window>>"))
 
             sep2 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
             sep2.pack(side=LEFT, padx=sep_padx, pady=btn_pady)
@@ -1252,7 +1172,7 @@ class EditorWindow:
                 shell_btn.create_text(16, 16, text='>', fill='black', font=('Courier', 12, 'bold'), tags='icon')
                 shell_btn.bind('<Button-1>', lambda e: self.toolbar_shell())
                 shell_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(shell_btn, "Console")
+            Hovertip(shell_btn, self.toolbar_tip("Console", "<<open-python-shell>>"))
 
             sep3 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
             sep3.pack(side=LEFT, padx=sep_padx, pady=btn_pady)
@@ -1275,7 +1195,7 @@ class EditorWindow:
                     pref_btn.create_line(x1, y1, x2, y2, width=2, fill='black', tags='icon')
                 pref_btn.bind('<Button-1>', lambda e: self.toolbar_preferences())
                 pref_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(pref_btn, "Preferences")
+            Hovertip(pref_btn, self.toolbar_tip("Preferences", "<<open-config-dialog>>"))
 
 
     # --- GLOBAL TOOLBAR ROUTING ENGINE ---
@@ -1290,17 +1210,14 @@ class EditorWindow:
         editor.text.after(0, lambda: editor.text.event_generate("<<run-module>>"))
 
     def toolbar_stop(self):
-        # Stop the running script by restarting its execution subprocess.
         # Deliberately does NOT close the Console window: closing it nulls
         # flist.pyshell and forces a slow rebuild on the next Run.
         active_editor = self.get_active_editor()
         flist = getattr(active_editor, 'flist', None)
-        sh = getattr(flist, 'pyshell', None) if flist else None
-        if sh and getattr(sh, 'interp', None) and getattr(sh.interp, 'rpcclt', None):
-            try:
-                sh.restart_shell()
-            except Exception:
-                pass
+        console = getattr(flist, 'pyshell', None) if flist else None
+        manager = getattr(console, 'interp', None)
+        if manager is not None:
+            manager.stop()
 
     def toolbar_new_file(self):
         active_editor = self.get_active_editor()
@@ -1327,10 +1244,6 @@ class EditorWindow:
     def toolbar_preferences(self):
         self.get_active_editor().text.event_generate("<<open-config-dialog>>")
 
-    def toolbar_create_executable(self):
-        builder = exebuilder.ExeBuilder(self.get_active_editor())
-        builder.create_executable()
-
     def toolbar_shell(self):
         """Toggles the visibility of the interactive Python Console."""
         # Defer by one event-loop tick so macOS can finish routing the toolbar
@@ -1338,15 +1251,6 @@ class EditorWindow:
         # Without this, lift() races the OS and the console ends up behind.
         self.text.after(0, self.flist.toggle_shell)
 
-
-    def postwindowsmenu(self):
-        menu = self.menudict['window']
-        end = menu.index("end")
-        if end is None:
-            end = -1
-        if end > self.wmenu_end:
-            menu.delete(self.wmenu_end+1, end)
-        window.add_windows_to_menu(menu)
 
     def update_menu_label(self, menu, index, label):
         menuitem = self.menudict.get(menu)
@@ -1483,23 +1387,12 @@ class EditorWindow:
         builder.create_executable()
         return "break"
 
-    def jythonmusic_docs(self, event=None):
+    def pythonmusic_docs(self, event=None):
         if self.root:
             parent = self.root
         else:
             parent = self.top
         help.show_pemhelp(parent)
-        return "break"
-
-    def python_docs(self, event=None):
-        if sys.platform[:3] == 'win':
-            try:
-                os.startfile(self.help_url)
-            except OSError as why:
-                messagebox.showerror(title='Document Start Failure',
-                    message=str(why), parent=self.text)
-        else:
-            webbrowser.open(self.help_url)
         return "break"
 
     def print_window(self, event=None):
@@ -1886,30 +1779,7 @@ class EditorWindow:
             if xkeydefs:
                 self.apply_bindings(xkeydefs)
 
-        menuEventDict = {}
-        for menu in self.mainmenu.menudefs:
-            menuEventDict[menu[0]] = {}
-            for item in menu[1]:
-                if item:
-                    menuEventDict[menu[0]][prepstr(item[0])[1]] = item[1]
-        for menubarItem in self.menudict:
-            menu = self.menudict[menubarItem]
-            end = menu.index(END)
-            if end is None:
-                continue
-            end += 1
-            for index in range(0, end):
-                if menu.type(index) == 'command':
-                    accel = menu.entrycget(index, 'accelerator')
-                    if accel:
-                        itemName = menu.entrycget(index, 'label')
-                        event = ''
-                        if menubarItem in menuEventDict:
-                            if itemName in menuEventDict[menubarItem]:
-                                event = menuEventDict[menubarItem][itemName]
-                        if event:
-                            accel = get_accelerator(keydefs, event)
-                            menu.entryconfig(index, accelerator=accel)
+        self.menus.apply_keybindings(keydefs)
 
     def set_notabs_indentwidth(self):
         if not self.usetabs:
@@ -1917,31 +1787,21 @@ class EditorWindow:
                                                   type='int')
 
     def reset_help_menu_entries(self):
-        help_list = pemConf.GetAllExtraHelpSourcesList()
-        helpmenu = self.menudict['help']
-        helpmenu_length = helpmenu.index(END)
-        if helpmenu_length > self.base_helpmenu_length:
-            helpmenu.delete((self.base_helpmenu_length + 1), helpmenu_length)
-        if help_list:
-            helpmenu.add_separator()
-            for entry in help_list:
-                cmd = self._extra_help_callback(entry[1])
-                helpmenu.add_command(label=entry[0], command=cmd)
-        self.menudict['help'] = helpmenu
+        "Rebuild the Help menu's extra documentation links."
+        self.menus.reset_help_menu_entries()
 
-    def _extra_help_callback(self, resource):
-        def display_extra_help(helpfile=resource):
-            if not helpfile.startswith(('www', 'http')):
-                helpfile = os.path.normpath(helpfile)
-            if sys.platform[:3] == 'win':
-                try:
-                    os.startfile(helpfile)
-                except OSError as why:
-                    messagebox.showerror(title='Document Start Failure',
-                        message=str(why), parent=self.text)
-            else:
-                webbrowser.open(helpfile)
-        return display_extra_help
+    def open_help_source(self, resource):
+        "Open one of the Help menu's extra entries: a web page or a local file."
+        if not resource.startswith(('www', 'http')):
+            resource = os.path.normpath(resource)
+        if sys.platform[:3] == 'win':
+            try:
+                os.startfile(resource)
+            except OSError as why:
+                messagebox.showerror(title='Document Start Failure',
+                    message=str(why), parent=self.text)
+        else:
+            webbrowser.open(resource)
 
     def update_recent_files_list(self, new_file=None):
         rf_list = []
@@ -1960,8 +1820,8 @@ class EditorWindow:
             if '\0' in path or not os.path.exists(path[0:-1]):
                 bad_paths.append(path)
         rf_list = [path for path in rf_list if path not in bad_paths]
-        ulchars = "1234567890ABCDEFGHIJK"
-        rf_list = rf_list[0:len(ulchars)]
+        # As many as the Open Recent submenu can label with its own key.
+        rf_list = rf_list[0:len(self.menus.recent_file_keys)]
         if file_path:
             try:
                 with open(file_path, 'w',
@@ -1975,20 +1835,7 @@ class EditorWindow:
                                 f"  {err}\n"
                                 "Select OK to continue.",
                         parent=self.text)
-        for instance in self.top.instance_dict:
-            menu = instance.recent_files_menu
-            menu.delete(0, END)  
-            for i, file_name in enumerate(rf_list):
-                file_name = file_name.rstrip()  
-                callback = instance.__recent_file_callback(file_name)
-                menu.add_command(label=ulchars[i] + " " + file_name,
-                                 command=callback,
-                                 underline=0)
-
-    def __recent_file_callback(self, file_name):
-        def open_recent_file(fn_closure=file_name):
-            self.io.open(editFile=fn_closure)
-        return open_recent_file
+        self.menus.fill_recent_files([name.rstrip() for name in rf_list])
 
     def saved_change_hook(self):
         short = self.short_title()
@@ -2166,17 +2013,27 @@ class EditorWindow:
             return False
 
     def close(self):
-        # The editor window is PEM's canonical window: closing its last tab
-        # exits PEM (which also shuts down the always-open Console). Other
-        # closes -- a non-last tab, or any tab while PEM is already exiting --
-        # just close that one tab.
-        if (self.flist and not getattr(self, 'is_shell', False)
-                and not getattr(self.flist, '_exiting', False)
-                and self._is_last_editor_tab()):
-            return self.flist.close_all_callback()
+        # Closing a tab never exits PEM. Close the last remaining tab and a
+        # fresh blank one takes its place, so the user is left with a window
+        # ready to type in rather than no window at all. Quitting PEM is the
+        # editor window's own close button, or Quit / Close All -- those route
+        # through close_all_callback instead.
+        replace_with_blank_tab = (self.flist
+                                  and not getattr(self, 'is_shell', False)
+                                  and not getattr(self.flist, '_exiting', False)
+                                  and self._is_last_editor_tab())
         try:
             reply = self.maybesave()
             if str(reply) != "cancel":
+                if replace_with_blank_tab:
+                    # Open the replacement *before* closing this tab. The
+                    # notebook is then never empty, so _close() takes its
+                    # ordinary path and leaves the editor window standing.
+                    # The new tab inherits this one's directory, the way
+                    # File > New does, and is left unmarked by
+                    # _user_created so File > Open can still load into it.
+                    dirname, basename = self.io.defaultfilename()
+                    self.flist.new(dirname)
                 self._close()
             return reply
         except AttributeError:
@@ -2223,7 +2080,6 @@ class EditorWindow:
         if self.io.filename:
             self.update_recent_files_list(new_file=self.io.filename)
 
-        window.unregister_callback(self.postwindowsmenu)
         self.unload_extensions()
         self.io.close()
         self.io = None
@@ -2248,9 +2104,10 @@ class EditorWindow:
                 
                 # -------------------------------------------------------------
                 # LAST TAB CLOSED
-                # Reached only while PEM is exiting (closing the last editor tab
-                # routes through close_all_callback). Tear down the now-empty
-                # editor window rather than leaving a blank notebook behind.
+                # Reached only while PEM is exiting: close() replaces the last
+                # tab before closing it, so an empty notebook otherwise can't
+                # happen. Tear down the now-empty editor window rather than
+                # leaving a blank notebook behind.
                 # -------------------------------------------------------------
                 if len(saved_flist.notebook.tabs()) == 0:
                     if saved_top.winfo_exists():
@@ -2304,7 +2161,7 @@ class EditorWindow:
         cls = getattr(mod, name)
         keydefs = pemConf.GetExtensionBindings(name)
         if hasattr(cls, "menudefs"):
-            self.fill_menus(cls.menudefs, keydefs)
+            self.menus.fill(cls.menudefs, keydefs)
         ins = cls(self)
         self.extensions[name] = ins
         if keydefs:
@@ -2327,39 +2184,6 @@ class EditorWindow:
         for event, keylist in keydefs.items():
             if keylist:
                 text.event_add(event, *keylist)
-
-    def fill_menus(self, menudefs=None, keydefs=None):
-        if menudefs is None:
-            menudefs = self.mainmenu.menudefs
-        if keydefs is None:
-            keydefs = self.mainmenu.default_keydefs
-        menudict = self.menudict
-        text = self.text
-        for mname, entrylist in menudefs:
-            menu = menudict.get(mname)
-            if not menu:
-                continue
-            for entry in entrylist:
-                if entry is None:
-                    menu.add_separator()
-                else:
-                    label, eventname = entry
-                    checkbutton = (label[:1] == '!')
-                    if checkbutton:
-                        label = label[1:]
-                    underline, label = prepstr(label)
-                    accelerator = get_accelerator(keydefs, eventname)
-                    def command(text=text, eventname=eventname):
-                        text.event_generate(eventname)
-                    if checkbutton:
-                        var = self.get_var_obj(eventname, BooleanVar)
-                        menu.add_checkbutton(label=label, underline=underline,
-                            command=command, accelerator=accelerator,
-                            variable=var)
-                    else:
-                        menu.add_command(label=label, underline=underline,
-                                         command=command,
-                                         accelerator=accelerator)
 
     def getvar(self, name):
         var = self.get_var_obj(name)
@@ -2749,39 +2573,6 @@ class IndentSearcher:
         except (tokenize.TokenError, SyntaxError):
             pass
         return self.blkopenline, self.indentedline
-
-
-def prepstr(s):
-    i = s.find('_')
-    if i >= 0:
-        s = s[:i] + s[i+1:]
-    return i, s
-
-
-keynames = {
- 'bracketleft': '[',
- 'bracketright': ']',
- 'slash': '/',
-}
-
-def get_accelerator(keydefs, eventname):
-    keylist = keydefs.get(eventname)
-    if (not keylist) or (macosx.isCocoaTk() and eventname in {
-                            "<<open-module>>",
-                            "<<goto-line>>",
-                            "<<change-indentwidth>>"}):
-        return ""
-    s = keylist[0]
-    s = re.sub(r"-[a-z]\b", lambda m: m.group().upper(), s)
-    s = re.sub(r"\b\w+\b", lambda m: keynames.get(m.group(), m.group()), s)
-    s = re.sub("Key-", "", s)
-    s = re.sub("Cancel", "Ctrl-Break", s)   
-    s = re.sub("Control-", "Ctrl-", s)
-    s = re.sub("-", "+", s)
-    s = re.sub("><", " ", s)
-    s = re.sub("<", "", s)
-    s = re.sub(">", "", s)
-    return s
 
 
 def fixwordbreaks(root):

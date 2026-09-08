@@ -1,20 +1,16 @@
 #! /usr/bin/env python3
-"""The PEM shell window and the GUI side of code execution.
+"""The PEM Console window and PEM's startup.
 
-Three layers live here:
-
-  * ``ModifiedInterpreter`` -- owns the execution subprocess.  It spawns and
-    connects to it over the RPC socket, keeps a pre-warmed *spare* subprocess
-    in the wings so Run is near-instant, restarts/kills the subprocess off the
-    Tk thread, and runs the ~15 ms poll loop that pumps RPC responses (and the
-    subprocess's stdout/stderr callbacks) back into the GUI.
   * ``PyShell`` -- the interactive Console window (an ``OutputWindow``): the
     ``>>>`` prompt, history, readline, and the *active-sink* routing that sends
     each run's output either here or to an editor tab's output pane.
+  * ``PyShellFileList`` / ``PyShellEditorWindow`` -- the file list and editor
+    tabs, extended to know about the Console.
   * ``main()`` -- builds the Tk root, the file list, and the first window.
 
-The subprocess itself is a separate, near-bare Python process; see
-``pem.execution.run``.
+The subprocesses the Console talks to are managed by
+``pem.interpreter``; the subprocess itself is a separate, near-bare
+Python process, in ``pem.interpreter.run``.
 """
 
 import sys
@@ -39,20 +35,13 @@ if sys.platform == 'win32':
 from tkinter import messagebox
 from tkinter import simpledialog
 
-from code import InteractiveInterpreter
 import itertools
 import linecache
 import os
 import os.path
-from platform import python_version
 import re
-import signal
-import socket
 import subprocess
 from textwrap import TextWrapper
-import threading
-import time
-import tokenize
 import warnings
 
 from pem.text.colorizer import ColorDelegator
@@ -63,19 +52,9 @@ from pem.editing.filelist import FileList
 from pem.shell.outwin import OutputWindow
 from pem import perflog
 from pem.searching import replace
-from pem.execution import rpc
-from pem.execution.run import pem_formatwarning, StdInputFile, StdOutputFile
+from pem.interpreter import Interpreter
+from pem.interpreter.run import pem_formatwarning, StdInputFile, StdOutputFile
 from pem.text.undo import UndoDelegator
-
-# Default for testing; defaults to True in main() for running.
-use_subprocess = False
-
-HOST = '127.0.0.1' # python execution server on localhost loopback
-PORT = 0  # someday pass in host, port for remote debug capability
-
-# Marker passed to a frozen build's own executable when it is re-launched as
-# the execution subprocess.  Must match PEM.py's SUBPROCESS_FLAG.
-SUBPROCESS_FLAG = '--pem-subprocess'
 
 # Make `exit`/`quit` (typed without parens at the shell) say "Use exit() or
 # Ctrl-D (end-of-file) to exit".  Absent under `python -S`, where the site
@@ -362,699 +341,32 @@ class UserInputTaggingDelegator(Delegator):
         self.delegate.insert(index, chars, tags)
 
 
-class MyRPCClient(rpc.RPCClient):
-    "RPCClient that turns a dropped connection into an EOFError for poll_subprocess to catch."
-
-    def handle_EOF(self):
-        "Override the base class - just re-raise EOFError"
-        raise EOFError
-
-
-# --- Execution-subprocess process helpers (used on the Tk thread and on
-#     background daemon threads, so they take their arguments explicitly and
-#     never touch interpreter instance state) -------------------------------
-
-def _spawn_exec_subprocess(arglist):
-    """Popen an execution subprocess.
-
-    On macOS the child gets its own process group (and PYTHONUNBUFFERED) so the
-    whole group -- including a PythonMusic Qt renderer child -- can be
-    reaped together later via os.killpg.
-    """
-    if sys.platform == 'darwin':
-        env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'
-        return subprocess.Popen(arglist, env=env, preexec_fn=os.setpgrp)
-    return subprocess.Popen(arglist)
-
-
-def _terminate_proc(proc):
-    """Force-terminate an execution subprocess and its process group.
-
-    The group kill reaps any PythonMusic renderer child that a force-killed
-    user process couldn't shut down cleanly.  Safe to call from a daemon thread
-    and safe if the process has already exited.
-    """
-    if not proc:
-        return
-    try:
-        if sys.platform == 'darwin':
-            try:
-                os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-            except (OSError, ProcessLookupError):
-                pass
-        elif sys.platform == 'win32':
-            try:
-                # CREATE_NO_WINDOW so taskkill (a console app) doesn't flash a
-                # black console window each time we reap a subprocess.
-                subprocess.run(['taskkill', '/F', '/T', '/PID', str(proc.pid)],
-                               capture_output=True,
-                               creationflags=subprocess.CREATE_NO_WINDOW)
-            except OSError:
-                pass
-        proc.kill()
-    except (OSError, ProcessLookupError):
-        return
-    else:
-        try:
-            proc.wait(timeout=1)
-        except (OSError, subprocess.TimeoutExpired):
-            try:
-                proc.kill()
-            except (OSError, ProcessLookupError):
-                pass
-            try:
-                proc.wait(timeout=2)
-            except (OSError, subprocess.TimeoutExpired):
-                pass
-
-
-def _terminate_conn(clt, proc):
-    "Close an RPC connection + its listening socket, then terminate the subprocess."
-    if clt is not None:
-        try:
-            clt.close()
-        except Exception:
-            pass
-        try:
-            clt.listening_sock.close()
-        except Exception:
-            pass
-    _terminate_proc(proc)
-
-
-class _Spare:
-    "A pre-built, idle execution subprocess waiting to be promoted to active."
-    __slots__ = ('clt', 'proc')
-
-    def __init__(self, clt, proc):
-        self.clt = clt
-        self.proc = proc
-
-
-class ModifiedInterpreter(InteractiveInterpreter):
-    """GUI-side controller for the execution subprocess.
-
-    Compiles shell input here (via ``code.InteractiveInterpreter``) but runs it
-    in a separate process, reached over the RPC socket in ``pem.execution.rpc``.
-    Responsibilities: spawn/connect (``start_subprocess``), keep a pre-warmed
-    ``_spare`` ready and promote it on restart (``restart_subprocess``), tear the
-    old process down off the Tk thread, and pump RPC responses + the subprocess's
-    output callbacks back into the shell on a timer (``poll_subprocess``).
-    """
-
-    def __init__(self, tkconsole):
-        self.tkconsole = tkconsole
-        locals = sys.modules['__main__'].__dict__
-        InteractiveInterpreter.__init__(self, locals=locals)
-        self.restarting = False
-        self.port = PORT
-        self.original_compiler_flags = self.compile.compiler.flags
-
-    _afterid = None
-    rpcclt = None
-    rpcsubproc = None
-    _spare = None            # a _Spare: pre-built idle subprocess (or None)
-    _spare_building = False  # True while a _build_spare daemon thread is in flight
-    _closing = False         # set by kill_subprocess; tells in-flight builds to discard
-
-    def spawn_subprocess(self):
-        # Builds the arglist fresh each time -- it embeds self.port, which changes
-        # when a warm spare (with its own listening socket) is promoted to active.
-        perflog.mark("spawn_subprocess: about to Popen execution subprocess")
-        self.rpcsubproc = _spawn_exec_subprocess(self.build_subprocess_arglist())
-        perflog.mark(f"spawn_subprocess: Popen returned (child pid={self.rpcsubproc.pid})")
-
-    def build_subprocess_arglist(self, port=None):
-        """argv for spawning an execution subprocess that connects back to our
-        listening socket on ``port``.
-
-        Frozen build: re-launch the bundled executable with SUBPROCESS_FLAG --
-        PyInstaller's _MEIPASS2 mechanism makes it reuse the parent's already-
-        extracted runtime, so this is fast (no re-extraction).
-        From source / an installed pem: spawn ``python -c <bootstrap>``
-        that puts the directory containing the ``pem`` package on sys.path
-        and runs pem.execution.run.main().
-        """
-        port = port if port is not None else self.port
-        assert port != 0, "Socket should have been assigned a port number."
-        warnopts = ['-W' + s for s in sys.warnoptions]
-        if getattr(sys, 'frozen', False):
-            return [sys.executable, SUBPROCESS_FLAG, str(port)]
-        # __file__ here is .../pem/pyshell.py -> grandparent is the dir
-        # that contains the 'pem' package (already on sys.path if
-        # pem is installed; needed when running from source).
-        pkg_parent = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        bootstrap = (f"import sys; sys.path.insert(0, {pkg_parent!r}); "
-                     f"from pem.execution.run import main; main()")
-        return [sys.executable] + warnopts + ["-c", bootstrap, str(port)]
-
-    def start_subprocess(self):
-        perflog.mark("start_subprocess: begin (acquiring listening socket)")
-        addr = (HOST, self.port)
-        # Bind the listening socket the subprocess will connect back to.  With
-        # PORT == 0 the OS hands us a free ephemeral port, so this normally
-        # succeeds on the first try; the short retry is just a safety net.
-        for attempt in range(6):
-            try:
-                self.rpcclt = MyRPCClient(addr)
-                break
-            except OSError:
-                time.sleep(0.05)
-        else:
-            self.display_port_binding_error()
-            return None
-        # if PORT was 0, system will assign an 'ephemeral' port. Find it out:
-        self.port = self.rpcclt.listening_sock.getsockname()[1]
-        # if PORT was not 0, probably working with a remote execution server
-        if PORT != 0:
-            # To allow reconnection within the 2MSL wait (cf. Stevens TCP
-            # V1, 18.6),  set SO_REUSEADDR.  Note that this can be problematic
-            # on Windows since the implementation allows two active sockets on
-            # the same address!
-            self.rpcclt.listening_sock.setsockopt(socket.SOL_SOCKET,
-                                           socket.SO_REUSEADDR, 1)
-        self.spawn_subprocess()
-        #time.sleep(20) # test to simulate GUI not accepting connection
-        # Accept the connection from the Python execution server
-        self.rpcclt.listening_sock.settimeout(10)
-        try:
-            self.rpcclt.accept()
-        except TimeoutError:
-            self.display_no_subprocess_error()
-            return None
-        perflog.mark("start_subprocess: subprocess connected back over socket")
-        self.rpcclt.register("console", self.tkconsole)
-        self.rpcclt.register("stdin", self.tkconsole.stdin)
-        self.rpcclt.register("stdout", self.tkconsole.stdout)
-        self.rpcclt.register("stderr", self.tkconsole.stderr)
-        self.rpcclt.register("flist", self.tkconsole.flist)
-        self.rpcclt.register("linecache", linecache)
-        self.rpcclt.register("interp", self)
-        self.transfer_path(with_cwd=True)
-        # Apply the desired initial working directory in the subprocess
-        target_cwd = self.tkconsole.flist.interp_cwd
-        if target_cwd and os.path.isdir(target_cwd):
-            self.runcommand(f"import os as _os; _os.chdir({target_cwd!r}); del _os\n")
-        self.poll_subprocess()
-        # Start warming a spare so the first Run doesn't pay spawn+connect.
-        self._start_spare_build()
-        perflog.mark("start_subprocess: done (path/cwd transferred, polling started)")
-        return self.rpcclt
-
-    # --- Pre-warm pool ------------------------------------------------------
-    # A "spare" is a fully-built, idle execution subprocess (own listening
-    # socket + connection + sys.path already transferred) sitting in the wings.
-    # restart_subprocess() promotes it instantly instead of spawning+connecting
-    # on the Tk thread.  Spares are built on a daemon thread; if anything goes
-    # wrong, restart_subprocess() falls back to the synchronous path.
-
-    def _start_spare_build(self):
-        "Kick off building the next warm spare on a background thread, if needed."
-        if self._closing or self._spare is not None or self._spare_building:
-            return
-        self._spare_building = True
-        threading.Thread(target=self._build_spare,
-                         name='PemSpareBuilder', daemon=True).start()
-
-    def _build_spare(self):
-        "Daemon-thread worker: spawn + connect + transfer sys.path for one spare."
-        clt = proc = None
-        try:
-            if self._closing:
-                return
-            perflog.mark("_build_spare: begin (background)")
-            clt = MyRPCClient((HOST, 0))                       # own ephemeral port
-            port = clt.listening_sock.getsockname()[1]
-            arglist = self.build_subprocess_arglist(port=port)
-            proc = _spawn_exec_subprocess(arglist)
-            clt.listening_sock.settimeout(15)
-            clt.accept()
-            # Register the GUI-side callback objects (same set as start_subprocess()).
-            clt.register("console", self.tkconsole)
-            clt.register("stdin", self.tkconsole.stdin)
-            clt.register("stdout", self.tkconsole.stdout)
-            clt.register("stderr", self.tkconsole.stderr)
-            clt.register("flist", self.tkconsole.flist)
-            clt.register("linecache", linecache)
-            clt.register("interp", self)
-            # Pre-transfer sys.path (with cwd, like start_subprocess) and the
-            # current interpreter cwd, fire-and-forget: RPC requests are handled
-            # in order, so this lands before any later runcode on this connection.
-            path = [''] + list(sys.path)
-            clt.asyncqueue("exec", "runcode",
-                ("if 1:\n    import sys as _sys\n    _sys.path = %r\n    del _sys\n" % (path,),), {})
-            target_cwd = getattr(self.tkconsole.flist, 'interp_cwd', None)
-            if target_cwd and os.path.isdir(target_cwd):
-                clt.asyncqueue("exec", "runcode",
-                    ("import os as _os; _os.chdir(%r); del _os\n" % (target_cwd,),), {})
-            if self._closing:
-                raise RuntimeError("PEM closing")
-            self._spare = _Spare(clt, proc)
-            perflog.mark(f"_build_spare: ready (spare pid={proc.pid})")
-        except BaseException as why:
-            perflog.mark(f"_build_spare: failed ({type(why).__name__}: {why})")
-            _terminate_conn(clt, proc)
-            self._spare = None
-        finally:
-            self._spare_building = False
-
-    def restart_subprocess(self, with_cwd=False, filename=''):
-        if self.restarting:
-            return self.rpcclt
-        perflog.mark("restart_subprocess: begin")
-        self.restarting = True
-        console = self.tkconsole
-        # Drop any pending buffered writes from the dying subprocess and cancel
-        # the pending flush, so a late-arriving \r-overwrite can't land in the
-        # console after the restart cleanup has trimmed iomark -- which would
-        # leave stale chars past iomark and make the next typed command look
-        # syntactically incomplete (the `...` continuation symptom).
-        flush_id = getattr(console, '_write_flush_id', None)
-        if flush_id is not None:
-            try:
-                console.text.after_cancel(flush_id)
-            except Exception:
-                pass
-        console._write_flush_id = None
-        console._write_buffer = []
-        was_executing = console.executing
-        console.executing = False
-        # try:
-        #     console.flist.set_run_indicator(False)
-        # except Exception:
-        #     pass
-        self.active_seq = None
-
-        old_clt = self.rpcclt
-        old_proc = self.rpcsubproc
-        spare = self._spare
-
-        if spare is not None:
-            # Fast path: promote the pre-built idle subprocess.  No spawn / no
-            # connect / no path transfer on the Tk thread.
-            perflog.mark(f"restart_subprocess: promoting warm spare (pid={spare.proc.pid})")
-            self._spare = None
-            self.rpcclt = spare.clt
-            self.rpcsubproc = spare.proc
-            # The spare's MyRPCClient was accepted on the spare-builder daemon
-            # thread, so rpc.SocketIO.sockthread points there.  Re-point it at
-            # the thread that now owns/polls this connection (the Tk thread),
-            # otherwise getresponse() takes its cross-thread Condition-wait path
-            # and deadlocks (the notifying poll loop never runs on the dead
-            # builder thread).
-            self.rpcclt.sockthread = threading.current_thread()
-            # The spare has its own listening socket on its own port; keep
-            # self.port in sync so a later slow-path spawn_subprocess() (if a
-            # future spare build fails) targets the right port.
-            try:
-                self.port = self.rpcclt.listening_sock.getsockname()[1]
-            except Exception:
-                pass
-            # Tear down the old connection + subprocess off the Tk thread
-            # (the killpg/taskkill is the slow part on Windows).
-            threading.Thread(target=_terminate_conn, args=(old_clt, old_proc),
-                             name='PemTerminator', daemon=True).start()
-            if with_cwd:
-                # Manual restart (Ctrl-F6 / Stop): cwd resets to the process cwd.
-                cwd = os.getcwd()
-                self.tkconsole.flist.interp_cwd = cwd
-                try:
-                    self.rpcclt.asyncqueue("exec", "runcode",
-                        ("import os as _os; _os.chdir(%r); del _os\n" % (cwd,),), {})
-                except Exception:
-                    pass
-            perflog.mark("restart_subprocess: spare promoted")
-        else:
-            # Slow path: no spare ready -> kill old + spawn + connect (synchronous).
-            perflog.mark("restart_subprocess: no warm spare; spawning synchronously")
-            try:
-                self.rpcclt.close()             # give the old subprocess EOF (fast)
-            except Exception:
-                pass
-            threading.Thread(target=_terminate_proc, args=(old_proc,),
-                             name='PemTerminator', daemon=True).start()
-            self.spawn_subprocess()
-            try:
-                self.rpcclt.accept()
-            except TimeoutError:
-                self.display_no_subprocess_error()
-                self.restarting = False
-                return None
-            perflog.mark("restart_subprocess: new subprocess connected back")
-            self.transfer_path(with_cwd=with_cwd)
-            if with_cwd:
-                self.tkconsole.flist.interp_cwd = os.getcwd()
-
-        console.stop_readline()
-        # annotate restart in shell window and mark it
-        console.text.delete("iomark", "end-1c")
-        console.text.mark_set("restart", "end-1c")
-        console.text.mark_gravity("restart", "left")
-        # Visible banner in the Console for every restart of the execution
-        # subprocess -- script Run (filename = the script's path) and manual
-        # restart (Stop / Ctrl-F6, filename = '').  write_to_console() bypasses
-        # the active-sink dispatch so the banner always lands in the Console
-        # rather than a script's target output pane.
-        label = f"Running '{os.path.splitext(os.path.basename(filename))[0]}'" if filename else "Reinitializing"
-        console.write_to_console(f"\n======= {label} =======\n", "stdout")
-        if not filename:
-            # Manual restart (Stop / Ctrl-F6): nothing's running, so the
-            # interactive prompt -- and subsequent Console output -- belongs in
-            # the Console.  (A script Run keeps the editor sink set by
-            # _prepare_for_run; we mustn't disturb that here.)
-            console.set_active_sink(None)
-            console.showprompt()
-
-        self.compile.compiler.flags = self.original_compiler_flags
-        self.restarting = False
-        # Warm the next spare in the background.
-        self._start_spare_build()
-        perflog.mark("restart_subprocess: done")
-        return self.rpcclt
-
-    def __request_interrupt(self):
-        self.rpcclt.remotecall("exec", "interrupt_the_server", (), {})
-
-    def interrupt_subprocess(self):
-        threading.Thread(target=self.__request_interrupt).start()
-
-    def kill_subprocess(self):
-        self._closing = True   # tell any in-flight spare build to discard itself
-        if self._afterid is not None:
-            self.tkconsole.text.after_cancel(self._afterid)
-        try:
-            self.rpcclt.listening_sock.close()
-        except AttributeError:  # no socket
-            pass
-        try:
-            self.rpcclt.close()
-        except AttributeError:  # no socket
-            pass
-        self.terminate_subprocess()
-        self.tkconsole.executing = False
-        self.rpcclt = None
-
-    def terminate_subprocess(self):
-        "Force-terminate the active subprocess and any pre-built spare."
-        _terminate_proc(self.rpcsubproc)
-        spare = self._spare
-        if spare is not None:
-            self._spare = None
-            _terminate_conn(spare.clt, spare.proc)
-
-    def transfer_path(self, with_cwd=False):
-        if with_cwd:        # Issue 13506
-            path = ['']     # include Current Working Directory
-            path.extend(sys.path)
-        else:
-            path = sys.path
-
-        self.runcommand("""if 1:
-        import sys as _sys
-        _sys.path = {!r}
-        del _sys
-        \n""".format(path))
-
-    active_seq = None
-
-    def poll_subprocess(self):
-        clt = self.rpcclt
-        if clt is None:
-            return
-        try:
-            # Short wait + a cap on how many incoming console.write callbacks
-            # we'll service in one pass, so a script flooding output can't
-            # monopolise the Tk event loop (it stays responsive; output flows
-            # in small batches via the poll reschedule below).  The cap is
-            # generous because PyShell.write only appends to a buffer now --
-            # actual rendering is deferred to the 16ms _flush_writes tick --
-            # so each serviced request is microseconds rather than ms.
-            response = clt.pollresponse(self.active_seq, wait=0.002, maxrequests=64)
-        except (EOFError, OSError, KeyboardInterrupt) as why:
-            # lost connection or subprocess terminated itself, restart
-            # [the KBI is from rpc.SocketIO.handle_EOF()]
-            if self.tkconsole.closing:
-                return
-            perflog.mark(f"poll_subprocess: lost connection to subprocess ({type(why).__name__}) -> auto-restarting")
-            response = None
-            self.active_seq = None
-            if self.tkconsole.executing:
-                self.tkconsole.executing = False
-            self.restart_subprocess()
-        if response:
-            perflog.mark(f"poll_subprocess: got response from subprocess ({response[0]!r})")
-            self.tkconsole.resetoutput()
-            self.active_seq = None
-            how, what = response
-            console = self.tkconsole.console
-            if how == "OK":
-                if what is not None:
-                    print(repr(what), file=console)
-            elif how == "EXCEPTION":
-                pass
-            elif how == "ERROR":
-                errmsg = "pyshell.ModifiedInterpreter: Subprocess ERROR:\n"
-                print(errmsg, what, file=sys.__stderr__)
-                print(errmsg, what, file=console)
-            # we received a response to the currently active seq number:
-            try:
-                self.tkconsole.endexecuting()
-            except AttributeError:  # shell may have closed
-                pass
-            perflog.mark("poll_subprocess: endexecuting() returned; rescheduling poll")
-        # Reschedule myself
-        if not self.tkconsole.closing:
-            self._afterid = self.tkconsole.text.after(
-                self.tkconsole.pollinterval, self.poll_subprocess)
-
-    gid = 0
-
-    def execsource(self, source):
-        "Like runsource() but assumes complete exec source"
-        filename = self.stuffsource(source)
-        self.execfile(filename, source)
-
-    def execfile(self, filename, source=None):
-        "Execute an existing file"
-        if source is None:
-            with tokenize.open(filename) as fp:
-                source = fp.read()
-                if use_subprocess:
-                    source = (f"__file__ = r'''{os.path.abspath(filename)}'''\n"
-                              + source + "\ndel __file__")
-        try:
-            code = compile(source, filename, "exec")
-        except (OverflowError, SyntaxError):
-            self.tkconsole.resetoutput()
-            print('*** Error in script or command!\n'
-                 'Traceback (most recent call last):',
-                  file=self.tkconsole.stderr)
-            InteractiveInterpreter.showsyntaxerror(self, filename)
-            self.tkconsole.showprompt()
-        else:
-            self.runcode(code)
-
-    def runsource(self, source):
-        "Extend base class method: Stuff the source in the line cache first"
-        filename = self.stuffsource(source)
-        # at the moment, InteractiveInterpreter expects str
-        assert isinstance(source, str)
-        # InteractiveInterpreter.runsource() calls its runcode() method,
-        # which is overridden (see below)
-        return InteractiveInterpreter.runsource(self, source, filename)
-
-    def stuffsource(self, source):
-        "Stuff source in the filename cache"
-        filename = "<pyshell#%d>" % self.gid
-        self.gid = self.gid + 1
-        lines = source.split("\n")
-        linecache.cache[filename] = len(source)+1, 0, lines, filename
-        return filename
-
-    def prepend_syspath(self, filename):
-        "Prepend sys.path with file's directory if not already included"
-        self.runcommand("""if 1:
-            _filename = {!r}
-            import sys as _sys
-            from os.path import dirname as _dirname
-            _dir = _dirname(_filename)
-            if not _dir in _sys.path:
-                _sys.path.insert(0, _dir)
-            del _filename, _sys, _dirname, _dir
-            \n""".format(filename))
-
-    def showsyntaxerror(self, filename=None, **kwargs):
-        """Override Interactive Interpreter method: Use Colorizing
-
-        Color the offending position instead of printing it and pointing at it
-        with a caret.
-
-        """
-        tkconsole = self.tkconsole
-        text = tkconsole.text
-        text.tag_remove("ERROR", "1.0", "end")
-        type, value, tb = sys.exc_info()
-        msg = getattr(value, 'msg', '') or value or "<no detail available>"
-        lineno = getattr(value, 'lineno', '') or 1
-        offset = getattr(value, 'offset', '') or 0
-        if offset == 0:
-            lineno += 1 #mark end of offending line
-        if lineno == 1:
-            pos = "iomark + %d chars" % (offset-1)
-        else:
-            pos = "iomark linestart + %d lines + %d chars" % \
-                  (lineno-1, offset-1)
-        tkconsole.colorize_syntax_error(text, pos)
-        tkconsole.resetoutput()
-        self.write("SyntaxError: %s\n" % msg)
-        tkconsole.showprompt()
-
-    def showtraceback(self):
-        "Extend base class method to reset output properly"
-        self.tkconsole.resetoutput()
-        self.checklinecache()
-        InteractiveInterpreter.showtraceback(self)
-
-    def checklinecache(self):
-        "Remove keys other than '<pyshell#n>'."
-        cache = linecache.cache
-        for key in list(cache):  # Iterate list because mutate cache.
-            if key[:1] + key[-1:] != "<>":
-                del cache[key]
-
-    def runcommand(self, code):
-        "Run code in the subprocess for its side effects only (no echoed result)."
-        # The code better not raise an exception!
-        if self.tkconsole.executing:
-            self.display_executing_dialog()
-            return 0
-        if self.rpcclt:
-            self.rpcclt.remotequeue("exec", "runcode", (code,), {})
-        else:
-            exec(code, self.locals)
-        return 1
-
-    def runcode(self, code):
-        "Override base class method"
-        if self.tkconsole.executing:
-            perflog.mark("ModifiedInterpreter.runcode: called while still executing")
-            # If executing is True but we're trying to run new code, check if
-            # the subprocess is actually responding. If not, reset state.
-            if self.rpcclt is not None and self.active_seq is not None:
-               # Check if subprocess is still responding
-               try:
-                  # Try to poll for response with short timeout
-                  response = self.rpcclt.pollresponse(self.active_seq, wait=0.01, maxrequests=4)
-                  if response is None:
-                     # No response yet, subprocess might be stuck - restart it
-                     perflog.mark("ModifiedInterpreter.runcode: prior run unresponsive -> restarting subprocess")
-                     self.restart_subprocess()
-               except (EOFError, OSError):
-                  # Connection broken, restart subprocess
-                  perflog.mark("ModifiedInterpreter.runcode: prior run's connection broken -> restarting subprocess")
-                  self.restart_subprocess()
-            else:
-               # No active sequence but executing is True - reset state
-               self.tkconsole.executing = False
-               self.active_seq = None
-        self.checklinecache()
-        try:
-            self.tkconsole.beginexecuting()
-            if self.rpcclt is not None:
-                self.active_seq = self.rpcclt.asyncqueue("exec", "runcode",
-                                                        (code,), {})
-                perflog.mark(f"ModifiedInterpreter.runcode: queued runcode RPC (seq={self.active_seq})")
-            else:
-                exec(code, self.locals)
-        except SystemExit:
-            if not self.tkconsole.closing:
-                if messagebox.askyesno(
-                    "Exit?",
-                    "Do you want to exit altogether?",
-                    default="yes",
-                    parent=self.tkconsole.text):
-                    raise
-                else:
-                    self.showtraceback()
-            else:
-                raise
-        except:
-            if use_subprocess:
-                print("PEM internal error in runcode()",
-                      file=self.tkconsole.stderr)
-                self.showtraceback()
-                self.tkconsole.endexecuting()
-            else:
-                if self.tkconsole.canceled:
-                    self.tkconsole.canceled = False
-                    print("KeyboardInterrupt", file=self.tkconsole.stderr)
-                else:
-                    self.showtraceback()
-        finally:
-            if not use_subprocess:
-                try:
-                    self.tkconsole.endexecuting()
-                except AttributeError:  # shell may have closed
-                    pass
-
-    def write(self, s):
-        "Override base class method"
-        return self.tkconsole.stderr.write(s)
-
-    def display_port_binding_error(self):
-        messagebox.showerror(
-            "Port Binding Error",
-            "PEM can't bind to a TCP/IP port, which is necessary to "
-            "communicate with its Python execution server.  This might be "
-            "because no networking is installed on this computer.  "
-            "Run PEM with the -n command line switch to start without a "
-            "subprocess and refer to Help/PEM Help 'Running without a "
-            "subprocess' for further details.",
-            parent=self.tkconsole.text)
-
-    def display_no_subprocess_error(self):
-        messagebox.showerror(
-            "Subprocess Connection Error",
-            "PEM's subprocess didn't make connection.\n"
-            "See the 'Startup failure' section of the PEM doc, online at\n"
-            "https://docs.python.org/3/library/pem.html#startup-failure",
-            parent=self.tkconsole.text)
-
-    def display_executing_dialog(self):
-        messagebox.showerror(
-            "Already executing",
-            "The Python Console window is already executing a command; "
-            "please wait until it is finished.",
-            parent=self.tkconsole.text)
 
 
 class PyShell(OutputWindow):
     """The interactive Console window: prompt, history, readline, and output routing.
 
-    Owns a ModifiedInterpreter (and thus the execution subprocess).  Per-run
-    output is dispatched by ``active_sink``: a script Run points it at that
-    editor tab's output pane, Console-entered code points it back here (None).
+    Holds an Interpreter, which runs the user's code in subprocesses of its
+    own.  Per-run output is dispatched by ``active_sink``: a script Run
+    points it at that editor tab's output pane, Console-entered code points it
+    back here (None).
     """
-    from pem.shell.squeezer import Squeezer
-
     shell_title = "PEM Console"
 
     # Override classes
     ColorDelegator = ModifiedColorDelegator
     UndoDelegator = ModifiedUndoDelegator
 
-    # Override menus
+    # Override menus.  The Console supports the editor rather than replacing
+    # it, so it carries no File, Edit or Run menu; its right-click menu covers
+    # the editing commands that make sense at a prompt.
     menu_specs = [
-        # ("shell", "_Console"),
         ("window", "_Window"),
         ("help", "_Help"),
     ]
 
     # Extend right-click context menu
-    rmenu_specs = OutputWindow.rmenu_specs + [
-        ("Squeeze", "<<squeeze-current-text>>"),
-    ]
+    rmenu_specs = list(OutputWindow.rmenu_specs)
     _idx = 1 + len(list(itertools.takewhile(
         lambda rmenu_item: rmenu_item[0] != "Copy", rmenu_specs)
     ))
@@ -1072,7 +384,7 @@ class PyShell(OutputWindow):
     from pem.shell.sidebar import ShellSidebar
 
     def __init__(self, flist=None):
-        self.interp = ModifiedInterpreter(self)
+        self.interp = Interpreter(self)
         if flist is None:
             root = Tk()
             fixwordbreaks(root)
@@ -1101,12 +413,8 @@ class PyShell(OutputWindow):
         text.bind("<<copy-with-prompts>>", self.copy_with_prompts_callback)
         text.bind("<Key-Up>", self.up_arrow_callback)
         text.bind("<Key-Down>", self.down_arrow_callback)
-        if use_subprocess:
-            text.bind("<<view-restart>>", self.view_restart_mark)
-            text.bind("<<restart-shell>>", self.restart_shell)
-        self.squeezer = self.Squeezer(self)
-        text.bind("<<squeeze-current-text>>",
-                  self.squeeze_current_text_event)
+        text.bind("<<view-restart>>", self.view_restart_mark)
+        text.bind("<<restart-shell>>", self.restart_shell)
 
         self.save_stdout = sys.stdout
         self.save_stderr = sys.stderr
@@ -1120,10 +428,6 @@ class PyShell(OutputWindow):
                                     iomenu.encoding, "backslashreplace")
         self.console = StdOutputFile(self, "console",
                                      iomenu.encoding, iomenu.errors)
-        if not use_subprocess:
-            sys.stdout = self.stdout
-            sys.stderr = self.stderr
-            sys.stdin = self.stdin
         try:
             # page help() text to shell.
             import pydoc # import must be done here to capture i/o rebinding.
@@ -1283,12 +587,12 @@ class PyShell(OutputWindow):
         return warning_stream
 
     def beginexecuting(self):
-        "Helper for ModifiedInterpreter"
+        "Helper for the Interpreter"
         self.resetoutput()
         self.executing = True
 
     def endexecuting(self):
-        "Helper for ModifiedInterpreter"
+        "Helper for the Interpreter"
         perflog.mark("PyShell.endexecuting: begin")
         # Flush any pending buffered output so it's visible before the prompt.
         if getattr(self, '_write_flush_id', None) is not None:
@@ -1336,7 +640,7 @@ class PyShell(OutputWindow):
         self.stop_readline()
         self.canceled = True
         self.closing = True
-        if use_subprocess and self.interp and self.interp.rpcsubproc:
+        if self.interp and self.interp.rpcsubproc:
             self.interp.kill_subprocess()
         # Restore std streams
         sys.stdout = self.save_stdout
@@ -1369,13 +673,10 @@ class PyShell(OutputWindow):
         except (AttributeError, TclError):
             return False
 
-        if use_subprocess:
-            client = self.interp.start_subprocess()
-            if not client:
-                self.close()
-                return False
-        else:
-            sys.displayhook = rpc.displayhook
+        client = self.interp.start_subprocess()
+        if not client:
+            self.close()
+            return False
 
         try:
             from PythonMusic import __version__ as cp_version
@@ -1482,8 +783,6 @@ class PyShell(OutputWindow):
         self.resetoutput()
         if self.canceled:
             self.canceled = False
-            if not use_subprocess:
-                raise KeyboardInterrupt
         if self.endoffile:
             self.endoffile = False
             line = ""
@@ -1704,40 +1003,12 @@ class PyShell(OutputWindow):
         return "break"
 
     def restart_shell(self, event=None):
-        "Restart the execution subprocess (Restart Console menu item / Stop button / Ctrl-F6)."
-        self.interp.restart_subprocess(with_cwd=True)
-
-    def _stop_subprocess(self):
-        """Shared subprocess restart logic used by both Stop and Reset."""
-        try:
-            if self.interp and self.interp.rpcclt:
-                self.restart_shell()
-        except Exception:
-            pass
+        "Restart Console menu item / Stop button / Ctrl-F6."
+        self.interp.stop()
 
     def toolbar_stop(self):
         """Stop the running script; keep the Console window open and its history intact."""
-        self._stop_subprocess()
-
-    def toolbar_reset(self):
-        """Reset: stop the subprocess and restore the console to its initial startup state."""
-        self._stop_subprocess()
-        try:
-            self.per.bottom.delete('1.0', 'end')
-            self.text.mark_set('iomark', 'end-1c')
-        except Exception:
-            pass
-        try:
-            from PythonMusic import __version__ as cp_version
-            self.write("PythonMusic %s\n" % cp_version)
-        except Exception:
-            pass
-        try:
-            self.write("Python %s on %s\n" % (sys.version, sys.platform))
-            self.write_to_console("\n======= Reset =======\n", "stdout")
-            self.showprompt()
-        except Exception:
-            pass
+        self.interp.stop()
 
     def showprompt(self):
         # --- SHUTDOWN FAILSAFE: Intercept Phantom Restarts ---
@@ -1970,13 +1241,6 @@ class PyShell(OutputWindow):
             return "break"
         return None   # allow default behavior for navigating output
 
-    def squeeze_current_text_event(self, event=None):
-        self.squeezer.squeeze_current_text()
-        self.shell_sidebar.update_sidebar()
-
-    def on_squeezed_expand(self, index, text, tags):
-        self.shell_sidebar.update_sidebar()
-
 
 def fix_x11_paste(root):
     "Make paste replace selection on x11.  See issue #5124."
@@ -1991,13 +1255,11 @@ def fix_x11_paste(root):
 
 usage_msg = """\
 
-USAGE: pem  [-eins] [-t title] [file]*
-       pem  [-ns] [-t title] (-c cmd | -r file) [arg]*
-       pem  [-ns] [-t title] - [arg]*
+USAGE: pem  [-eis] [-t title] [file]*
+       pem  [-s] [-t title] (-c cmd | -r file) [arg]*
+       pem  [-s] [-t title] - [arg]*
 
   -h         print this help message and exit
-  -n         run PEM without a subprocess (DEPRECATED,
-             see Help/PEM Help for details)
 
 The following options will override the PEM 'settings' configuration:
 
@@ -2072,22 +1334,25 @@ def main():
     from pem import testing  # bool value
     from pem import macosx
 
-    global flist, root, use_subprocess
+    global flist, root
 
     # Name the app before any Tk()/NSApplication is created, so macOS shows
     # 'PEM' in the menu bar and Dock instead of 'Python' (the executable name).
     macosx.setApplicationName('PEM')
 
+    # Also before Tk(): macOS reads these while building its application
+    # object, and keeps two of its own items out of PEM's Edit menu.
+    macosx.hideSystemEditMenuItems()
+
     _ensure_save_panel_expanded()
     capture_warnings(True)
-    use_subprocess = True
     enable_shell = False
     enable_edit = False
     cmd = None
     script = None
     startup = False
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "c:eihnr:st:")
+        opts, args = getopt.getopt(sys.argv[1:], "c:eihr:st:")
     except getopt.error as msg:
         print(f"Error: {msg}\n{usage_msg}", file=sys.stderr)
         sys.exit(2)
@@ -2102,10 +1367,6 @@ def main():
             sys.exit()
         if o == '-i':
             enable_shell = True
-        if o == '-n':
-            # print(" Warning: running PEM without a subprocess is deprecated.",
-            #       file=sys.stderr)
-            use_subprocess = False
         if o == '-r':
             script = a
             if os.path.isfile(script):
@@ -2153,7 +1414,7 @@ def main():
 
     # Setup root.  Don't break user code run in PEM process.
     # Don't change environment when testing.
-    if use_subprocess and not testing:
+    if not testing:
         NoDefaultRoot()
     root = Tk(className="Pem")
     root.withdraw()

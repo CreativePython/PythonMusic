@@ -218,10 +218,10 @@ class ScriptBinding:
             workingDir = os.path.dirname(os.path.abspath(displayFilename))
             
         # Manage Subprocess Lifecycles
-        if pyshell.use_subprocess and restart:
+        if restart:
             interp.restart_subprocess(
                     with_cwd=False, filename=displayFilename)
-        elif pyshell.use_subprocess:
+        else:
             # "Customize Run" with "Restart" unchecked: run on top of the
             # existing namespace.  Note it in the Console (write_to_console
             # bypasses the active-sink dispatch).

@@ -1,23 +1,17 @@
-""" help.py: Implement the Pem help menu.
-Contents are subject to revision at any time, without notice.
+""" help.py: Open PEM's documentation.
 
-
-Help => About PEM: display About Pem dialog
-
-<to be moved here from help_about.py>
-
-
-Help => PEM Help: Display help.html with proper formatting.
-Doc/library/pem.rst (Sphinx)=> Doc/build/html/library/pem.html
-(help.copy_strip)=> Lib/pem/help.html
-
-show_pemhelp - Create HelpWindow.  Called in EditorWindow.help_dialog.
+Help => PythonMusic Docs opens the documentation site in the user's browser.
+The same page is reached from the Help menu, the F1 key, and -- on macOS --
+the system Help menu, which macosx.overrideRootMenu() points here.
 """
 import webbrowser
 
+DOCS_URL = "https://pythonmusic.org/"
+
+
 def show_pemhelp(parent):
-    "Open the JythonMusic documentation in a web browser."
-    webbrowser.open("https://jythonmusic.me/api-reference/")
+    "Open the PythonMusic documentation in a web browser."
+    webbrowser.open(DOCS_URL)
 
 
 if __name__ == '__main__':
