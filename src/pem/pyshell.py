@@ -1006,33 +1006,9 @@ class PyShell(OutputWindow):
         "Restart Console menu item / Stop button / Ctrl-F6."
         self.interp.stop()
 
-    def _stop_subprocess(self):
-        "Shared by the Stop and Reset toolbar buttons."
-        self.interp.stop()
-
     def toolbar_stop(self):
         """Stop the running script; keep the Console window open and its history intact."""
-        self._stop_subprocess()
-
-    def toolbar_reset(self):
-        """Reset: stop the subprocess and restore the console to its initial startup state."""
-        self._stop_subprocess()
-        try:
-            self.per.bottom.delete('1.0', 'end')
-            self.text.mark_set('iomark', 'end-1c')
-        except Exception:
-            pass
-        try:
-            from PythonMusic import __version__ as cp_version
-            self.write("PythonMusic %s\n" % cp_version)
-        except Exception:
-            pass
-        try:
-            self.write("Python %s on %s\n" % (sys.version, sys.platform))
-            self.write_to_console("\n======= Reset =======\n", "stdout")
-            self.showprompt()
-        except Exception:
-            pass
+        self.interp.stop()
 
     def showprompt(self):
         # --- SHUTDOWN FAILSAFE: Intercept Phantom Restarts ---

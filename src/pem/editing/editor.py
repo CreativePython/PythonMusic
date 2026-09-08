@@ -1092,32 +1092,20 @@ class EditorWindow:
                 run_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
             Hovertip(run_btn, self.toolbar_tip("Run", "<<run-module>>"))
 
-        if self.is_shell:
-            icon = self.load_toolbar_icon('reset', btn_size)
-            if icon:
-                stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_reset,
-                                                     btn_size, btn_padx, btn_pady)
-            else:
-                stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
-                                highlightthickness=0, relief=FLAT,
-                                bg=self.toolbar_frame.cget('bg'))
-                stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
-                stop_btn.bind('<Button-1>', lambda e: self.toolbar_reset())
-                stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, self.toolbar_tip("Reset Console"))
+        # Stop, on both the editor and the Console: the running program is
+        # halted on the spot and a fresh subprocess takes over.
+        icon = self.load_toolbar_icon('stop', btn_size)
+        if icon:
+            stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_stop,
+                                                 btn_size, btn_padx, btn_pady)
         else:
-            icon = self.load_toolbar_icon('stop', btn_size)
-            if icon:
-                stop_btn = self.create_toolbar_button(self.toolbar_frame, icon, self.toolbar_stop,
-                                                     btn_size, btn_padx, btn_pady)
-            else:
-                stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
-                                highlightthickness=0, relief=FLAT,
-                                bg=self.toolbar_frame.cget('bg'))
-                stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
-                stop_btn.bind('<Button-1>', lambda e: self.toolbar_stop())
-                stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, self.toolbar_tip("Stop", "<<stop-script>>"))
+            stop_btn = Canvas(self.toolbar_frame, width=btn_size, height=btn_size,
+                            highlightthickness=0, relief=FLAT,
+                            bg=self.toolbar_frame.cget('bg'))
+            stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
+            stop_btn.bind('<Button-1>', lambda e: self.toolbar_stop())
+            stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
+        Hovertip(stop_btn, self.toolbar_tip("Stop", "<<stop-script>>"))
 
         if not self.is_shell:
             sep1 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
