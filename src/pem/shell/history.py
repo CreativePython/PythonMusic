@@ -88,14 +88,13 @@ class History:
         self.prefix = prefix
 
     def store(self, source):
-        "Store Shell input statement into history list."
+        """Store Shell input statement into history list.
+
+        Every statement is kept in the order it was entered, repeats included,
+        so walking back through history retraces what was actually typed.
+        """
         source = source.strip()
-        if len(source) > 2:
-            # avoid duplicates
-            try:
-                self.history.remove(source)
-            except ValueError:
-                pass
+        if source:
             self.history.append(source)
         self.pointer = None
         self.prefix = None
