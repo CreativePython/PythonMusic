@@ -36,6 +36,7 @@ from pem.text import pyparse
 from pem.dialogs import query
 from pem.searching import replace
 from pem.searching import search
+from pem.editing.menubar import window_menus, prepstr, get_accelerator
 from pem.editing.tree import wheel_event
 from pem.util import py_extensions
 from pem import window
@@ -156,21 +157,15 @@ class EditorWindow:
             flist.notebook.add(self.main_container, text=initial_tab_title)
             flist.notebook.select(self.main_container)
 
-            # Attached to the window by createmenubar(), once its cascades are
-            # in place.  macOS scans a menu bar for an Edit menu as it is
-            # attached and adds its own items (Writing Tools, AutoFill, Start
-            # Dictation, Emoji & Symbols) to it; attaching the finished menu
-            # bar gets those items from the first window PEM opens, rather
-            # than from whenever a tab switch next reattaches one.
-            self.menubar = Menu(top)
-
             # --- TAB FOCUS LOGIC ---
+            # The window's menu bar stays attached (see WindowMenus), so a
+            # tab change only records which editor the menus, toolbar and
+            # keys now act on.
             def on_tab_change(event):
                 try:
                     if self.text and self.text.winfo_exists():
                         if flist.notebook.select() == str(self.main_container):
-                            top.current_editor = self  
-                            top.config(menu=self.menubar)
+                            top.current_editor = self
                             self.text.focus_set()
                             self.text.update_idletasks()
                 except Exception:
@@ -327,26 +322,26 @@ class EditorWindow:
 
 
         else:
-            # Mount window as a standalone legacy Toplevel
-            self.menubar = Menu(root)
+            # Mount window as a standalone legacy Toplevel.  Its menu bar is
+            # built by adopt_window_menus() below; the Console's stays
+            # unattached until PyShell.show() puts the window on screen, so
+            # its menus don't leak into the editor window while it is hidden.
+            self.top = top = window.ListedToplevel(root)
             if getattr(self, 'is_shell', False):
-                # Don't associate the menubar with the Toplevel while it's hidden —
-                # doing so leaks the shell's menu into the editor's window on some
-                # platforms. _show_and_focus() attaches the menu when the shell
-                # is actually displayed.
-                self.top = top = window.ListedToplevel(root)
                 top.withdraw()
-            else:
-                self.top = top = window.ListedToplevel(root, menu=self.menubar)
 
             self.main_container = top
 
+
+        # A new tab is the one on show, and the window's menus, toolbar and
+        # keys act on whichever editor this points at.
+        self.top.current_editor = self
 
         if flist:
             self.tkinter_vars = flist.vars
             self.top.instance_dict = flist.inversedict
         else:
-            self.tkinter_vars = {}  
+            self.tkinter_vars = {}
             self.top.instance_dict = {}
             
         self.recent_files_path = pemConf.userdir and os.path.join(
@@ -426,7 +421,7 @@ class EditorWindow:
         self.text = text = MultiCallCreator(Text)(text_frame, **text_options)
         self.top.focused_widget = self.text
 
-        self.createmenubar()
+        self.adopt_window_menus()
         self.apply_bindings()
 
 
@@ -695,17 +690,6 @@ class EditorWindow:
         self.update_recent_files_list()
         self.load_extensions()
         
-        menu = self.menudict.get('window')
-        if menu:
-            end = menu.index("end")
-            if end is None:
-                end = -1
-            if end >= 0:
-                menu.add_separator()
-                end = end + 1
-            self.wmenu_end = end
-            window.register_callback(self.postwindowsmenu)
-
         self.askinteger = simpledialog.askinteger
         self.askyesno = messagebox.askyesno
         self.showerror = messagebox.showerror
@@ -924,41 +908,20 @@ class EditorWindow:
         ("help", "_Help"),
     ]
 
-    def createmenubar(self):
-        mbar = self.menubar
-        self.menudict = menudict = {}
-        for name, label in self.menu_specs:
-            underline, label = prepstr(label)
-            postcommand = getattr(self, f'{name}_menu_postcommand', None)
-            # Tk claims the menubar child named 'help' as the system Help
-            # menu and puts a "PEM Help" item at its top.  PEM's Help menu
-            # holds only the entries in mainmenu.menudefs, so the widget
-            # takes a name of its own and Tk leaves its contents alone.
-            widget_name = 'pemhelp' if name == 'help' else name
-            menudict[name] = menu = Menu(mbar, name=widget_name, tearoff=0,
-                                         postcommand=postcommand)
-            mbar.add_cascade(label=label, menu=menu, underline=underline)
-        if macosx.isCarbonTk():
-            menudict['application'] = menu = Menu(mbar, name='apple',
-                                                  tearoff=0)
-            mbar.add_cascade(label='PEM', menu=menu)
-        self.fill_menus()
-        self.recent_files_menu = Menu(self.menubar, tearoff=0)
-        if 'file' in self.menudict:
-            self.menudict['file'].insert_cascade(2, label='Open Recent',
-                                                 underline=5,
-                                                 menu=self.recent_files_menu)
-        self.base_helpmenu_length = self.menudict['help'].index(END)
-        self.reset_help_menu_entries()
+    def adopt_window_menus(self):
+        """Take this window's menus, building them if it has none yet.
 
-        # Attach the finished menu bar to the window.  A tab switch reattaches
-        # this same menu bar (see on_tab_change), so every window shows the
-        # menus -- and any items macOS adds to them -- from the moment it opens.
-        # The Console starts hidden and attaches its own menu bar in
-        # PyShell.show(), so that its menus reach the screen only with it.
-        if not getattr(self, 'is_shell', False):
-            self.top.config(menu=self.menubar)
-
+        Every tab in a window works from the one menu bar the window owns; a
+        command acts on whichever tab is showing.  The Console starts hidden
+        and attaches its own menu bar in PyShell.show(), so its menus reach
+        the screen with it.
+        """
+        self.menus = window_menus(self.top, self.menu_specs,
+                                  attach=not getattr(self, 'is_shell', False))
+        self.menubar = self.menus.menubar
+        self.menudict = self.menus.menudict
+        self.recent_files_menu = self.menus.recent_files_menu
+        self.base_helpmenu_length = self.menus.base_helpmenu_length
 
     def run_menu_postcommand(self):
         """
@@ -1306,15 +1269,6 @@ class EditorWindow:
         # Without this, lift() races the OS and the console ends up behind.
         self.text.after(0, self.flist.toggle_shell)
 
-
-    def postwindowsmenu(self):
-        menu = self.menudict['window']
-        end = menu.index("end")
-        if end is None:
-            end = -1
-        if end > self.wmenu_end:
-            menu.delete(self.wmenu_end+1, end)
-        window.add_windows_to_menu(menu)
 
     def update_menu_label(self, menu, index, label):
         menuitem = self.menudict.get(menu)
@@ -1843,30 +1797,7 @@ class EditorWindow:
             if xkeydefs:
                 self.apply_bindings(xkeydefs)
 
-        menuEventDict = {}
-        for menu in self.mainmenu.menudefs:
-            menuEventDict[menu[0]] = {}
-            for item in menu[1]:
-                if item:
-                    menuEventDict[menu[0]][prepstr(item[0])[1]] = item[1]
-        for menubarItem in self.menudict:
-            menu = self.menudict[menubarItem]
-            end = menu.index(END)
-            if end is None:
-                continue
-            end += 1
-            for index in range(0, end):
-                if menu.type(index) == 'command':
-                    accel = menu.entrycget(index, 'accelerator')
-                    if accel:
-                        itemName = menu.entrycget(index, 'label')
-                        event = ''
-                        if menubarItem in menuEventDict:
-                            if itemName in menuEventDict[menubarItem]:
-                                event = menuEventDict[menubarItem][itemName]
-                        if event:
-                            accel = get_accelerator(keydefs, event)
-                            menu.entryconfig(index, accelerator=accel)
+        self.menus.apply_keybindings(keydefs)
 
     def set_notabs_indentwidth(self):
         if not self.usetabs:
@@ -1874,31 +1805,21 @@ class EditorWindow:
                                                   type='int')
 
     def reset_help_menu_entries(self):
-        help_list = pemConf.GetAllExtraHelpSourcesList()
-        helpmenu = self.menudict['help']
-        helpmenu_length = helpmenu.index(END)
-        if helpmenu_length > self.base_helpmenu_length:
-            helpmenu.delete((self.base_helpmenu_length + 1), helpmenu_length)
-        if help_list:
-            helpmenu.add_separator()
-            for entry in help_list:
-                cmd = self._extra_help_callback(entry[1])
-                helpmenu.add_command(label=entry[0], command=cmd)
-        self.menudict['help'] = helpmenu
+        "Rebuild the Help menu's extra documentation links."
+        self.menus.reset_help_menu_entries()
 
-    def _extra_help_callback(self, resource):
-        def display_extra_help(helpfile=resource):
-            if not helpfile.startswith(('www', 'http')):
-                helpfile = os.path.normpath(helpfile)
-            if sys.platform[:3] == 'win':
-                try:
-                    os.startfile(helpfile)
-                except OSError as why:
-                    messagebox.showerror(title='Document Start Failure',
-                        message=str(why), parent=self.text)
-            else:
-                webbrowser.open(helpfile)
-        return display_extra_help
+    def open_help_source(self, resource):
+        "Open one of the Help menu's extra entries: a web page or a local file."
+        if not resource.startswith(('www', 'http')):
+            resource = os.path.normpath(resource)
+        if sys.platform[:3] == 'win':
+            try:
+                os.startfile(resource)
+            except OSError as why:
+                messagebox.showerror(title='Document Start Failure',
+                    message=str(why), parent=self.text)
+        else:
+            webbrowser.open(resource)
 
     def update_recent_files_list(self, new_file=None):
         rf_list = []
@@ -1917,8 +1838,8 @@ class EditorWindow:
             if '\0' in path or not os.path.exists(path[0:-1]):
                 bad_paths.append(path)
         rf_list = [path for path in rf_list if path not in bad_paths]
-        ulchars = "1234567890ABCDEFGHIJK"
-        rf_list = rf_list[0:len(ulchars)]
+        # As many as the Open Recent submenu can label with its own key.
+        rf_list = rf_list[0:len(self.menus.recent_file_keys)]
         if file_path:
             try:
                 with open(file_path, 'w',
@@ -1932,20 +1853,7 @@ class EditorWindow:
                                 f"  {err}\n"
                                 "Select OK to continue.",
                         parent=self.text)
-        for instance in self.top.instance_dict:
-            menu = instance.recent_files_menu
-            menu.delete(0, END)  
-            for i, file_name in enumerate(rf_list):
-                file_name = file_name.rstrip()  
-                callback = instance.__recent_file_callback(file_name)
-                menu.add_command(label=ulchars[i] + " " + file_name,
-                                 command=callback,
-                                 underline=0)
-
-    def __recent_file_callback(self, file_name):
-        def open_recent_file(fn_closure=file_name):
-            self.io.open(editFile=fn_closure)
-        return open_recent_file
+        self.menus.fill_recent_files([name.rstrip() for name in rf_list])
 
     def saved_change_hook(self):
         short = self.short_title()
@@ -2190,7 +2098,6 @@ class EditorWindow:
         if self.io.filename:
             self.update_recent_files_list(new_file=self.io.filename)
 
-        window.unregister_callback(self.postwindowsmenu)
         self.unload_extensions()
         self.io.close()
         self.io = None
@@ -2272,7 +2179,7 @@ class EditorWindow:
         cls = getattr(mod, name)
         keydefs = pemConf.GetExtensionBindings(name)
         if hasattr(cls, "menudefs"):
-            self.fill_menus(cls.menudefs, keydefs)
+            self.menus.fill(cls.menudefs, keydefs)
         ins = cls(self)
         self.extensions[name] = ins
         if keydefs:
@@ -2295,39 +2202,6 @@ class EditorWindow:
         for event, keylist in keydefs.items():
             if keylist:
                 text.event_add(event, *keylist)
-
-    def fill_menus(self, menudefs=None, keydefs=None):
-        if menudefs is None:
-            menudefs = self.mainmenu.menudefs
-        if keydefs is None:
-            keydefs = self.mainmenu.default_keydefs
-        menudict = self.menudict
-        text = self.text
-        for mname, entrylist in menudefs:
-            menu = menudict.get(mname)
-            if not menu:
-                continue
-            for entry in entrylist:
-                if entry is None:
-                    menu.add_separator()
-                else:
-                    label, eventname = entry
-                    checkbutton = (label[:1] == '!')
-                    if checkbutton:
-                        label = label[1:]
-                    underline, label = prepstr(label)
-                    accelerator = get_accelerator(keydefs, eventname)
-                    def command(text=text, eventname=eventname):
-                        text.event_generate(eventname)
-                    if checkbutton:
-                        var = self.get_var_obj(eventname, BooleanVar)
-                        menu.add_checkbutton(label=label, underline=underline,
-                            command=command, accelerator=accelerator,
-                            variable=var)
-                    else:
-                        menu.add_command(label=label, underline=underline,
-                                         command=command,
-                                         accelerator=accelerator)
 
     def getvar(self, name):
         var = self.get_var_obj(name)
@@ -2717,39 +2591,6 @@ class IndentSearcher:
         except (tokenize.TokenError, SyntaxError):
             pass
         return self.blkopenline, self.indentedline
-
-
-def prepstr(s):
-    i = s.find('_')
-    if i >= 0:
-        s = s[:i] + s[i+1:]
-    return i, s
-
-
-keynames = {
- 'bracketleft': '[',
- 'bracketright': ']',
- 'slash': '/',
-}
-
-def get_accelerator(keydefs, eventname):
-    keylist = keydefs.get(eventname)
-    if (not keylist) or (macosx.isCocoaTk() and eventname in {
-                            "<<open-module>>",
-                            "<<goto-line>>",
-                            "<<change-indentwidth>>"}):
-        return ""
-    s = keylist[0]
-    s = re.sub(r"-[a-z]\b", lambda m: m.group().upper(), s)
-    s = re.sub(r"\b\w+\b", lambda m: keynames.get(m.group(), m.group()), s)
-    s = re.sub("Key-", "", s)
-    s = re.sub("Cancel", "Ctrl-Break", s)   
-    s = re.sub("Control-", "Ctrl-", s)
-    s = re.sub("-", "+", s)
-    s = re.sub("><", " ", s)
-    s = re.sub("<", "", s)
-    s = re.sub(">", "", s)
-    return s
 
 
 def fixwordbreaks(root):
