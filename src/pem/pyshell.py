@@ -1036,25 +1036,22 @@ class PyShell(OutputWindow):
     output is dispatched by ``active_sink``: a script Run points it at that
     editor tab's output pane, Console-entered code points it back here (None).
     """
-    from pem.shell.squeezer import Squeezer
-
     shell_title = "PEM Console"
 
     # Override classes
     ColorDelegator = ModifiedColorDelegator
     UndoDelegator = ModifiedUndoDelegator
 
-    # Override menus
+    # Override menus.  The Console supports the editor rather than replacing
+    # it, so it carries no File, Edit or Run menu; its right-click menu covers
+    # the editing commands that make sense at a prompt.
     menu_specs = [
-        # ("shell", "_Console"),
         ("window", "_Window"),
         ("help", "_Help"),
     ]
 
     # Extend right-click context menu
-    rmenu_specs = OutputWindow.rmenu_specs + [
-        ("Squeeze", "<<squeeze-current-text>>"),
-    ]
+    rmenu_specs = list(OutputWindow.rmenu_specs)
     _idx = 1 + len(list(itertools.takewhile(
         lambda rmenu_item: rmenu_item[0] != "Copy", rmenu_specs)
     ))
@@ -1104,9 +1101,6 @@ class PyShell(OutputWindow):
         if use_subprocess:
             text.bind("<<view-restart>>", self.view_restart_mark)
             text.bind("<<restart-shell>>", self.restart_shell)
-        self.squeezer = self.Squeezer(self)
-        text.bind("<<squeeze-current-text>>",
-                  self.squeeze_current_text_event)
 
         self.save_stdout = sys.stdout
         self.save_stderr = sys.stderr
@@ -1969,13 +1963,6 @@ class PyShell(OutputWindow):
             self.history.history_next(event)
             return "break"
         return None   # allow default behavior for navigating output
-
-    def squeeze_current_text_event(self, event=None):
-        self.squeezer.squeeze_current_text()
-        self.shell_sidebar.update_sidebar()
-
-    def on_squeezed_expand(self, index, text, tags):
-        self.shell_sidebar.update_sidebar()
 
 
 def fix_x11_paste(root):

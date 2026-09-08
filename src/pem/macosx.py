@@ -174,20 +174,13 @@ def overrideRootMenu(root, flist):
     from pem import mainmenu
     from pem import window
 
-    closeItem = mainmenu.menudefs[0][1][-2]
+    # Build the menu set that suits macOS: Preferences, Quit and About PEM
+    # come from the application menu, so the File and Help cascades leave them
+    # out.  Carbon Tk needs its own 'application' cascade to hold About.
+    # This runs before any window builds its menu bar.
+    mainmenu.menudefs = mainmenu.build_menudefs(mac_app_menu=True,
+                                                carbon_app_cascade=isCarbonTk())
 
-    # Remove the last 3 items of the file menu: a separator, close window and
-    # quit. Close window will be reinserted just above the save item, where
-    # it should be according to the HIG. Quit is in the application menu.
-    del mainmenu.menudefs[0][1][-3:]
-    mainmenu.menudefs[0][1].insert(6, closeItem)
-
-    # Remove the 'About' entry from the help menu, it is in the application
-    # menu
-    del mainmenu.menudefs[-1][1][0:2]
-    # Remove the 'Configure Pem' entry from the options menu, it is in the
-    # application menu as 'Preferences'
-    del mainmenu.menudefs[-3][1][0:2]
     menubar = Menu(root)
     root.configure(menu=menubar)
 
@@ -243,18 +236,11 @@ def overrideRootMenu(root, flist):
         # for Carbon AquaTk, replace the default Tk apple menu
         menu = Menu(menubar, name='apple', tearoff=0)
         menubar.add_cascade(label='PEM', menu=menu)
-        mainmenu.menudefs.insert(0,
-            ('application', [
-                ('About PEM...', '<<about-pem>>'),
-                    None,
-                ]))
     if isCocoaTk():
         # replace default About dialog with About PEM one
         root.createcommand('tkAboutDialog', about_dialog)
         # replace default "Help" item in Help menu
         root.createcommand('::tk::mac::ShowHelp', help_dialog)
-        # remove redundant "PEM Help" from menu
-        del mainmenu.menudefs[-1][1][0]
 
 def fixb2context(root):
     '''Removed bad AquaTk Button-2 (right) and Paste bindings.

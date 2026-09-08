@@ -73,7 +73,6 @@ class EditorWindow:
     from pem.editing.zoomheight import ZoomHeight
 
     filesystemencoding = sys.getfilesystemencoding()  # for file names
-    help_url = None
 
     allow_code_context = True
     allow_line_numbers = True
@@ -83,42 +82,6 @@ class EditorWindow:
     def __init__(self, flist=None, filename=None, key=None, root=None):
         from pem.editing.runscript import ScriptBinding
 
-        if EditorWindow.help_url is None:
-            dochome =  os.path.join(sys.base_prefix, 'Doc', 'index.html')
-            if sys.platform.count('linux'):
-                pyver = 'python-docs-' + '%s.%s.%s' % sys.version_info[:3]
-                if os.path.isdir('/var/www/html/python/'):  
-                    dochome = '/var/www/html/python/index.html'
-                else:
-                    basepath = '/usr/share/doc/'  
-                    dochome = os.path.join(basepath, pyver,
-                                           'Doc', 'index.html')
-            elif sys.platform[:3] == 'win':
-                import winreg  
-                docfile = ''
-                KEY = (rf"Software\Python\PythonCore\{sys.winver}"
-                        r"\Help\Main Python Documentation")
-                try:
-                    docfile = winreg.QueryValue(winreg.HKEY_CURRENT_USER, KEY)
-                except FileNotFoundError:
-                    try:
-                        docfile = winreg.QueryValue(winreg.HKEY_LOCAL_MACHINE,
-                                                    KEY)
-                    except FileNotFoundError:
-                        pass
-                if os.path.isfile(docfile):
-                    dochome = docfile
-            elif sys.platform == 'darwin':
-                dochome = os.path.join(sys.base_prefix,
-                        'Resources/English.lproj/Documentation/index.html')
-            dochome = os.path.normpath(dochome)
-            if os.path.isfile(dochome):
-                EditorWindow.help_url = dochome
-                if sys.platform == 'darwin':
-                    EditorWindow.help_url = 'file://' + EditorWindow.help_url
-            else:
-                EditorWindow.help_url = ("https://docs.python.org/%d.%d/"
-                                         % sys.version_info[:2])
         self.flist = flist
         root = root or flist.root
         self.root = root
@@ -193,9 +156,14 @@ class EditorWindow:
             flist.notebook.add(self.main_container, text=initial_tab_title)
             flist.notebook.select(self.main_container)
 
+            # Attached to the window by createmenubar(), once its cascades are
+            # in place.  macOS scans a menu bar for an Edit menu as it is
+            # attached and adds its own items (Writing Tools, AutoFill, Start
+            # Dictation, Emoji & Symbols) to it; attaching the finished menu
+            # bar gets those items from the first window PEM opens, rather
+            # than from whenever a tab switch next reattaches one.
             self.menubar = Menu(top)
-            top.config(menu=self.menubar)
-            
+
             # --- TAB FOCUS LOGIC ---
             def on_tab_change(event):
                 try:
@@ -510,8 +478,7 @@ class EditorWindow:
         text.bind("<<copy>>", self.copy)
         text.bind("<<paste>>", self.paste)
         text.bind("<<center-insert>>", self.center_insert_event)
-        text.bind("<<jythonmusic-docs>>", self.jythonmusic_docs)
-        text.bind("<<python-docs>>", self.python_docs)
+        text.bind("<<pythonmusic-docs>>", self.pythonmusic_docs)
         text.bind("<<about-pem>>", self.about_dialog)
         text.bind("<<open-config-dialog>>", self.config_dialog)
         text.bind("<<open-module>>", self.open_module_event)
@@ -551,10 +518,6 @@ class EditorWindow:
             if key:
                 flist.dict[key] = self
             text.bind("<<open-new-window>>", self.new_callback)
-            if sys.platform == 'darwin':
-                text.event_add("<<open-new-window>>", "<Command-t>")
-            else:
-                text.event_add("<<open-new-window>>", "<Control-t>")
             text.bind("<<close-all-windows>>", self.flist.close_all_callback)
             text.bind("<<save-all-windows>>", self.save_all_windows_event)
             text.bind("<<quit>>", self.quit_event)
@@ -762,33 +725,13 @@ class EditorWindow:
         text.bind("<<run-selection>>", scriptbinding.run_selection_event)
         text.bind("<<run-current-line>>", scriptbinding.run_current_line_event)
         text.bind("<<run-current-paragraph>>", scriptbinding.run_current_paragraph_event)
+        # Run > Stop and the toolbar's stop button do the same thing.  PyShell
+        # overrides toolbar_stop, so the Console stops without losing its history.
+        text.bind("<<stop-script>>", lambda event: self.toolbar_stop())
         text.bind("<<do-rstrip>>", self.Rstrip(self).do_rstrip)
         text.bind("<<zoom-height>>", self.ZoomHeight(self).zoom_height_event)
         text.bind("<<print-window>>", self.print_window)
 
-        # Register Ctrl+P / Cmd+P as the print keyboard shortcut
-        if sys.platform == 'darwin':
-            text.event_add("<<print-window>>", "<Command-p>")
-            _print_accel = "Cmd+P"
-        else:
-            text.event_add("<<print-window>>", "<Control-p>")
-            _print_accel = "Ctrl+P"
-
-        # Display the shortcut on the File ▸ Print menu item
-        file_menu = self.menudict.get('file')
-        if file_menu:
-            end = file_menu.index(END)
-            if end is not None:
-                for i in range(end + 1):
-                    try:
-                        if file_menu.type(i) == 'command':
-                            lbl = file_menu.entrycget(i, 'label')
-                            if 'print' in lbl.lower():
-                                file_menu.entryconfig(i, accelerator=_print_accel)
-                                break
-                    except (TclError, ValueError):
-                        pass
-        
         if self.allow_code_context:
             self.code_context = self.CodeContext(self)
             text.bind("<<toggle-code-context>>",
@@ -987,7 +930,12 @@ class EditorWindow:
         for name, label in self.menu_specs:
             underline, label = prepstr(label)
             postcommand = getattr(self, f'{name}_menu_postcommand', None)
-            menudict[name] = menu = Menu(mbar, name=name, tearoff=0,
+            # Tk claims the menubar child named 'help' as the system Help
+            # menu and puts a "PEM Help" item at its top.  PEM's Help menu
+            # holds only the entries in mainmenu.menudefs, so the widget
+            # takes a name of its own and Tk leaves its contents alone.
+            widget_name = 'pemhelp' if name == 'help' else name
+            menudict[name] = menu = Menu(mbar, name=widget_name, tearoff=0,
                                          postcommand=postcommand)
             mbar.add_cascade(label=label, menu=menu, underline=underline)
         if macosx.isCarbonTk():
@@ -1002,6 +950,14 @@ class EditorWindow:
                                                  menu=self.recent_files_menu)
         self.base_helpmenu_length = self.menudict['help'].index(END)
         self.reset_help_menu_entries()
+
+        # Attach the finished menu bar to the window.  A tab switch reattaches
+        # this same menu bar (see on_tab_change), so every window shows the
+        # menus -- and any items macOS adds to them -- from the moment it opens.
+        # The Console starts hidden and attaches its own menu bar in
+        # PyShell.show(), so that its menus reach the screen only with it.
+        if not getattr(self, 'is_shell', False):
+            self.top.config(menu=self.menubar)
 
 
     def run_menu_postcommand(self):
@@ -1132,6 +1088,20 @@ class EditorWindow:
             btn.pack(side=side, padx=btn_padx, pady=btn_pady)
             return btn
 
+    def toolbar_tip(self, label, eventname=None):
+        """Return a toolbar tooltip, with the command's shortcut if it has one.
+
+        The shortcut comes from the active key set, so the tip reads
+        "Run (Command+R)" on macOS and "Run (Ctrl+R)" elsewhere, and follows
+        any rebinding the user makes in Preferences.
+        """
+        accelerator = ''
+        if eventname:
+            accelerator = get_accelerator(self.mainmenu.default_keydefs, eventname)
+        if accelerator:
+            return f"{label} ({accelerator})"
+        return label
+
     def create_toolbar(self):
         from pem.dialogs.tooltip import Hovertip
         import math
@@ -1157,7 +1127,7 @@ class EditorWindow:
                 run_btn.create_polygon(10, 8, 10, 24, 24, 16, fill='black', tags='icon')
                 run_btn.bind('<Button-1>', lambda e: self.toolbar_run())
                 run_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(run_btn, "Run (Ctrl+R)")
+            Hovertip(run_btn, self.toolbar_tip("Run", "<<run-module>>"))
 
         if self.is_shell:
             icon = self.load_toolbar_icon('reset', btn_size)
@@ -1171,7 +1141,7 @@ class EditorWindow:
                 stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
                 stop_btn.bind('<Button-1>', lambda e: self.toolbar_reset())
                 stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, "Reset Console")
+            Hovertip(stop_btn, self.toolbar_tip("Reset Console"))
         else:
             icon = self.load_toolbar_icon('stop', btn_size)
             if icon:
@@ -1184,7 +1154,7 @@ class EditorWindow:
                 stop_btn.create_rectangle(9, 9, 23, 23, fill='black', outline='black', tags='icon')
                 stop_btn.bind('<Button-1>', lambda e: self.toolbar_stop())
                 stop_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(stop_btn, "Stop")
+            Hovertip(stop_btn, self.toolbar_tip("Stop", "<<stop-script>>"))
 
         if not self.is_shell:
             sep1 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
@@ -1203,7 +1173,7 @@ class EditorWindow:
                 new_btn.create_line(18, 13, 24, 13, width=2, fill='black', tags='icon')
                 new_btn.bind('<Button-1>', lambda e: self.toolbar_new_file())
                 new_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(new_btn, "New (Ctrl+N)")
+            Hovertip(new_btn, self.toolbar_tip("New", "<<open-new-window>>"))
 
             icon = self.load_toolbar_icon('open_file', btn_size)
             if icon:
@@ -1217,7 +1187,7 @@ class EditorWindow:
                 open_btn.create_polygon(8, 12, 12, 12, 13, 9, 17, 9, 18, 12, fill='white', outline='black', width=2, tags='icon')
                 open_btn.bind('<Button-1>', lambda e: self.toolbar_open_file())
                 open_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(open_btn, "Open (Ctrl+O)")
+            Hovertip(open_btn, self.toolbar_tip("Open", "<<open-window-from-file>>"))
 
             icon = self.load_toolbar_icon('save', btn_size)
             if icon:
@@ -1233,7 +1203,7 @@ class EditorWindow:
                 save_btn.create_line(19, 6, 19, 11, width=2, fill='black', tags='icon')
                 save_btn.bind('<Button-1>', lambda e: self.toolbar_save())
                 save_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(save_btn, "Save (Ctrl+S)")
+            Hovertip(save_btn, self.toolbar_tip("Save", "<<save-window>>"))
 
             sep2 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
             sep2.pack(side=LEFT, padx=sep_padx, pady=btn_pady)
@@ -1250,7 +1220,7 @@ class EditorWindow:
                 shell_btn.create_text(16, 16, text='>', fill='black', font=('Courier', 12, 'bold'), tags='icon')
                 shell_btn.bind('<Button-1>', lambda e: self.toolbar_shell())
                 shell_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(shell_btn, "Console")
+            Hovertip(shell_btn, self.toolbar_tip("Console", "<<open-python-shell>>"))
 
             sep3 = Frame(self.toolbar_frame, width=1, height=btn_size-4, bg='gray70', relief=FLAT)
             sep3.pack(side=LEFT, padx=sep_padx, pady=btn_pady)
@@ -1273,7 +1243,7 @@ class EditorWindow:
                     pref_btn.create_line(x1, y1, x2, y2, width=2, fill='black', tags='icon')
                 pref_btn.bind('<Button-1>', lambda e: self.toolbar_preferences())
                 pref_btn.pack(side=LEFT, padx=btn_padx, pady=btn_pady)
-            Hovertip(pref_btn, "Preferences")
+            Hovertip(pref_btn, self.toolbar_tip("Preferences", "<<open-config-dialog>>"))
 
 
     # --- GLOBAL TOOLBAR ROUTING ENGINE ---
@@ -1481,23 +1451,12 @@ class EditorWindow:
         builder.create_executable()
         return "break"
 
-    def jythonmusic_docs(self, event=None):
+    def pythonmusic_docs(self, event=None):
         if self.root:
             parent = self.root
         else:
             parent = self.top
         help.show_pemhelp(parent)
-        return "break"
-
-    def python_docs(self, event=None):
-        if sys.platform[:3] == 'win':
-            try:
-                os.startfile(self.help_url)
-            except OSError as why:
-                messagebox.showerror(title='Document Start Failure',
-                    message=str(why), parent=self.text)
-        else:
-            webbrowser.open(self.help_url)
         return "break"
 
     def print_window(self, event=None):

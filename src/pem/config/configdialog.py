@@ -32,13 +32,11 @@ from pem.dialogs.textview import view_text
 from pem.editing.codecontext import CodeContext
 from pem.text.parenmatch import ParenMatch
 from pem.text.format import FormatParagraph
-from pem.shell.squeezer import Squeezer
 from pem.dialogs.textview import ScrollableTextFrame
 
 changes = ConfigChanges()
 # Reload changed options in the following classes.
-reloadables = (CodeContext, ParenMatch, FormatParagraph,
-               Squeezer)
+reloadables = (CodeContext, ParenMatch, FormatParagraph)
 
 
 class ConfigDialog(Toplevel):

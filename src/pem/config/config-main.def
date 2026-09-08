@@ -74,7 +74,6 @@ window-width-pixels= 800
 window-height-pixels= 600
 
 [PyShell]
-auto-squeeze-min-lines= 50
 window-width-pixels= 800
 window-height-pixels= 600
 
