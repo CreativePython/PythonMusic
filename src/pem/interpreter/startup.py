@@ -2,7 +2,7 @@
 
 Student code never runs in the PEM editor's own process: shell input, Run
 Module, and every shell restart all run in an execution subprocess
-(``pem.execution.run``), which starts as essentially bare Python.  So any
+(``pem.interpreter.run``), which starts as essentially bare Python.  So any
 default PEM wants to change for user code has to be changed *there*,
 once, before their code gets a chance to run.
 
@@ -19,7 +19,7 @@ To add a setting:
 
 Keep each one self-contained and cheap.  They run during the startup of
 *every* subprocess, including the pre-warmed spare PEM keeps in the wings
-(see ``pyshell.ModifiedInterpreter``), so slow work here shows up as a
+(see ``pem.interpreter.interpreter``), so slow work here shows up as a
 slower Run.  A setting that raises is skipped rather than taking the
 subprocess -- and the user's session -- down with it.
 """

@@ -1221,17 +1221,14 @@ class EditorWindow:
         editor.text.after(0, lambda: editor.text.event_generate("<<run-module>>"))
 
     def toolbar_stop(self):
-        # Stop the running script by restarting its execution subprocess.
         # Deliberately does NOT close the Console window: closing it nulls
         # flist.pyshell and forces a slow rebuild on the next Run.
         active_editor = self.get_active_editor()
         flist = getattr(active_editor, 'flist', None)
-        sh = getattr(flist, 'pyshell', None) if flist else None
-        if sh and getattr(sh, 'interp', None) and getattr(sh.interp, 'rpcclt', None):
-            try:
-                sh.restart_shell()
-            except Exception:
-                pass
+        console = getattr(flist, 'pyshell', None) if flist else None
+        manager = getattr(console, 'interp', None)
+        if manager is not None:
+            manager.stop()
 
     def toolbar_new_file(self):
         active_editor = self.get_active_editor()

@@ -1,8 +1,8 @@
-""" pem.execution.run -- the PEM execution subprocess (RPC server).
+""" pem.interpreter.run -- the PEM execution subprocess (RPC server).
 
-Spawned by pyshell.ModifiedInterpreter.build_subprocess_arglist():
+Spawned by Interpreter.build_subprocess_arglist():
   * from source / an installed pem:
-        {sys.executable} -c "...; from pem.execution.run import main; main()" <port>
+        {sys.executable} -c "...; from pem.interpreter.run import main; main()" <port>
   * from a frozen build: the bundled executable is re-launched with the
         --pem-subprocess flag, which routes into PEM.py -> run.main().
 This module deliberately imports nothing from PEM except the RPC layer, so
@@ -26,7 +26,7 @@ from pem import perflog
 perflog.mark("run.py: stdlib imports done; importing pem RPC server")
 
 import pem  # for pem.testing
-from pem.execution import rpc, startup
+from pem.interpreter import rpc, startup
 from pem._encoding import encoding, errors
 import __main__
 perflog.mark("run.py: module-level imports done")
