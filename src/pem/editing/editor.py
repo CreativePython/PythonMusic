@@ -276,8 +276,6 @@ class EditorWindow:
                             str(editor.main_container) == clickedTabWidget):
 
                             def safe_close(targetEditor=editor):
-                                # Defer to close(), which closes this tab or --
-                                # if it is the last one -- exits PEM.
                                 targetEditor.close()
 
                             editor.text.after(10, safe_close)
@@ -2166,17 +2164,27 @@ class EditorWindow:
             return False
 
     def close(self):
-        # The editor window is PEM's canonical window: closing its last tab
-        # exits PEM (which also shuts down the always-open Console). Other
-        # closes -- a non-last tab, or any tab while PEM is already exiting --
-        # just close that one tab.
-        if (self.flist and not getattr(self, 'is_shell', False)
-                and not getattr(self.flist, '_exiting', False)
-                and self._is_last_editor_tab()):
-            return self.flist.close_all_callback()
+        # Closing a tab never exits PEM. Close the last remaining tab and a
+        # fresh blank one takes its place, so the user is left with a window
+        # ready to type in rather than no window at all. Quitting PEM is the
+        # editor window's own close button, or Quit / Close All -- those route
+        # through close_all_callback instead.
+        replace_with_blank_tab = (self.flist
+                                  and not getattr(self, 'is_shell', False)
+                                  and not getattr(self.flist, '_exiting', False)
+                                  and self._is_last_editor_tab())
         try:
             reply = self.maybesave()
             if str(reply) != "cancel":
+                if replace_with_blank_tab:
+                    # Open the replacement *before* closing this tab. The
+                    # notebook is then never empty, so _close() takes its
+                    # ordinary path and leaves the editor window standing.
+                    # The new tab inherits this one's directory, the way
+                    # File > New does, and is left unmarked by
+                    # _user_created so File > Open can still load into it.
+                    dirname, basename = self.io.defaultfilename()
+                    self.flist.new(dirname)
                 self._close()
             return reply
         except AttributeError:
@@ -2248,9 +2256,10 @@ class EditorWindow:
                 
                 # -------------------------------------------------------------
                 # LAST TAB CLOSED
-                # Reached only while PEM is exiting (closing the last editor tab
-                # routes through close_all_callback). Tear down the now-empty
-                # editor window rather than leaving a blank notebook behind.
+                # Reached only while PEM is exiting: close() replaces the last
+                # tab before closing it, so an empty notebook otherwise can't
+                # happen. Tear down the now-empty editor window rather than
+                # leaving a blank notebook behind.
                 # -------------------------------------------------------------
                 if len(saved_flist.notebook.tabs()) == 0:
                     if saved_top.winfo_exists():
