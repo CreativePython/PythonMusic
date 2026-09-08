@@ -712,6 +712,7 @@ class EditorWindow:
         # Run > Stop and the toolbar's stop button do the same thing.  PyShell
         # overrides toolbar_stop, so the Console stops without losing its history.
         text.bind("<<stop-script>>", lambda event: self.toolbar_stop())
+        text.bind("<<create-executable>>", self.create_executable_event)
         text.bind("<<do-rstrip>>", self.Rstrip(self).do_rstrip)
         text.bind("<<zoom-height>>", self.ZoomHeight(self).zoom_height_event)
         text.bind("<<print-window>>", self.print_window)
@@ -1242,10 +1243,6 @@ class EditorWindow:
 
     def toolbar_preferences(self):
         self.get_active_editor().text.event_generate("<<open-config-dialog>>")
-
-    def toolbar_create_executable(self):
-        builder = exebuilder.ExeBuilder(self.get_active_editor())
-        builder.create_executable()
 
     def toolbar_shell(self):
         """Toggles the visibility of the interactive Python Console."""

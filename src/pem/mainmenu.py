@@ -33,10 +33,11 @@ def build_menudefs(mac_app_menu=False, carbon_app_cascade=False):
         ('_Save', '<<save-window>>'),
         ('Save _As...', '<<save-window-as-file>>'),
         ('Save _All', '<<save-all-windows>>'),
-        # ('Create _Executable', '<<create-executable>>'),
         None,
         ('_Close', '<<close-window>>'),
         ('Close _All', '<<close-all-windows>>'),
+        None,
+        ('Create _Executable', '<<create-executable>>'),
         None,
         ('_Print...', '<<print-window>>'),
         ]
