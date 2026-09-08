@@ -252,6 +252,33 @@ def fixb2context(root):
     root.unbind_class('Text', '<B2-Motion>')
     root.unbind_class('Text', '<<PasteSelection>>')
 
+def hideSystemEditMenuItems():
+    """Keep macOS's Start Dictation and Emoji & Symbols out of the Edit menu.
+
+    macOS reads a menu bar for an Edit menu as it is attached to a window and
+    adds four items of its own to it.  These two settings turn two of them
+    off; Writing Tools and AutoFill have no such setting and stay.
+
+    Call this before Tk() -- macOS reads the settings as it builds its
+    application object, and a call after that is too late for the Emoji &
+    Symbols item.  Safe on any platform: elsewhere there is nothing to read
+    them.
+
+    The frozen app carries the same two keys in its Info.plist (see
+    PEM/build.py), so a built PEM behaves the same without pyobjc.
+    ``registerDefaults_`` supplies them as defaults rather than writing to the
+    user's preferences, so anyone who wants those items can turn them back on.
+    """
+    try:
+        from Foundation import NSUserDefaults
+    except ImportError:
+        return
+    NSUserDefaults.standardUserDefaults().registerDefaults_({
+        'NSDisabledDictationMenuItem': True,
+        'NSDisabledCharacterPaletteMenuItem': True,
+    })
+
+
 def _setDockIcon():
     """Set the macOS Dock icon when running as a plain Python process.
 

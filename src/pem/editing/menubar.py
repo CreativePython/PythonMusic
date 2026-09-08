@@ -9,10 +9,8 @@ creates the editor window; a window that stands on its own -- the Console --
 creates one for itself.  Either way the result lives on the window as
 ``top.menus``, and each ``EditorWindow`` in it reads its menus from there.
 
-The menu bar is attached to its window while still empty and filled in place
-afterwards.  macOS reads a menu bar for an Edit menu at the moment it is
-attached and adds its own items (Writing Tools, AutoFill, Start Dictation,
-Emoji & Symbols) to what it finds; an empty bar gives it nothing to add to.
+The menu bar is filled with its cascades and their items, then attached to
+the window.
 """
 import os
 import re
@@ -85,9 +83,6 @@ class WindowMenus:
         self.top = top
         self.menu_specs = menu_specs
         self.menubar = Menu(top)
-        if attach:
-            self.menubar.master.config(menu=self.menubar)
-
         self.menudict = {}
         for name, label in menu_specs:
             underline, label = prepstr(label)
@@ -116,6 +111,9 @@ class WindowMenus:
         self.base_helpmenu_length = self.menudict['help'].index(END)
         self.reset_help_menu_entries()
         self.start_window_list()
+
+        if attach:
+            top.config(menu=self.menubar)
 
     # --- what the menus act on -------------------------------------------
 

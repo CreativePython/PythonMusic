@@ -2065,6 +2065,10 @@ def main():
     # 'PEM' in the menu bar and Dock instead of 'Python' (the executable name).
     macosx.setApplicationName('PEM')
 
+    # Also before Tk(): macOS reads these while building its application
+    # object, and keeps two of its own items out of PEM's Edit menu.
+    macosx.hideSystemEditMenuItems()
+
     _ensure_save_panel_expanded()
     capture_warnings(True)
     use_subprocess = True

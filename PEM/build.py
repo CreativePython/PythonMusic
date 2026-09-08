@@ -611,6 +611,11 @@ app = BUNDLE(
    info_plist={{
       "CFBundleShortVersionString": "{version}",
       "CFBundleVersion": "{version}",
+      # Keep macOS's Start Dictation and Emoji & Symbols out of the Edit menu
+      # (see pem.macosx._hideSystemEditMenuItems, which does the same when
+      # PEM runs from source).
+      "NSDisabledDictationMenuItem": True,
+      "NSDisabledCharacterPaletteMenuItem": True,
    }},
 )
 """
