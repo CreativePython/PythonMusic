@@ -28,17 +28,47 @@ Two shapes of build, decided by whether the program uses PythonMusic:
 
 PyInstaller always runs as a child process so the student's "Cancel" button can
 actually stop it.
+
+Troubleshooting a build
+-----------------------
+When a build fails, a full record of it is saved to ``create-executable.log`` in
+PythonMusic's log folder (on macOS, ``~/Library/Logs/PythonMusic``), and the
+error message shows the file's path.  The record covers the settings used, which
+Python ran the build and whether PEM was a frozen app, the folders searched for
+modules, where the audio library and soundfont were found, the generated
+``.spec`` file, the exact PyInstaller command, and PyInstaller's own output.
+The log from the build before that is kept as ``create-executable.log.prev``.
+A successful build leaves no log behind.
+
+For development, set the ``PEM_BUILD_DEBUG`` environment variable before
+launching PEM:
+
+    PEM_BUILD_DEBUG=1 python PEM.py
+    PEM_BUILD_DEBUG=1 ./PEM.app/Contents/MacOS/PEM
+
+With it set, every build saves its log (not just failed ones), each step is also
+printed to the terminal, PyInstaller runs with its most detailed logging, and
+the temporary work folder -- holding the generated ``.spec`` file and launcher --
+is kept instead of deleted (its location is in the log).
 """
 
 import os
 import sys
+import shlex
 import shutil
 import platform
 import subprocess
 import tempfile
+import time
+import traceback
 from pathlib import Path
 
 from pem.build import packages
+
+
+# Set the PEM_BUILD_DEBUG environment variable before launching PEM to get a
+# fuller record of every build (see "Troubleshooting a build" above).
+DEBUG = bool(os.environ.get("PEM_BUILD_DEBUG"))
 
 
 # PythonMusic's own top-level modules.  If a student's program imports any of
@@ -282,15 +312,17 @@ class BuildResult:
       message (str): A student-friendly explanation of the result.
       cancelled (bool): True if the student cancelled the build.
       external_imports (list): Third-party imports we did not bundle, if any.
+      log_path (Path or None): Where this build's log was saved, if it was saved.
    """
 
    def __init__(self, success, output_path=None, message="",
-                cancelled=False, external_imports=None):
+                cancelled=False, external_imports=None, log_path=None):
       self.success = success
       self.output_path = output_path
       self.message = message
       self.cancelled = cancelled
       self.external_imports = external_imports or []
+      self.log_path = log_path
 
 
 def build_user_executable(script_path, console=False, quit_on_window_close=False,
@@ -312,19 +344,23 @@ def build_user_executable(script_path, console=False, quit_on_window_close=False
          child process is terminated and a cancelled result is returned.
 
    Returns:
-      BuildResult
+      BuildResult.  A failed build saves its log and ends its message with the
+      log file's path (see "Troubleshooting a build" in the module docstring).
    """
    report = progress if progress is not None else (lambda message: None)
-
-   scriptPath = Path(script_path).resolve()
-   scriptDir = scriptPath.parent
-   scriptName = scriptPath.stem
-
-   # Everything transient (spec file, work folder, generated launcher) goes in
-   # one temp dir we delete at the end.
-   tempDir = Path(tempfile.mkdtemp(prefix="pem_build_"))
+   log = _BuildLog()
+   tempDir = None
 
    try:
+      scriptPath = Path(script_path).resolve()
+      scriptDir = scriptPath.parent
+      scriptName = scriptPath.stem
+
+      # Everything transient (spec file, work folder, generated launcher) goes in
+      # one temp dir, removed at the end unless PEM_BUILD_DEBUG is set.
+      tempDir = Path(tempfile.mkdtemp(prefix="pem_build_"))
+      _note_environment(log, scriptPath, console, quit_on_window_close, tempDir)
+
       report("Looking at your program...")
       usedModules = _imports_including_siblings(scriptPath, scriptDir) & PYTHONMUSIC_MODULES
       usesPythonMusic = bool(usedModules)
@@ -332,6 +368,9 @@ def build_user_executable(script_path, console=False, quit_on_window_close=False
       usesWindows = "gui" in usedModules
       externalImports = _classify_imports(scriptPath, scriptDir)
       siblingModules = _find_local_modules(scriptPath, scriptDir)
+      log.note(f"PythonMusic modules used: {sorted(usedModules) or 'none'}")
+      log.note(f"other third-party imports: {externalImports or 'none'}")
+      log.note(f"sibling files imported: {siblingModules or 'none'}")
 
       report("Preparing the build...")
       specPath = _write_spec(
@@ -345,7 +384,9 @@ def build_user_executable(script_path, console=False, quit_on_window_close=False
          quitOnWindowClose=quit_on_window_close and usesWindows,
          siblingModules=siblingModules,
          externalImports=externalImports,
+         log=log,
       )
+      log.section("generated spec file", specPath.read_text(encoding="utf-8"))
 
       report("Building the executable (this can take a few minutes)...")
       # Build into the temp folder, not the student's folder: PyInstaller's
@@ -356,39 +397,163 @@ def build_user_executable(script_path, console=False, quit_on_window_close=False
          specPath=specPath,
          distDir=tempDir / "dist",
          workDir=tempDir / "build",
+         log=log,
          cancel_event=cancel_event,
       )
+      log.section("PyInstaller output", buildLog)
 
       if cancel_event is not None and cancel_event.is_set():
-         return BuildResult(False, cancelled=True)
-
-      if not built:
-         return BuildResult(
+         log.note("the build was cancelled")
+         result = BuildResult(False, cancelled=True)
+      elif not built:
+         log.note("PyInstaller did not finish successfully")
+         result = BuildResult(
             False,
             message=_friendly_failure(externalImports, buildLog),
             external_imports=externalImports,
          )
+      else:
+         report("Finishing up...")
+         shareablePath, message = _collect_output(
+            tempDir / "dist", scriptDir, scriptName)
+         if shareablePath is None:
+            log.note(f"PyInstaller finished, but no finished program was found in {tempDir / 'dist'}")
+            result = BuildResult(
+               False,
+               message=_friendly_failure(externalImports, buildLog),
+               external_imports=externalImports,
+            )
+         else:
+            log.note(f"finished program: {shareablePath}")
+            result = BuildResult(True, output_path=shareablePath, message=message,
+                                 external_imports=externalImports)
 
-      report("Finishing up...")
-      shareablePath, message = _collect_output(
-         tempDir / "dist", scriptDir, scriptName)
-      if shareablePath is None:
-         return BuildResult(
-            False,
-            message=_friendly_failure(externalImports, buildLog),
-            external_imports=externalImports,
-         )
-
-      return BuildResult(True, output_path=shareablePath, message=message,
-                         external_imports=externalImports)
+   except Exception:
+      # A problem inside PEM itself, rather than PyInstaller reporting a failed
+      # build -- record exactly where it happened.
+      log.note("unexpected error while building")
+      log.section("traceback", traceback.format_exc())
+      result = BuildResult(
+         False,
+         message="Something went wrong inside PEM while creating the executable.",
+      )
 
    finally:
       # The finished executable lives in the student's folder, not here, so the
-      # whole temp tree is safe to remove.  Cleanup failures are non-fatal.
+      # whole temp tree is safe to remove.  In debug mode it is kept so the
+      # generated spec file and launcher can be inspected.
+      if tempDir is not None:
+         if DEBUG:
+            log.note(f"kept the temporary work folder: {tempDir}")
+         else:
+            shutil.rmtree(tempDir, ignore_errors=True)
+
+   # A failed build always saves its log (every build does in debug mode), and
+   # the failure message names the file so the details can be found later.
+   buildFailed = not result.success and not result.cancelled
+   if buildFailed or DEBUG:
+      result.log_path = log.save()
+   if buildFailed and result.log_path is not None:
+      result.message = result.message + f"\n\nDetails were saved to:\n{result.log_path}"
+   return result
+
+
+# ── Build log ──────────────────────────────────────────────────────────────────
+
+class _BuildLog:
+   """Records one build so a failure can be diagnosed after the fact.
+
+   Lines are collected in memory while the build runs; save() writes them to the
+   log file once the build is over.
+   """
+
+   def __init__(self):
+      self.lines = []
+      self.startTime = time.perf_counter()
+
+   def note(self, text):
+      """Record one step of the build, with the seconds elapsed so far.
+
+      In debug mode the line is also printed to the terminal, when there is one
+      (a windowed app launched from Finder has none).
+      """
+      elapsedSeconds = time.perf_counter() - self.startTime
+      line = f"[{elapsedSeconds:7.1f}s] {text}"
+      self.lines.append(line)
+      if DEBUG:
+         stream = sys.__stderr__ or sys.stderr
+         if stream is not None:
+            try:
+               stream.write(line + "\n")
+               stream.flush()
+            except Exception:
+               pass
+
+   def section(self, title, body):
+      """Record a block of text, such as the generated spec or PyInstaller's output."""
+      self.lines.append(f"----- {title} -----")
+      self.lines.append(body.rstrip("\n"))
+      self.lines.append(f"----- end of {title} -----")
+
+   def save(self):
+      """Write the log file, keeping the previous build's log as ``.prev``.
+
+      Returns the log file's path, or None if it couldn't be written.
+      """
+      logPath = _build_log_path()
+      previousPath = logPath.with_suffix(logPath.suffix + ".prev")
       try:
-         shutil.rmtree(tempDir, ignore_errors=True)
-      except Exception:
-         pass
+         if logPath.exists():
+            if previousPath.exists():
+               previousPath.unlink()
+            logPath.rename(previousPath)
+         logPath.write_text("\n".join(self.lines) + "\n", encoding="utf-8")
+         return logPath
+      except OSError:
+         return None
+
+
+def _build_log_path():
+   """Return the build log's path, creating its folder if needed.
+
+   Uses the same per-platform folder as PythonMusic's GUI renderer log.
+   """
+   if sys.platform == "darwin":
+      base = Path.home() / "Library" / "Logs" / "PythonMusic"
+   elif sys.platform == "win32":
+      base = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "PythonMusic" / "Logs"
+   else:
+      stateHome = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+      base = Path(stateHome) / "PythonMusic" / "logs"
+   try:
+      base.mkdir(parents=True, exist_ok=True)
+   except OSError:
+      pass
+   return base / "create-executable.log"
+
+
+def _note_environment(log, scriptPath, console, quitOnWindowClose, tempDir):
+   """Record the settings and surroundings of this build.
+
+   Many build problems come down to *where* things are: which program is running
+   the build, whether PEM is a frozen app, and which folders are searched for
+   modules.
+   """
+   log.note(f"Create Executable for: {scriptPath}")
+   log.note(f"settings: console={console}, quit_on_window_close={quitOnWindowClose}, debug={DEBUG}")
+   log.note(f"platform: {platform.platform()}, Python {platform.python_version()}")
+   log.note(f"PEM is a frozen app: {bool(getattr(sys, 'frozen', False))}")
+   log.note(f"sys.executable: {sys.executable}")
+   if getattr(sys, "frozen", False):
+      log.note("  (in a frozen app this is PEM itself, not a Python interpreter)")
+   if hasattr(sys, "_MEIPASS"):
+      log.note(f"bundle folder (sys._MEIPASS): {sys._MEIPASS}")
+   log.note(f"working folder: {os.getcwd()}")
+   log.note(f"temporary work folder: {tempDir}")
+   log.note("module search path (sys.path):")
+   for entry in sys.path:
+      missing = "" if os.path.exists(entry) else "   (missing)"
+      log.note(f"    {entry}{missing}")
 
 
 # ── Import analysis ────────────────────────────────────────────────────────────
@@ -565,7 +730,7 @@ def _locate_soundfont():
 
 
 def _write_spec(tempDir, scriptPath, scriptName, console, usesPythonMusic,
-                playsAudio, quitOnWindowClose, siblingModules, externalImports):
+                playsAudio, quitOnWindowClose, siblingModules, externalImports, log):
    """Write a PyInstaller ``.spec`` for the student's program and return its path.
 
    For a PythonMusic program the entry point is the generated launcher, the
@@ -574,7 +739,8 @@ def _write_spec(tempDir, scriptPath, scriptName, console, usesPythonMusic,
    PyInstaller freezes the student's script directly and follows its own
    imports.  Either way the large unused parts are excluded (see
    ``packages.getExcludes``), and the executable shape is chosen per platform:
-   a ``.app`` on macOS, a single file elsewhere.
+   a ``.app`` on macOS, a single file elsewhere.  Where each bundled resource
+   was found is recorded in ``log``.
    """
    scriptDir = scriptPath.parent
    excludes = packages.getExcludes(profile="user_script")
@@ -582,6 +748,7 @@ def _write_spec(tempDir, scriptPath, scriptName, console, usesPythonMusic,
    if usesPythonMusic:
       entryPath = _write_launcher(tempDir, scriptPath.name, playsAudio,
                                   quitOnWindowClose)
+      log.note(f"entry point: generated launcher {entryPath}")
       # The launcher runs the student's script from the bundle, so the script
       # travels as data rather than as an analysed entry point.
       datas = [(str(scriptPath), ".")]
@@ -592,6 +759,7 @@ def _write_spec(tempDir, scriptPath, scriptName, console, usesPythonMusic,
       hiddenimports += externalImports
       binaries = []
       libportaudio = _locate_libportaudio()
+      log.note(f"PortAudio library: {libportaudio or 'not found'}")
       if libportaudio is not None:
          binaries.append((str(libportaudio), "."))
 
@@ -600,12 +768,14 @@ def _write_spec(tempDir, scriptPath, scriptName, console, usesPythonMusic,
       # "soundfonts" in the bundle (its _MEIPASS/soundfonts candidate).
       if playsAudio:
          soundfont = _locate_soundfont()
+         log.note(f"soundfont: {soundfont or 'not found'}")
          if soundfont is not None:
             datas.append((str(soundfont), "soundfonts"))
    else:
       # Plain program: freeze the script itself and let PyInstaller follow its
       # imports.
       entryPath = scriptPath
+      log.note(f"entry point: the script itself ({entryPath})")
       datas = []
       hiddenimports = []
       binaries = []
@@ -730,7 +900,7 @@ def _pyinstaller_command(specPath, distDir, workDir):
    -- that is handled in the frozen-mode work (a later phase); here we target a
    normal Python interpreter.
    """
-   return [
+   command = [
       sys.executable, "-m", "PyInstaller",
       str(specPath),
       "--distpath", str(distDir),
@@ -738,16 +908,22 @@ def _pyinstaller_command(specPath, distDir, workDir):
       "--noconfirm",
       "--clean",
    ]
+   if DEBUG:
+      # PyInstaller's most detailed output, showing why it made each choice.
+      command += ["--log-level", "DEBUG"]
+   return command
 
 
-def _run_pyinstaller(specPath, distDir, workDir, cancel_event=None):
+def _run_pyinstaller(specPath, distDir, workDir, log, cancel_event=None):
    """Run PyInstaller as a child process, watching for cancellation.
 
-   Returns ``(success, log)`` where ``log`` is the combined output (used to
-   explain failures).  If ``cancel_event`` is set while the build runs, the
-   child process is terminated and ``success`` is False.
+   Returns ``(success, output)`` where ``output`` is PyInstaller's combined
+   output (used to explain failures).  If ``cancel_event`` is set while the
+   build runs, the child process is terminated and ``success`` is False.  The
+   command and its exit code are recorded in ``log``.
    """
    command = _pyinstaller_command(specPath, distDir, workDir)
+   log.note("running: " + shlex.join(command))
 
    process = subprocess.Popen(
       command,
@@ -761,6 +937,7 @@ def _run_pyinstaller(specPath, distDir, workDir, cancel_event=None):
    # than only after the (multi-minute) build finishes.
    while True:
       if cancel_event is not None and cancel_event.is_set():
+         log.note("stopping PyInstaller because the build was cancelled")
          _terminate(process)
          return False, "".join(outputLines)
       line = process.stdout.readline()
@@ -771,6 +948,7 @@ def _run_pyinstaller(specPath, distDir, workDir, cancel_event=None):
          break
 
    returnCode = process.wait()
+   log.note(f"PyInstaller exited with code {returnCode}")
    return returnCode == 0, "".join(outputLines)
 
 
