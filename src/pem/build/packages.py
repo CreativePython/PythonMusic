@@ -7,8 +7,8 @@ This module provides lists of different packages for inclusion in build.py and P
 
 It lives inside the shipped ``pem`` package so both the PEM application build
 (PEM/build.py, via a thin shim) and the editor's "Create Executable" feature
-(pem.editing.exebuilder) read the exact same lists in every install mode --
-running from source, pip-installed, or frozen.
+(pem.editing.exebuilder) read the exact same lists: build.py while building the
+PEM app, and Create Executable in a pip-installed PEM (or PEM run from source).
 """
 
 # PythonMusic's core libraries, and the specific modules needed to run them.

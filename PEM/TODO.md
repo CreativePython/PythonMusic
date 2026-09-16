@@ -41,13 +41,16 @@ abandon" — nothing here is load-bearing. Companion to `PEM_REFACTOR_PLAN.md`
 
 ## 2. Dormant / non-functional features
 
-- **Create Executable.** `pemlib/editing/exebuilder.py` has a
-  `# WORK IN PROGRESS` banner — the feature is wired to a toolbar button
-  (`EditorWindow.toolbar_create_executable`) but is not functional. The menu
-  item (`('Create _Executable', '<<create-executable>>')` in
-  `mainmenu.py`) is commented out. Decide: fix it, or remove it (the toolbar
-  button, the binding, `exebuilder.py`, and the `packages.py` build profiles it
-  would use). — *implement or abandon*
+- **Create Executable in the frozen PEM app.** The feature works in
+  pip-installed PEM (and from source); the frozen app leaves out its menu item
+  and Preferences section (`pem.isFrozen()`). Running PyInstaller inside the
+  frozen app fails: the app's Python modules are compiled into it, and
+  PyInstaller needs them as files on disk. If revisited, options are to
+  assemble the student's program from PEM's own compiled runtime (PyInstaller's
+  archive reader/writer), or have PEM set up a real Python build environment on
+  first use. Meanwhile PEM.app still bundles PyInstaller (and `PEM.py`'s
+  `_child.py` route) only for nested builds — remove them if this stays out.
+  — *implement or abandon*
 - **`OnDemandOutputWindow`** in `pemlib/shell/outwin.py` — a dead class with
   a `# These classes are currently not used but might come in handy` header. —
   *abandon (delete) unless a use appears*

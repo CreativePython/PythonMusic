@@ -29,7 +29,7 @@ from code import InteractiveInterpreter
 
 from tkinter import messagebox
 
-from pem import perflog
+from pem import perflog, isFrozen
 from pem.interpreter import rpc
 
 HOST = '127.0.0.1' # python execution server on localhost loopback
@@ -178,7 +178,7 @@ class Interpreter(InteractiveInterpreter):
         port = port if port is not None else self.port
         assert port != 0, "Socket should have been assigned a port number."
         warnopts = ['-W' + s for s in sys.warnoptions]
-        if getattr(sys, 'frozen', False):
+        if isFrozen():
             return [sys.executable, SUBPROCESS_FLAG, str(port)]
         # __file__ here is .../pem/pyshell.py -> grandparent is the dir
         # that contains the 'pem' package (already on sys.path if

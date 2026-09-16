@@ -28,6 +28,8 @@ import os
 import sys
 import time
 
+from pem import isFrozen
+
 _value = os.environ.get("PEM_PERF") or ""
 ENABLED = bool(_value)
 
@@ -57,8 +59,7 @@ def _emit(text):
 
 
 if ENABLED:
-    _frozen = getattr(sys, "frozen", False)
-    _emit(f"[perf ======== process start  pid={os.getpid():>6}  frozen={bool(_frozen)}  "
+    _emit(f"[perf ======== process start  pid={os.getpid():>6}  frozen={isFrozen()}  "
           f"argv={sys.argv!r}  ========]")
 
 

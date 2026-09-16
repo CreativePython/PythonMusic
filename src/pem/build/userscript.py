@@ -7,6 +7,11 @@ this one builds the *student's* program -- but it borrows the same recipe for
 the hard case (bundle PySide6, the audio backend, and every PythonMusic module;
 trim the large unused parts) from ``pem.build.packages``.
 
+Create Executable is offered only when PEM runs on a regular Python
+installation (pip-installed, or from source).  The frozen PEM app leaves it out:
+PyInstaller can't build from inside it, because the app's Python modules are
+compiled into it rather than stored as files.
+
 Two shapes of build, decided by whether the program uses PythonMusic:
 
 * **Plain Python program.**  PyInstaller freezes the student's script directly,
@@ -34,8 +39,8 @@ Troubleshooting a build
 When a build fails, a full record of it is saved to ``create-executable.log`` in
 PythonMusic's log folder (on macOS, ``~/Library/Logs/PythonMusic``), and the
 error message shows the file's path.  The record covers the settings used, which
-Python ran the build and whether PEM was a frozen app, the folders searched for
-modules, where the audio library and soundfont were found, the generated
+Python ran the build, the folders searched for modules, where the audio library
+and soundfont were found, the generated
 ``.spec`` file, the exact PyInstaller command, and PyInstaller's own output.
 The log from the build before that is kept as ``create-executable.log.prev``.
 A successful build leaves no log behind.
@@ -43,8 +48,8 @@ A successful build leaves no log behind.
 For development, set the ``PEM_BUILD_DEBUG`` environment variable before
 launching PEM:
 
-    PEM_BUILD_DEBUG=1 python PEM.py
-    PEM_BUILD_DEBUG=1 ./PEM.app/Contents/MacOS/PEM
+    PEM_BUILD_DEBUG=1 pem              # pip-installed PEM
+    PEM_BUILD_DEBUG=1 python -m pem    # PEM run from source
 
 With it set, every build saves its log (not just failed ones), each step is also
 printed to the terminal, PyInstaller runs with its most detailed logging, and
@@ -104,9 +109,9 @@ import sys
 import runpy
 import threading
 
-# Build setting: quit once the last window closes?  Off by default, because some
-# PythonMusic features (e.g. MidiIn's device chooser) open and close a window
-# while the program keeps running.  On suits a typical single-window program.
+# Build setting: quit once the last window closes?  Suits a typical window
+# program; turned off for programs where a window closes while the program keeps
+# running (e.g. MidiIn's device chooser).
 _QUIT_ON_WINDOW_CLOSE = __PEM_QUIT_ON_CLOSE__
 
 # How many program windows are currently open (only tracked when the setting is
@@ -535,19 +540,13 @@ def _build_log_path():
 def _note_environment(log, scriptPath, console, quitOnWindowClose, tempDir):
    """Record the settings and surroundings of this build.
 
-   Many build problems come down to *where* things are: which program is running
-   the build, whether PEM is a frozen app, and which folders are searched for
-   modules.
+   Many build problems come down to *where* things are: which Python is running
+   the build, and which folders are searched for modules.
    """
    log.note(f"Create Executable for: {scriptPath}")
    log.note(f"settings: console={console}, quit_on_window_close={quitOnWindowClose}, debug={DEBUG}")
    log.note(f"platform: {platform.platform()}, Python {platform.python_version()}")
-   log.note(f"PEM is a frozen app: {bool(getattr(sys, 'frozen', False))}")
    log.note(f"sys.executable: {sys.executable}")
-   if getattr(sys, "frozen", False):
-      log.note("  (in a frozen app this is PEM itself, not a Python interpreter)")
-   if hasattr(sys, "_MEIPASS"):
-      log.note(f"bundle folder (sys._MEIPASS): {sys._MEIPASS}")
    log.note(f"working folder: {os.getcwd()}")
    log.note(f"temporary work folder: {tempDir}")
    log.note("module search path (sys.path):")
@@ -673,7 +672,7 @@ def _locate_libportaudio():
 
    PythonMusic bundles ``libportaudio`` (macOS) so audio output works without a
    system install; ``PEM/build.py`` bundles it for the app the same way.  In a
-   pip / frozen install it lives inside the installed ``PythonMusic`` package.
+   pip install it lives inside the installed ``PythonMusic`` package.
    """
    try:
       import PythonMusic
@@ -711,10 +710,6 @@ def _locate_soundfont():
       candidates.append(Path(user_data_dir("PythonMusic", "CofC")) / "Soundfonts")
    except Exception:
       pass
-
-   # If PEM itself is frozen, it may carry a bundled soundfont.
-   if hasattr(sys, "_MEIPASS"):
-      candidates.append(Path(sys._MEIPASS) / "soundfonts")
 
    for candidate in candidates:
       try:
@@ -895,10 +890,9 @@ app = BUNDLE(
 def _pyinstaller_command(specPath, distDir, workDir):
    """Build the command that runs PyInstaller on ``specPath``.
 
-   Uses the current interpreter's PyInstaller (``-m PyInstaller``).  In a frozen
-   PEM ``sys.executable`` is the app itself, which needs a different launch path
-   -- that is handled in the frozen-mode work (a later phase); here we target a
-   normal Python interpreter.
+   Uses the current interpreter's PyInstaller (``-m PyInstaller``), so
+   ``sys.executable`` must be a regular Python interpreter -- one reason the
+   frozen PEM app doesn't offer Create Executable.
    """
    command = [
       sys.executable, "-m", "PyInstaller",

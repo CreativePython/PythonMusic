@@ -1,9 +1,9 @@
 """
 packages.py -- compatibility shim.
 
-The real build configuration now lives in the shipped package at
+The real build configuration lives in the shipped package at
 ``src/pem/build/packages.py`` so the editor's "Create Executable" feature can
-read it in every install mode (source, pip, frozen).  This shim keeps
+read it in a pip-installed PEM (or PEM run from source).  This shim keeps
 ``build.py``'s ``from packages import ...`` working -- including during the
 pre-venv bootstrap, before PythonMusic is installed -- by pointing at the
 in-tree source copy and re-exporting everything from it.

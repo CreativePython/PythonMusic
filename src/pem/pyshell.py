@@ -50,7 +50,7 @@ from pem.text.delegator import Delegator
 from pem.editing.editor import EditorWindow, fixwordbreaks
 from pem.editing.filelist import FileList
 from pem.shell.outwin import OutputWindow
-from pem import perflog
+from pem import perflog, isFrozen
 from pem.searching import replace
 from pem.interpreter import Interpreter
 from pem.interpreter.run import pem_formatwarning, StdInputFile, StdOutputFile
@@ -1443,7 +1443,7 @@ def main():
     # On macOS the executable lives inside PEM.app/Contents/MacOS/, so
     # walk up to find the .app bundle and return its parent directory.
     # For development (running PEM.py): use the launch cwd.
-    if getattr(sys, 'frozen', False):
+    if isFrozen():
         _exe = os.path.abspath(sys.executable)
         _launch_dir = os.path.dirname(_exe)
         _p = _exe
