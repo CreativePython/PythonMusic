@@ -40,7 +40,7 @@ from pem.editing.menubar import window_menus, prepstr, get_accelerator
 from pem.editing.tree import wheel_event
 from pem.util import py_extensions
 from pem import window
-from pem.editing import exebuilder
+from pem.builder import executable
 
 # The default tab setting for a Text widget, in average-width characters.
 TK_TABWIDTH_DEFAULT = 8
@@ -1383,7 +1383,7 @@ class EditorWindow:
         return "break"
 
     def create_executable_event(self, event=None):
-        builder = exebuilder.ExeBuilder(self)
+        builder = executable.ExeBuilder(self)
         builder.create_executable()
         return "break"
 
