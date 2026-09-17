@@ -3404,7 +3404,7 @@ class DropDownListMirror(_ControlMirror):
    def _applyColor(self, color):
       r, g, b, a = color
       self._widget.setStyleSheet(
-         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; combobox-popup: 0; }}"
          f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
       )
 
