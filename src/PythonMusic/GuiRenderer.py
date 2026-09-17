@@ -675,7 +675,10 @@ class _QPolygonItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPolygonItem):
    pass
 
 class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
-   pass
+   def boundingRect(self):
+      # measure the children as they are now; QGraphicsItemGroup only measures them
+      # when they are added, so its area goes stale once they move or resize
+      return self.childrenBoundingRect()
 
 
 class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
