@@ -1,5 +1,5 @@
 ######################################################################################
-# music.py       Version 5.0     22-Jun-2026
+# music.py       Version 5.2     17-Sep-2026
 #
 # Taj Ballinger, Trevor Ritchie, Drew Smuniewski, and Bill Manaris
 #
@@ -28,6 +28,10 @@
 #######################################################################################
 #
 # REVISIONS:
+#
+# 5.2   17-Sep-2026 (bm)   Fixed several issues:
+#        - Corrected a mismatch of parameters between AudioSample, and LinearRamp constructor (timer.py).
+#        - Fixed another typo in MIDI instrument constants (METTALIC --> METALLIC).
 #
 # 5.1   14-Sep-2026 (bm)   Updated MIDI instrument constants to match JythonMusic's.
 #
@@ -313,7 +317,7 @@ ACOUSTIC_GRAND = PIANO = 0
 BRIGHT_ACOUSTIC = 1
 ELECTRIC_GRAND = 2
 HONKYTONK_PIANO = HONKYTONK = 3
-EPIANO1 = EPIANO1 = RHODES_PIANO = RHODES = 4
+EPIANO1 = RHODES_PIANO = RHODES = 4
 EPIANO2 = DX_PIANO = DX = 5
 HARPSICHORD = 6
 CLAVINET = 7
@@ -402,7 +406,7 @@ PAD_2_WARM = WARM_PAD = 89
 PAD_3_POLYSYNTH = POLYSYNTH = 90
 PAD_4_CHOIR = SPACE_VOICE = 91
 PAD_5_GLASS = BOWED_GLASS = 92
-PAD_6_METTALIC = METALLIC = 93
+PAD_6_METALLIC = METALLIC = 93
 PAD_7_HALO = HALO = 94
 PAD_8_SWEEP = SWEEP = 95
 FX_1_RAIN = ICE_RAIN = 96
@@ -5109,11 +5113,11 @@ class AudioSample:
             currentVolumeFactor = currentApiVolume / 127.0
 
             volumeRamp = LinearRamp(
-               delayMs=float(effectiveDelay),
+               delay=float(effectiveDelay),
                startValue=currentVolumeFactor,
                endValue=targetVolumeFactor,
                action=rampCallback,
-               stepMs=stepMs
+               step=stepMs
             )
             volumeRamp.start()   # start volume ramp
 
