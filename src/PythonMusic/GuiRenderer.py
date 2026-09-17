@@ -681,6 +681,54 @@ class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
       return self.childrenBoundingRect()
 
 
+class _QComboBox(QtWidgets.QComboBox):
+   """
+   QComboBox whose popup list draws above every other item in the scene.
+
+   Inside a QGraphicsProxyWidget, Qt shows the popup as a child item of the combo's
+   proxy, so it only stacks among that proxy's children and anything above the combo
+   covers it.  While the popup is open, we lift it to a top-level item (keeping the
+   combo's on-screen placement) and put it back under the combo once it hides.
+   """
+
+   _POPUP_Z_VALUE = 1e9   # above any z-value a Display or Group assigns
+
+   def __init__(self):
+      QtWidgets.QComboBox.__init__(self)
+      self._liftedPopup   = None    # the popup's scene item while it is lifted
+      self._watchingPopup = False   # whether the popup window's hide event is filtered
+
+   def showPopup(self):
+      QtWidgets.QComboBox.showPopup(self)
+      comboProxy = self.graphicsProxyWidget()
+      children   = comboProxy.childItems() if comboProxy is not None else []
+      if children:
+         popupItem = children[0]
+         if not self._watchingPopup:
+            # the popup can close without calling hidePopup (e.g. clicking outside it),
+            # so watch its window's hide event instead
+            self.view().window().installEventFilter(self)
+            self._watchingPopup = True
+
+         # Qt keeps setting the popup's position relative to the combo, so fold the
+         # combo's scene placement into the popup's own transform
+         popupOffset = QtGui.QTransform.fromTranslate(popupItem.x(), popupItem.y())
+         placement   = popupOffset * comboProxy.sceneTransform()
+         popupItem.setParentItem(None)
+         popupItem.setTransform(popupOffset.inverted()[0] * placement)
+         popupItem.setZValue(self._POPUP_Z_VALUE)
+         self._liftedPopup = popupItem
+
+   def eventFilter(self, watched, event):
+      if event.type() == QtCore.QEvent.Type.Hide and self._liftedPopup is not None:
+         # put the popup back under the combo, so it moves and is removed along with it
+         self._liftedPopup.setParentItem(self.graphicsProxyWidget())
+         self._liftedPopup.resetTransform()
+         self._liftedPopup.setZValue(0)
+         self._liftedPopup = None
+      return False
+
+
 class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
    """
    QGraphicsProxyWidget that also delivers PythonMusic on* events for Controls.
@@ -3383,7 +3431,7 @@ class DropDownListMirror(_ControlMirror):
       items = args.get('items', [])
       color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
 
-      widget = QtWidgets.QComboBox()
+      widget = _QComboBox()
       widget.addItems(items)
       widget.adjustSize()
       self._width  = widget.width()
