@@ -3650,6 +3650,20 @@ class Icon(Graphics):
       else:
          print(f'{type(self).__name__}.save(): failed to save "{resolvedPath}"')
 
+   # ── Size ────────────────────────────────────────────────────────────────
+
+   def _resize(self, targetWidth, targetHeight, currentWidth, currentHeight):
+      """"""
+      # an image's size is its pixel grid, so resizing resamples the pixels to a whole
+      # number of columns and rows (at least one of each)
+      newWidth  = (self._baseWidth  * targetWidth  / currentWidth)  if currentWidth  else targetWidth
+      newHeight = (self._baseHeight * targetHeight / currentHeight) if currentHeight else targetHeight
+      self._baseWidth  = max(1, round(newWidth))
+      self._baseHeight = max(1, round(newHeight))
+      self._pixelCache = None   # the renderer resamples the pixels, so drop the cached ones
+      self._markParentExtentDirty()
+      self._pushExtent()
+
    # ── Crop ────────────────────────────────────────────────────────────────
 
    def crop(self, x, y, width, height):
@@ -3673,6 +3687,47 @@ class Icon(Graphics):
       self.setPosition(currentLeft + x, currentTop + y)
 
    # ── Pixel Manipulation ────────────────────────────────────────────────────────────
+   # The icon keeps a local copy of its pixels (_pixelCache) so repeated reads don't have
+   # to ask the renderer each time.  setPixel and setPixels update that copy alongside the
+   # renderer, rather than dropping it, so mixing reads and writes stays fast.  This only
+   # works because both sides store exactly the checked values given, with no blending;
+   # anything the renderer calculates itself (crop, resize) drops the copy instead.
+   # Pixel lists in the copy are replaced, never changed in place, so a list handed to the
+   # renderer or to the caller can't be altered later through the copy.
+
+   def _checkPixelPosition(self, methodName, column, row):
+      """"""
+      if not isinstance(column, (int, np.integer)) or not isinstance(row, (int, np.integer)):
+         raise TypeError(f'{type(self).__name__}.{methodName}(): column and row should be whole numbers (they were {column} and {row}).')
+
+      columnInside = 0 <= column < self._baseWidth
+      rowInside    = 0 <= row    < self._baseHeight
+      if not (columnInside and rowInside):
+         raise IndexError(f'{type(self).__name__}.{methodName}(): the pixel at column {column}, row {row} is outside the image.  '
+                          f'Columns run from 0 to {self._baseWidth - 1}, and rows from 0 to {self._baseHeight - 1}.')
+
+   def _checkPixelColor(self, methodName, color):
+      """"""
+      # returns the color as a new [red, green, blue, alpha] list, with alpha filled in
+      if not isinstance(color, (list, tuple)) or len(color) not in (3, 4):
+         raise TypeError(f'{type(self).__name__}.{methodName}(): a pixel color should be a list of [red, green, blue] or [red, green, blue, alpha] values (it was {color}).')
+
+      checkedColor = []
+      for value in color:
+         if not isinstance(value, (int, np.integer)):
+            raise TypeError(f'{type(self).__name__}.{methodName}(): pixel color values should be whole numbers from 0 to 255 (the color was {color}).')
+         if not 0 <= value <= 255:
+            raise ValueError(f'{type(self).__name__}.{methodName}(): pixel color values should be from 0 to 255 (the color was {color}).')
+         checkedColor.append(int(value))
+
+      if len(checkedColor) == 3:
+         checkedColor.append(255)   # no alpha given, so the pixel is fully opaque
+      return checkedColor
+
+   def _fetchPixelCache(self):
+      """"""
+      if self._pixelCache is None:
+         self._pixelCache = _handler().sendQuery('getPixels', self._objectId)
 
    def getPixel(self, column, row):
       """Return the color of one pixel.
@@ -3687,8 +3742,8 @@ class Icon(Graphics):
           pixel (list[int]): The pixel's red, green, blue, and alpha values, for example
               [255, 0, 0, 255]. Alpha runs from 0 (fully transparent) to 255 (fully opaque).
       """
-      if self._pixelCache is None:  # fetch local cache, if needed
-         self._pixelCache = _handler().sendQuery('getPixels', self._objectId)
+      self._checkPixelPosition('getPixel', column, row)
+      self._fetchPixelCache()
       pixel = list(self._pixelCache[row][column])
       return pixel
 
@@ -3704,8 +3759,12 @@ class Icon(Graphics):
               may add a fourth alpha value, from 0 (fully transparent) to 255 (fully opaque); when
               left off, the pixel is fully opaque.
       """
-      self._pixelCache = None  # invalidate local cache
-      _handler().sendCommand('setPixel', self._objectId, {'column': column, 'row': row, 'color': color})
+      self._checkPixelPosition('setPixel', column, row)
+      checkedColor = self._checkPixelColor('setPixel', color)
+
+      if self._pixelCache is not None:
+         self._pixelCache[row][column] = checkedColor
+      _handler().sendCommand('setPixel', self._objectId, {'column': int(column), 'row': int(row), 'color': checkedColor})
 
    def getPixels(self):
       """Return every pixel in the image.
@@ -3718,25 +3777,45 @@ class Icon(Graphics):
           pixelList (list[list[list[int]]]): The image's pixels, by row then column, each as
               [red, green, blue, alpha].
       """
-      if self._pixelCache is None:  # fetch local cache, if needed
-         self._pixelCache = _handler().sendQuery('getPixels', self._objectId)
-      pixelList = list(self._pixelCache)
+      self._fetchPixelCache()
+      # hand back a fresh copy, so changing it doesn't change the image's stored pixels
+      pixelList = [[list(pixel) for pixel in cachedRow] for cachedRow in self._pixelCache]
       return pixelList
 
-   def setPixels(self, pixelList):
-      """Replace every pixel in the image.
+   def setPixels(self, pixels):
+      """Set the pixels of the image from a grid of colors.
 
       The pixels are arranged as a list of rows, each row a list of pixels, each pixel a list
-      of red, green, and blue values. The image's top-left pixel is at [0][0]. Each pixel may add
-      a fourth alpha value, from 0 (fully transparent) to 255 (fully opaque); when left off, the
-      pixel is fully opaque.
+      of red, green, and blue values. The grid's top-left pixel goes at the image's top-left,
+      [0][0]. The grid may be smaller than the image, in which case only that top-left part
+      of the image changes. Each pixel may add a fourth alpha value, from 0 (fully
+      transparent) to 255 (fully opaque); when left off, the pixel is fully opaque.
 
       Args:
           pixels (list[list[list[int]]]): The new pixels, by row then column, each as
               [red, green, blue] or [red, green, blue, alpha].
       """
-      self._pixelCache = None  # invalidate local cache
-      _handler().sendCommand('setPixels', self._objectId, {'pixels': pixelList})
+      # check the whole grid before changing anything, so a mistake leaves the image as it was
+      if not isinstance(pixels, (list, tuple)) or len(pixels) == 0:
+         raise TypeError(f'{type(self).__name__}.setPixels(): pixels should be a list of rows of pixel colors.')
+
+      gridHeight = len(pixels)
+      gridWidth  = len(pixels[0])
+      if gridHeight > self._baseHeight or gridWidth > self._baseWidth:
+         raise IndexError(f'{type(self).__name__}.setPixels(): the grid of pixels ({gridWidth} wide by {gridHeight} tall) '
+                          f'is larger than the image ({self._baseWidth} wide by {self._baseHeight} tall).')
+
+      checkedPixels = []
+      for gridRow in pixels:
+         if len(gridRow) != gridWidth:
+            raise ValueError(f'{type(self).__name__}.setPixels(): every row should have the same number of pixels (the first row has {gridWidth}, but another has {len(gridRow)}).')
+         checkedRow = [self._checkPixelColor('setPixels', color) for color in gridRow]
+         checkedPixels.append(checkedRow)
+
+      if self._pixelCache is not None:
+         for rowIndex in range(gridHeight):
+            self._pixelCache[rowIndex][0:gridWidth] = checkedPixels[rowIndex]
+      _handler().sendCommand('setPixels', self._objectId, {'pixels': checkedPixels})
 
 
 class Label(Graphics):

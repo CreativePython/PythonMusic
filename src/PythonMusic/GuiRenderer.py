@@ -2765,10 +2765,15 @@ class IconMirror(_GraphicsMirror):
    operations must happen where the image lives.  This means IconMirror has
    getters (getPixel, getPixels) that send responses back through the pipe.
 
-   The original, unscaled pixels live in a QImage (_image), which reads and writes
-   single pixels cheaply.  The QGraphicsPixmapItem shows a scaled QPixmap copy that
+   The pixels live in a QImage (_image), which reads and writes single pixels cheaply.
+   Its size is always the icon's size (_width x _height): resizing resamples the pixels,
+   and cropping cuts them.  The QGraphicsPixmapItem shows a QPixmap copy that
    _applyExtent() rebuilds; pixel setters mark the icon dirty so that rebuild happens
    once per render tick.
+
+   Resizing resamples from _sourceImage, the pixels as they were before the first resize
+   since the last edit, so repeated resizes don't compound quality loss.  Any edit (a pixel
+   setter or crop) sets _sourceImage to None, meaning the current pixels are the source.
 
    A QGraphicsPixmapItem has no pen or brush, so color/fill/thickness can't act on
    the image the way they act on a shape.  Instead they style the backing rectangle
@@ -2812,11 +2817,22 @@ class IconMirror(_GraphicsMirror):
          width = int(image.width() * (height / image.height()))
       elif height is None:
          height = int(image.height() * (width / image.width()))
+      width  = max(1, int(round(width)))    # an image is a whole number of pixels
+      height = max(1, int(round(height)))
 
-      # original (unscaled) pixels for quality rescaling.  Files can load as grayscale or
-      # palette images, which can't hold arbitrary colors, so convert once to full
-      # color.  Non-premultiplied alpha, so getPixel returns exactly what setPixel wrote.
-      self._image  = image.convertToFormat(QtGui.QImage.Format.Format_ARGB32)
+      # Files can load as grayscale or palette images, which can't hold arbitrary colors,
+      # so convert once to full color.  Non-premultiplied alpha, so getPixel returns
+      # exactly what setPixel wrote.
+      image = image.convertToFormat(QtGui.QImage.Format.Format_ARGB32)
+
+      # a requested size resamples the loaded pixels; the loaded image stays the source
+      # for later resizes
+      if image.width() == width and image.height() == height:
+         self._image       = image
+         self._sourceImage = None
+      else:
+         self._image       = self._resample(image, width, height)
+         self._sourceImage = image
       self._width  = width
       self._height = height
       self._cx       = args.get('cx',       0.0)
@@ -2890,16 +2906,38 @@ class IconMirror(_GraphicsMirror):
       """
       self.guiRenderer.sendResponse(responseId, [self._width, self._height, self._loadFailed])
 
+   def _resample(self, image, width, height):
+      """Returns a smoothly resampled copy of image at exactly width x height pixels."""
+      return image.scaled(width, height,
+                          QtCore.Qt.AspectRatioMode.IgnoreAspectRatio,
+                          QtCore.Qt.TransformationMode.SmoothTransformation)
+
+   def _setExtent(self, args, responseId):
+      """
+      Resizes the icon by resampling its pixels to the new size, working from the source
+      image so repeated resizes don't compound quality loss.
+      """
+      width  = max(1, int(round(args.get('width',  self._width))))
+      height = max(1, int(round(args.get('height', self._height))))
+
+      if self._sourceImage is None:
+         self._sourceImage = self._image   # first resize since the last edit
+      self._image  = self._resample(self._sourceImage, width, height)
+      self._width  = width
+      self._height = height
+      self.guiRenderer._dirtyIcons.discard(self)   # rebuilt just below
+      self.qObject.prepareGeometryChange()
+      self._applyExtent()
+
    def _applyExtent(self):
       """
-      Scales the image from the original to the current size and centers both it and the
-      backing rectangle on the origin, so the item's transform turns and scales them about
-      their center.
+      Shows the current pixels and centers both the image and the backing rectangle on
+      the origin, so the item's transform turns and scales them about their center.
       """
-      width  = max(1, int(self._width))
-      height = max(1, int(self._height))
-      scaledPixmap = QtGui.QPixmap.fromImage(self._image.scaled(width, height))
-      self._qPixmapObject.setPixmap(scaledPixmap)
+      width  = self._width
+      height = self._height
+      pixmap = QtGui.QPixmap.fromImage(self._image)
+      self._qPixmapObject.setPixmap(pixmap)
       self._qPixmapObject.setOffset(-width / 2.0, -height / 2.0)
       self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
 
@@ -2907,16 +2945,18 @@ class IconMirror(_GraphicsMirror):
 
    def _crop(self, args, responseId):
       """
-      Crops the original image to the given rectangle, then recenters it on the origin.
+      Crops the pixels to the given rectangle, then recenters them on the origin.  The
+      cropped pixels become the source for later resizes.
       """
-      x      = args.get('x', 0)
-      y      = args.get('y', 0)
-      width  = args.get('width',  self._width)
-      height = args.get('height', self._height)
+      x      = int(args.get('x', 0))
+      y      = int(args.get('y', 0))
+      width  = int(args.get('width',  self._width))    # whole pixels, matching gui.py's crop()
+      height = int(args.get('height', self._height))
 
-      self._image  = self._image.copy(x, y, width, height)
-      self._width  = width
-      self._height = height
+      self._image       = self._image.copy(x, y, width, height)
+      self._sourceImage = None
+      self._width       = width
+      self._height      = height
       self.qObject.prepareGeometryChange()
       self._applyExtent()
 
@@ -2924,7 +2964,7 @@ class IconMirror(_GraphicsMirror):
 
    def _getPixel(self, args, responseId):
       """
-      Returns [r, g, b, a] for the pixel at (column, row) on the original image.
+      Returns [r, g, b, a] for the pixel at (column, row).
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
@@ -2933,19 +2973,20 @@ class IconMirror(_GraphicsMirror):
 
    def _setPixel(self, args, responseId):
       """
-      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] on the original image
-      (alpha defaults to opaque).  The on-screen image is rebuilt at the end of the tick.
+      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] (alpha defaults to
+      opaque).  The on-screen image is rebuilt at the end of the tick.
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
       color  = args.get('color', [0, 0, 0])
 
       self._image.setPixelColor(column, row, _qColorFromChannels(color))
+      self._sourceImage = None
       self.guiRenderer._dirtyIcons.add(self)
 
    def _getPixels(self, args, responseId):
       """
-      Returns all pixels as a 2D list of [r, g, b, a] values from the original image.
+      Returns all pixels as a 2D list of [r, g, b, a] values.
       """
       image  = self._image
       width  = image.width()
@@ -2963,22 +3004,18 @@ class IconMirror(_GraphicsMirror):
 
    def _setPixels(self, args, responseId):
       """
-      Sets all pixels from a 2D list of [r, g, b] or [r, g, b, a] values (alpha defaults
-      to opaque).  The on-screen image is rebuilt at the end of the tick.
+      Writes a 2D list of [r, g, b] or [r, g, b, a] values (alpha defaults to opaque) into
+      the image, starting at its top-left.  gui.py has already checked that the grid fits;
+      a smaller grid leaves the rest of the image unchanged.  The on-screen image is rebuilt
+      at the end of the tick.
       """
       pixels = args.get('pixels', [])
-      if not pixels:
-         return
 
-      height = len(pixels)
-      width  = len(pixels[0])
+      for row in range(len(pixels)):
+         for col in range(len(pixels[row])):
+            self._image.setPixelColor(col, row, _qColorFromChannels(pixels[row][col]))
 
-      image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_ARGB32)
-      for row in range(height):
-         for col in range(width):
-            image.setPixelColor(col, row, _qColorFromChannels(pixels[row][col]))
-
-      self._image = image
+      self._sourceImage = None
       self.guiRenderer._dirtyIcons.add(self)
 
    # ── Write ──────────────────────────────────────────────────────────────────
@@ -2997,8 +3034,8 @@ class IconMirror(_GraphicsMirror):
       width    = args.get('width')
       height   = args.get('height')
 
-      iconWidth  = max(1, int(round(self._width)))
-      iconHeight = max(1, int(round(self._height)))
+      iconWidth  = self._width
+      iconHeight = self._height
       thickness  = self._thickness
       margin     = thickness / 2.0          # the border straddles the rect edge, half outside
       canvasW    = iconWidth  + thickness   # grow the canvas to hold the whole border
@@ -3013,7 +3050,7 @@ class IconMirror(_GraphicsMirror):
       painter.setPen(self._qBackgroundObject.pen())
       painter.setBrush(self._qBackgroundObject.brush())
       painter.drawRect(QtCore.QRectF(margin, margin, iconWidth, iconHeight))
-      painter.drawImage(QtCore.QPointF(margin, margin), self._image.scaled(iconWidth, iconHeight))
+      painter.drawImage(QtCore.QPointF(margin, margin), self._image)
       painter.end()
 
       # 2. fade the whole composite by the icon's visibility, so overlapping parts fade as
