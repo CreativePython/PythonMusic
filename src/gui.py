@@ -3588,14 +3588,14 @@ class Icon(Graphics):
       })
 
       # the renderer loads the image and works out its size, so ask it for the resolved
-      # dimensions when the caller left them open
-      if width is None or height is None:
-         result = _handler().sendQuery('getSize', self._objectId)
-         self._baseWidth  = result[0]
-         self._baseHeight = result[1]
-      else:
-         self._baseWidth  = width
-         self._baseHeight = height
+      # dimensions (which match width and height when the caller gave them), and whether
+      # the file loaded at all
+      result = _handler().sendQuery('getSize', self._objectId)
+      self._baseWidth  = result[0]
+      self._baseHeight = result[1]
+      loadFailed       = result[2]
+      if loadFailed:
+         print(f'{type(self).__name__}(): could not load the image file "{filename}".  Using a blank image instead.')
 
       # start with the icon's top-left at the origin (its center is half its size in)
       self._centerX = self._baseWidth  / 2.0

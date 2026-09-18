@@ -233,10 +233,15 @@ class GuiRenderer:
       self._registeredEvents = set()
 
       # DisplayMirrors that received draw calls this tick and need a deferred setPixmap.
-      # Populated by DisplayMirror._markDrawLayerDirty(); flushed at the end of
+      # Populated by DisplayMirror._openDrawPainter(); flushed at the end of
       # _processCommandBuffer so Qt sees one atomic update per tick rather than one
       # per draw primitive.
       self._dirtyDisplays = set()
+
+      # IconMirrors whose pixels changed this tick and need their on-screen image
+      # rebuilt.  Populated by IconMirror's pixel setters; flushed by _flushDirtyIcons()
+      # so a burst of setPixel calls costs one rebuild per tick rather than one per pixel.
+      self._dirtyIcons = set()
 
    def run(self):
       """
@@ -379,10 +384,17 @@ class GuiRenderer:
             responseId = command.get('responseId')
             if responseId is not None:
                self.sendResponse(responseId, [])
-      # flush deferred draw layer updates accumulated during this tick
+      # flush deferred draw layer and icon updates accumulated during this tick
       for display in self._dirtyDisplays:
          display._flushDrawLayer()
       self._dirtyDisplays.clear()
+      self._flushDirtyIcons()
+
+   def _flushDirtyIcons(self):
+      """Rebuilds the on-screen image of every Icon whose pixels changed since the last flush."""
+      for icon in self._dirtyIcons:
+         icon._applyExtent()
+      self._dirtyIcons.clear()
 
 
    def _executeCommand(self, command):
@@ -2061,6 +2073,7 @@ class DisplayMirror:
       if self in self.guiRenderer._dirtyDisplays:
          self._flushDrawLayer()
          self.guiRenderer._dirtyDisplays.discard(self)
+      self.guiRenderer._flushDirtyIcons()
 
       # grab() synchronously paints the window, including the QGraphicsView, which
       # renders the scene (every item, controls included) into the captured pixmap.
@@ -2749,8 +2762,13 @@ class IconMirror(_GraphicsMirror):
    QGraphicsRectItem (behind) and a QGraphicsPixmapItem (the image, in front).
 
    Unlike other mirrors, Icon does most of its work on the Qt side because pixel
-   operations must happen where the QPixmap lives.  This means IconMirror has
+   operations must happen where the image lives.  This means IconMirror has
    getters (getPixel, getPixels) that send responses back through the pipe.
+
+   The original, unscaled pixels live in a QImage (_image), which reads and writes
+   single pixels cheaply.  The QGraphicsPixmapItem shows a scaled QPixmap copy that
+   _applyExtent() rebuilds; pixel setters mark the icon dirty so that rebuild happens
+   once per render tick.
 
    A QGraphicsPixmapItem has no pen or brush, so color/fill/thickness can't act on
    the image the way they act on a shape.  Instead they style the backing rectangle
@@ -2772,27 +2790,33 @@ class IconMirror(_GraphicsMirror):
       width    = args.get('width')
       height   = args.get('height')
 
-      # build pixmap
-      pixmap = QtGui.QPixmap(filename)
+      # load the image
+      image = QtGui.QImage(filename)
 
-      if pixmap.isNull():
-         # file failed to load — create blank pixmap
+      # reported to the parent by _getSize, which prints a warning
+      self._loadFailed = image.isNull()
+      if self._loadFailed:
+         # file failed to load — create a blank white image
          if width is None:
             width = 600
          if height is None:
             height = 400
-         pixmap = QtGui.QPixmap(width, height)
+         image = QtGui.QImage(int(width), int(height), QtGui.QImage.Format.Format_ARGB32)
+         image.fill(QtGui.QColor(255, 255, 255))
 
-      # resolve width/height from pixmap if not specified
+      # resolve width/height from the image if not specified
       if width is None and height is None:
-         width  = pixmap.width()
-         height = pixmap.height()
+         width  = image.width()
+         height = image.height()
       elif width is None:
-         width = int(pixmap.width() * (height / pixmap.height()))
+         width = int(image.width() * (height / image.height()))
       elif height is None:
-         height = int(pixmap.height() * (width / pixmap.width()))
+         height = int(image.height() * (width / image.width()))
 
-      self._pixmap = pixmap   # original (unscaled) pixmap for quality rescaling
+      # original (unscaled) pixels for quality rescaling.  Files can load as grayscale or
+      # palette images, which can't hold arbitrary colors, so convert once to full
+      # color.  Non-premultiplied alpha, so getPixel returns exactly what setPixel wrote.
+      self._image  = image.convertToFormat(QtGui.QImage.Format.Format_ARGB32)
       self._width  = width
       self._height = height
       self._cx       = args.get('cx',       0.0)
@@ -2860,10 +2884,11 @@ class IconMirror(_GraphicsMirror):
 
    def _getSize(self, args, responseId):
       """
-      Returns [width, height] for this item.
-      Used to resolve dimensions after creation, since pixel data lives in Qt.
+      Returns [width, height, loadFailed] for this item.
+      Used to resolve dimensions after creation, since pixel data lives in Qt, and to
+      let the parent warn when the image file could not be loaded.
       """
-      self.guiRenderer.sendResponse(responseId, [self._width, self._height])
+      self.guiRenderer.sendResponse(responseId, [self._width, self._height, self._loadFailed])
 
    def _applyExtent(self):
       """
@@ -2873,7 +2898,7 @@ class IconMirror(_GraphicsMirror):
       """
       width  = max(1, int(self._width))
       height = max(1, int(self._height))
-      scaledPixmap = self._pixmap.scaled(width, height)
+      scaledPixmap = QtGui.QPixmap.fromImage(self._image.scaled(width, height))
       self._qPixmapObject.setPixmap(scaledPixmap)
       self._qPixmapObject.setOffset(-width / 2.0, -height / 2.0)
       self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
@@ -2882,14 +2907,14 @@ class IconMirror(_GraphicsMirror):
 
    def _crop(self, args, responseId):
       """
-      Crops the original pixmap to the given rectangle, then recenters it on the origin.
+      Crops the original image to the given rectangle, then recenters it on the origin.
       """
       x      = args.get('x', 0)
       y      = args.get('y', 0)
       width  = args.get('width',  self._width)
       height = args.get('height', self._height)
 
-      self._pixmap = self._pixmap.copy(x, y, width, height)
+      self._image  = self._image.copy(x, y, width, height)
       self._width  = width
       self._height = height
       self.qObject.prepareGeometryChange()
@@ -2899,36 +2924,30 @@ class IconMirror(_GraphicsMirror):
 
    def _getPixel(self, args, responseId):
       """
-      Returns [r, g, b, a] for the pixel at (column, row) on the original pixmap.
+      Returns [r, g, b, a] for the pixel at (column, row) on the original image.
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
-      image  = self._pixmap.toImage()
-      color  = image.pixelColor(column, row)
+      color  = self._image.pixelColor(column, row)
       self.guiRenderer.sendResponse(responseId, [color.red(), color.green(), color.blue(), color.alpha()])
 
    def _setPixel(self, args, responseId):
       """
-      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] on the original pixmap
-      (alpha defaults to opaque), then rescales to current display dimensions.
+      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] on the original image
+      (alpha defaults to opaque).  The on-screen image is rebuilt at the end of the tick.
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
       color  = args.get('color', [0, 0, 0])
 
-      image = self._pixmap.toImage().convertToFormat(QtGui.QImage.Format.Format_ARGB32)
-      image.setPixelColor(column, row, _qColorFromChannels(color))
-      self._pixmap = QtGui.QPixmap.fromImage(image)
-
-      scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self._qPixmapObject.setPixmap(scaledPixmap)
+      self._image.setPixelColor(column, row, _qColorFromChannels(color))
+      self.guiRenderer._dirtyIcons.add(self)
 
    def _getPixels(self, args, responseId):
       """
-      Returns all pixels as a 2D list of [r, g, b, a] values from the original pixmap.
+      Returns all pixels as a 2D list of [r, g, b, a] values from the original image.
       """
-      image  = self._pixmap.toImage()
-      image  = image.convertToFormat(QtGui.QImage.Format.Format_RGBA8888)
+      image  = self._image
       width  = image.width()
       height = image.height()
 
@@ -2945,7 +2964,7 @@ class IconMirror(_GraphicsMirror):
    def _setPixels(self, args, responseId):
       """
       Sets all pixels from a 2D list of [r, g, b] or [r, g, b, a] values (alpha defaults
-      to opaque).  Rebuilds the pixmap and rescales to current display dimensions.
+      to opaque).  The on-screen image is rebuilt at the end of the tick.
       """
       pixels = args.get('pixels', [])
       if not pixels:
@@ -2954,14 +2973,13 @@ class IconMirror(_GraphicsMirror):
       height = len(pixels)
       width  = len(pixels[0])
 
-      image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_RGBA8888)
+      image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_ARGB32)
       for row in range(height):
          for col in range(width):
             image.setPixelColor(col, row, _qColorFromChannels(pixels[row][col]))
 
-      self._pixmap = QtGui.QPixmap.fromImage(image)
-      scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self._qPixmapObject.setPixmap(scaledPixmap)
+      self._image = image
+      self.guiRenderer._dirtyIcons.add(self)
 
    # ── Write ──────────────────────────────────────────────────────────────────
 
@@ -2995,7 +3013,7 @@ class IconMirror(_GraphicsMirror):
       painter.setPen(self._qBackgroundObject.pen())
       painter.setBrush(self._qBackgroundObject.brush())
       painter.drawRect(QtCore.QRectF(margin, margin, iconWidth, iconHeight))
-      painter.drawPixmap(QtCore.QPointF(margin, margin), self._pixmap.scaled(iconWidth, iconHeight))
+      painter.drawImage(QtCore.QPointF(margin, margin), self._image.scaled(iconWidth, iconHeight))
       painter.end()
 
       # 2. fade the whole composite by the icon's visibility, so overlapping parts fade as
