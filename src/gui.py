@@ -5092,7 +5092,7 @@ class Button(Control):
        rotation (int or float, optional): How far to turn the button, in degrees, counter-clockwise.
        visibility (int, optional): How visible the button is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.LIGHT_GRAY, rotation=0, visibility=100):
+   def __init__(self, text='', action=None, color=Color.WHITE, rotation=0, visibility=100):
       """"""
       Control.__init__(self)
 

@@ -87,6 +87,101 @@ _CHORD = 2
 
 _RENDER_RATE = 60   # default timer ticks per second
 
+# Control styling — Qt's own styling leaves controls taller and squarer than JEM's.
+# These are applied to the whole application (see GuiRenderer.__init__), so each
+# control mirror's own stylesheet only has to carry its colors.
+_CONTROL_BORDER_WIDTH   = 1    # px, the outline drawn around a control
+_CONTROL_CORNER_RADIUS  = 5    # px, how far the corners are rounded
+_CONTROL_PADDING_TOP    = 2    # px, between a button's text and its top/bottom edges
+_FIELD_PADDING_TOP      = 1    # px, the same for a text field or text area
+_FIELD_PADDING_SIDE     = 4    # px, between a field's text and its left/right edges
+_TEXT_AREA_DOC_MARGIN   = 2    # px, the text area's own margin inside its border
+_COMBO_PADDING_SIDE     = 12   # px, between a drop-down list's text and its left/right edges
+_DROP_DOWN_WIDTH        = 20   # px, the arrow area at the right of a drop-down list
+_ARROW_WIDTH            = 9    # px, across the triangle drawn in that area
+_ARROW_HEIGHT           = 5    # px, from the triangle's flat top to its point
+_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
+
+# A list draws each row's text a few pixels in from the row's edge on its own (one past
+# the style's focus-frame margin), so the padding below makes up the rest of the distance
+# to where the closed box above shows its text.
+_LIST_ITEM_TEXT_MARGIN = 5
+_LIST_TEXT_INDENT      = _COMBO_PADDING_SIDE + _CONTROL_BORDER_WIDTH - _LIST_ITEM_TEXT_MARGIN
+
+# macOS's own highlight blue, used for a drop-down list's arrow area and for the
+# highlighted row in its list.  Qt would otherwise use the palette's highlight, which is
+# blue while the Display is the active window and grey while it is not.
+_HIGHLIGHT_COLOR      = (0, 122, 255, 255)
+_HIGHLIGHT_TEXT_COLOR = (255, 255, 255, 255)
+
+def _asRgba(color):
+   """Formats an (r, g, b, a) color as the rgba(...) text a stylesheet expects."""
+   r, g, b, a = color
+   return f'rgba({r}, {g}, {b}, {a})'
+_PROXY_MAXIMUM_SIZE     = 16777215   # Qt's QWIDGETSIZE_MAX, i.e. no limit
+
+# how much wider and taller a field is than the text it holds
+_FIELD_EXTRA_WIDTH  = 2 * (_FIELD_PADDING_SIDE + _CONTROL_BORDER_WIDTH)
+_FIELD_EXTRA_HEIGHT = 2 * (_FIELD_PADDING_TOP  + _CONTROL_BORDER_WIDTH)
+
+_CONTROL_STYLESHEET = f"""
+QPushButton {{
+   padding: {_CONTROL_PADDING_TOP}px 14px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QComboBox {{
+   padding: {_FIELD_PADDING_TOP}px {_COMBO_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QComboBox::drop-down {{
+   width: {_DROP_DOWN_WIDTH}px;
+   border: none;
+   background: transparent;
+}}
+QComboBox QAbstractItemView::item {{
+   padding-left: {_LIST_TEXT_INDENT}px;
+}}
+QComboBox QAbstractItemView QScrollBar:vertical {{
+   width: {_LIST_SCROLLBAR_WIDTH}px;
+   margin: 0px;
+   background: transparent;
+}}
+QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+   min-height: 20px;
+   border-radius: {_LIST_SCROLLBAR_WIDTH // 2}px;
+   background: rgba(150, 150, 150, 255);
+}}
+QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
+   height: 0px;
+}}
+QComboBox QAbstractItemView QScrollBar::add-page:vertical,
+QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+   background: transparent;
+}}
+QLineEdit {{
+   padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QTextEdit {{
+   padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+"""
+
+# the controls the stylesheet above gives rounded corners; _QProxyWidget.paint keeps
+# each of these inside its corners
+_ROUNDED_CONTROLS = (
+   QtWidgets.QPushButton,
+   QtWidgets.QComboBox,
+   QtWidgets.QLineEdit,
+   QtWidgets.QTextEdit,
+)
+
 
 #######################################################################################
 # GuiRenderer
@@ -117,6 +212,10 @@ class GuiRenderer:
 
       # QApplication must be created first; it owns the Qt event loop.
       self.qApplication = QtWidgets.QApplication([])
+
+      # padding, border, and corner rounding for every control.  Each control mirror
+      # sets its own colors on top of this; the two stylesheets combine.
+      self.qApplication.setStyleSheet(_CONTROL_STYLESHEET)
 
       # Do not quit when the last window is closed — the child stays alive
       # until the parent closes the admin pipe, triggering _receiveAdminMessage.
@@ -689,6 +788,9 @@ class _QComboBox(QtWidgets.QComboBox):
    proxy, so it only stacks among that proxy's children and anything above the combo
    covers it.  While the popup is open, we lift it to a top-level item (keeping the
    combo's on-screen placement) and put it back under the combo once it hides.
+
+   Qt also places the popup slightly left of the combo and narrower than it, so we line
+   it up under the combo ourselves.
    """
 
    _POPUP_Z_VALUE = 1e9   # above any z-value a Display or Group assigns
@@ -698,7 +800,53 @@ class _QComboBox(QtWidgets.QComboBox):
       self._liftedPopup   = None    # the popup's scene item while it is lifted
       self._watchingPopup = False   # whether the popup window's hide event is filtered
 
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paintEvent(self, event):
+      """
+      Draws the combo, then its arrow: a white triangle on a highlighted background.
+
+      The control stylesheet empties the arrow area, because a styled drop-down loses the
+      arrow the platform would have drawn there.  Painting it here keeps it visible over
+      any color a program gives the list, and marks the part of the box that opens it.
+      """
+      QtWidgets.QComboBox.paintEvent(self, event)
+
+      painter = QtGui.QPainter(self)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+
+      # keep the arrow's background inside the box's rounded corners
+      insideBorder = QtCore.QRectF(self.rect()).adjusted(
+         _CONTROL_BORDER_WIDTH, _CONTROL_BORDER_WIDTH, -_CONTROL_BORDER_WIDTH, -_CONTROL_BORDER_WIDTH)
+      roundedBox = QtGui.QPainterPath()
+      roundedBox.addRoundedRect(insideBorder, _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      painter.setClipPath(roundedBox)
+
+      arrowArea = QtCore.QRectF(insideBorder.right() - _DROP_DOWN_WIDTH, insideBorder.top(),
+                                _DROP_DOWN_WIDTH, insideBorder.height())
+      painter.fillRect(arrowArea, QtGui.QColor(*_HIGHLIGHT_COLOR))
+
+      # a triangle pointing down, centered in that area
+      centerX      = arrowArea.center().x()
+      centerY      = arrowArea.center().y()
+      halfWidth    = _ARROW_WIDTH  / 2.0
+      halfHeight   = _ARROW_HEIGHT / 2.0
+      arrowCorners = QtGui.QPolygonF([
+         QtCore.QPointF(centerX - halfWidth, centerY - halfHeight),
+         QtCore.QPointF(centerX + halfWidth, centerY - halfHeight),
+         QtCore.QPointF(centerX,             centerY + halfHeight),
+      ])
+      painter.setPen(QtCore.Qt.PenStyle.NoPen)
+      painter.setBrush(QtGui.QColor(*_HIGHLIGHT_TEXT_COLOR))
+      painter.drawPolygon(arrowCorners)
+
+   # ── Popup ──────────────────────────────────────────────────────────────────
+
    def showPopup(self):
+      # a popup list hides its scrollbar by default, and on macOS the scrollbar it would
+      # show fades in and out with the mouse; ask for one that stays while it is needed
+      self.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
       QtWidgets.QComboBox.showPopup(self)
       comboProxy = self.graphicsProxyWidget()
       children   = comboProxy.childItems() if comboProxy is not None else []
@@ -710,10 +858,20 @@ class _QComboBox(QtWidgets.QComboBox):
             self.view().window().installEventFilter(self)
             self._watchingPopup = True
 
-         # Qt keeps setting the popup's position relative to the combo, so fold the
-         # combo's scene placement into the popup's own transform
+         # match the combo's width, then read back where Qt put the popup: a popup that
+         # would run off the bottom of the screen is placed above the combo instead, and
+         # we keep whichever side that is
+         self.view().window().setFixedWidth(self.width())
+         popupSitsAbove = popupItem.y() < 0
+         if popupSitsAbove:
+            popupTop = -popupItem.boundingRect().height()
+         else:
+            popupTop = self.height()
+
+         # line the popup up under (or over) the combo, and carry the combo's own
+         # placement, since the popup no longer hangs off it
          popupOffset = QtGui.QTransform.fromTranslate(popupItem.x(), popupItem.y())
-         placement   = popupOffset * comboProxy.sceneTransform()
+         placement   = QtGui.QTransform.fromTranslate(0, popupTop) * comboProxy.sceneTransform()
          popupItem.setParentItem(None)
          popupItem.setTransform(popupOffset.inverted()[0] * placement)
          popupItem.setZValue(self._POPUP_Z_VALUE)
@@ -726,6 +884,11 @@ class _QComboBox(QtWidgets.QComboBox):
          self._liftedPopup.resetTransform()
          self._liftedPopup.setZValue(0)
          self._liftedPopup = None
+
+         # a popup dismissed from outside the window (e.g. by clicking another app) can
+         # hide without this running, leaving the combo still expecting to be closed and
+         # ignoring the next click; closing it here resets that
+         QtWidgets.QComboBox.hidePopup(self)
       return False
 
 
@@ -745,6 +908,24 @@ class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
    def __init__(self):
       QtWidgets.QGraphicsProxyWidget.__init__(self)
       self._pressScenePos = None   # scene pos at last press, for click detection
+
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paint(self, painter, option, widget=None):
+      """
+      Draws the embedded widget, with the rounded controls kept inside their corners.
+
+      A widget fills its whole rectangle before the control stylesheet draws its rounded
+      box on top, so its square corners would otherwise show outside that box.  Clipping
+      to the same rounded shape hides them.  Controls the stylesheet leaves square are
+      drawn untouched, so a slider's handle and a check box's tick keep their full size.
+      """
+      if isinstance(self.widget(), _ROUNDED_CONTROLS):
+         roundedShape = QtGui.QPainterPath()
+         roundedShape.addRoundedRect(self.boundingRect(), _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+         painter.setClipPath(roundedShape, QtCore.Qt.ClipOperation.IntersectClip)
+
+      QtWidgets.QGraphicsProxyWidget.paint(self, painter, option, widget)
 
    # ── Mouse ──────────────────────────────────────────────────────────────────
 
@@ -3183,6 +3364,14 @@ class _ControlMirror(_DrawableMirror):
       width  = max(1, int(self._width))
       height = max(1, int(self._height))
       self._widget.setFixedSize(width, height)
+
+      # a proxy holds on to the size limits its widget had when it was embedded, so
+      # clear them before resizing; otherwise the proxy stays at the widget's original
+      # size and the control keeps a box larger than what is drawn
+      self.qObject.setMinimumSize(0, 0)
+      self.qObject.setMaximumSize(_PROXY_MAXIMUM_SIZE, _PROXY_MAXIMUM_SIZE)
+      self.qObject.resize(width, height)
+
       self._applyTransform()
 
    # ── Event helper ───────────────────────────────────────────────────────────
@@ -3453,7 +3642,9 @@ class DropDownListMirror(_ControlMirror):
       r, g, b, a = color
       self._widget.setStyleSheet(
          f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; combobox-popup: 0; }}"
-         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black;"
+         f" selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};"
+         f" selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)}; }}"
       )
 
    def _setColor(self, args, responseId):
@@ -3499,19 +3690,13 @@ class TextFieldMirror(_ControlMirror):
          self._width  = width
          self._height = height
       elif columns is not None:
-         fm       = QtGui.QFontMetrics(widget.font())
-         charW    = fm.horizontalAdvance('M')
-         charH    = fm.lineSpacing()
-         margins  = widget.textMargins()
-         hMargin  = margins.left() + margins.right()
-         vMargin  = margins.top()  + margins.bottom()
-         frameOpt = QtWidgets.QStyleOptionFrame()
-         widget.initStyleOption(frameOpt)
-         frame    = widget.style().pixelMetric(
-            QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth, frameOpt, widget
-         )
-         w = (charW * columns) + hMargin + (2 * frame)
-         h = charH + vMargin + (2 * frame)
+         # leave room for the padding and border the control stylesheet draws, so the
+         # field still holds the number of characters it was asked for
+         fm    = QtGui.QFontMetrics(widget.font())
+         charW = fm.horizontalAdvance('M')
+         charH = fm.lineSpacing()
+         w = (charW * columns) + _FIELD_EXTRA_WIDTH
+         h = charH + _FIELD_EXTRA_HEIGHT
          widget.setFixedSize(w, h)
          self._width  = w
          self._height = h
@@ -3594,6 +3779,7 @@ class TextAreaMirror(_ControlMirror):
       rows    = args.get('rows')
 
       widget = QtWidgets.QTextEdit(str(text))
+      widget.document().setDocumentMargin(_TEXT_AREA_DOC_MARGIN)
       self._wrapWidget(widget)
 
       if font is not None:
@@ -3604,9 +3790,11 @@ class TextAreaMirror(_ControlMirror):
          self._width  = width
          self._height = height
       elif columns is not None or rows is not None:
+         # leave room for the padding, border, and document margin drawn around the
+         # text, so the area still holds the rows and columns it was asked for
          fm = QtGui.QFontMetrics(widget.font())
-         w  = fm.horizontalAdvance('M') * (columns or 8)
-         h  = fm.lineSpacing()          * (rows    or 5)
+         w  = (fm.horizontalAdvance('M') * (columns or 8)) + _FIELD_EXTRA_WIDTH  + (2 * _TEXT_AREA_DOC_MARGIN)
+         h  = (fm.lineSpacing()          * (rows    or 5)) + _FIELD_EXTRA_HEIGHT + (2 * _TEXT_AREA_DOC_MARGIN)
          widget.setFixedSize(w, h)
          self._width  = w
          self._height = h
