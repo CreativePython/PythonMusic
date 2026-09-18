@@ -60,6 +60,14 @@
 # through the MRO at the time the dict is built, subclass overrides (e.g.
 # RectangleMirror._setSize) are picked up automatically without extra wiring.
 #
+# Merged commands
+# ---------------
+# GuiHandler merges back-to-back commands with the same action, target, and arg names
+# into one 'merged' command (arg names once, each command's values as a tuple), so tight
+# loops like drawPoint or setPixel are cheap to send.  GuiRenderer._executeMerged unpacks
+# a run back into ordinary commands, unless the target mirror lists a faster handler for
+# runs of that action in its _mergedHandlers dict; those take (argNames, rows).
+#
 # Event handling
 # --------------
 # GuiHandler.registerEvent() stores a callback locally and sends a 'registerEvent'
@@ -547,6 +555,10 @@ class GuiRenderer:
             mirror = MenuMirror(objectId, args, self)
             self._objectRegistry[objectId] = mirror
 
+      # ── Merged Commands ─────────────────────────────────────────────
+      elif action == 'merged':
+         self._executeMerged(target, args)
+
       # ── Object Commands ─────────────────────────────────────────────
       else:
          # any other commands are defined by their target objects
@@ -556,6 +568,36 @@ class GuiRenderer:
             mirrorObject.handleCommand(action, args, responseId)
 
       return True
+
+   def _executeMerged(self, target, args):
+      """
+      Runs a 'merged' command: a run of back-to-back commands with the same action,
+      target, and arg names, packed by GuiHandler._appendCommand().
+
+      If the target mirror has a handler for runs of this action (in its _mergedHandlers
+      dict), the whole run goes to it at once, as (argNames, rows).  Otherwise each
+      command is rebuilt and executed as if it had arrived alone, so any action can be
+      merged safely; a mirror only needs a run handler to make a run faster.
+      """
+      action   = args['action']
+      argNames = args['argNames']
+      rows     = args['rows']
+
+      mirrorObject   = self._objectRegistry.get(target)
+      mergedHandlers = getattr(mirrorObject, '_mergedHandlers', {})
+      runHandler     = mergedHandlers.get(action)
+
+      if runHandler is not None:
+         runHandler(argNames, rows)
+      else:
+         for row in rows:
+            command = _createCommand(action, target, dict(zip(argNames, row)))
+            # one failing command doesn't stop the rest, matching _processCommandBuffer
+            try:
+               self._executeCommand(command)
+            except Exception:
+               import traceback
+               traceback.print_exc()
 
    def sendResponse(self, responseId, values=None):
       """Sends a response back to the parent process."""
@@ -1308,6 +1350,11 @@ class DisplayMirror:
          'label':     self._drawLabel,
       }
 
+      # handlers for runs of merged commands (see GuiRenderer._executeMerged)
+      self._mergedHandlers = {
+         'draw': self._drawMerged,
+      }
+
       self._popupMenu = None
       self._window.customContextMenuRequested.connect(self._onContextMenuRequested)
 
@@ -1637,6 +1684,42 @@ class DisplayMirror:
       if handler is not None:
          handler(args)
 
+   def _drawMerged(self, argNames, rows):
+      """
+      Paints a run of merged draw commands (see GuiRenderer._executeMerged).
+
+      A run of points, e.g. an image painted pixel by pixel with drawPoint(), is painted
+      in one tight loop that reads each point's values straight from its row and keeps
+      one painter state for as long as the visibility stays the same.  Same result as
+      _drawPoint(), without per-point overhead.  Any other run is drawn one command at a
+      time by the usual handlers.
+      """
+      shapeIndex = argNames.index('shape')
+      allPoints  = all(row[shapeIndex] == 'point' for row in rows)
+
+      if allPoints:
+         xIndex          = argNames.index('x')
+         yIndex          = argNames.index('y')
+         colorIndex      = argNames.index('color')
+         visibilityIndex = argNames.index('visibility')
+
+         painter           = None
+         currentVisibility = None
+         for row in rows:
+            visibility = row[visibilityIndex]
+            if visibility != currentVisibility:
+               if painter is not None:
+                  self._closeDrawPainter(painter)
+               painter           = self._openDrawPainter(visibility)
+               currentVisibility = visibility
+            r, g, b, a = row[colorIndex]
+            painter.fillRect(int(row[xIndex]), int(row[yIndex]), 1, 1, QtGui.QColor(r, g, b, a))
+         if painter is not None:
+            self._closeDrawPainter(painter)
+      else:
+         for row in rows:
+            self._draw(dict(zip(argNames, row)), None)
+
    def _clearDrawing(self, args, responseId):
       """Clears all one-time drawn content from the draw layer."""
       self._endDrawPainter()   # a pixmap can't be filled while a painter is open on it
@@ -1748,22 +1831,22 @@ class DisplayMirror:
 
    def _drawPoint(self, args):
       """
-      Paints a single pixel onto the draw layer.  Filled without antialiasing so the
-      point stays one crisp pixel instead of blending into its neighbors.
+      Paints a single pixel onto the draw layer.  The position is truncated to a whole
+      pixel, so the point stays one crisp pixel instead of blending into its neighbors
+      (antialiasing has no effect on a pixel-aligned fill).
+
+      Called once per point, often hundreds of thousands of times, so it reads args
+      directly: gui.py's drawPoint() always sends every field.
 
       Args:
-        x, y  — the pixel's top-left corner
-        color — [r, g, b, a]
+        x, y       — the pixel's top-left corner
+        color      — [r, g, b, a]
+        visibility — 0 (invisible) to 100 (fully visible)
       """
-      x          = args.get('x',          0)
-      y          = args.get('y',          0)
-      color      = args.get('color',      [0, 0, 0, 255])
-      visibility = args.get('visibility', 100)
+      r, g, b, a = args['color']
 
-      painter = self._openDrawPainter(visibility)
-      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
-      r, g, b, a = color
-      painter.fillRect(QtCore.QRectF(x, y, 1, 1), QtGui.QColor(r, g, b, a))
+      painter = self._openDrawPainter(args['visibility'])
+      painter.fillRect(int(args['x']), int(args['y']), 1, 1, QtGui.QColor(r, g, b, a))
       self._closeDrawPainter(painter)
 
    def _drawRectangle(self, args):
@@ -2865,6 +2948,11 @@ class IconMirror(_GraphicsMirror):
          'write':     self._write,
       })
 
+      # handlers for runs of merged commands (see GuiRenderer._executeMerged)
+      self._mergedHandlers = {
+         'setPixel': self._setPixelMerged,
+      }
+
       self._applyColor()       # color the backing rectangle (pen, plus brush if filled)
       self._applyThickness()   # the backing rectangle's border width
       self._applyExtent()      # scale the image to size and size the backing to match
@@ -2984,23 +3072,38 @@ class IconMirror(_GraphicsMirror):
       self._sourceImage = None
       self.guiRenderer._dirtyIcons.add(self)
 
+   def _setPixelMerged(self, argNames, rows):
+      """
+      Sets a run of merged setPixel commands (see GuiRenderer._executeMerged) in one
+      loop, reading each pixel's values straight from its row.  Same result as calling
+      _setPixel() for each, without per-pixel overhead.
+      """
+      columnIndex = argNames.index('column')
+      rowIndex    = argNames.index('row')
+      colorIndex  = argNames.index('color')
+
+      for values in rows:
+         self._image.setPixelColor(values[columnIndex], values[rowIndex], _qColorFromChannels(values[colorIndex]))
+
+      self._sourceImage = None
+      self.guiRenderer._dirtyIcons.add(self)
+
    def _getPixels(self, args, responseId):
       """
-      Returns all pixels as a 2D list of [r, g, b, a] values.
+      Returns all pixels as [width, height, rgbaBytes]: the raw bytes of the image, four
+      per pixel (red, green, blue, alpha), row by row from the top-left.  gui.py's
+      Icon._fetchPixelCache() builds the [r, g, b, a] rows from them.  Sending bytes is
+      far faster than building one list per pixel here and pickling them all.
       """
-      image  = self._image
-      width  = image.width()
-      height = image.height()
+      width  = self._width
+      height = self._height
 
-      pixels = []
-      for row in range(height):
-         rowPixels = []
-         for col in range(width):
-            color = image.pixelColor(col, row)
-            rowPixels.append([color.red(), color.green(), color.blue(), color.alpha()])
-         pixels.append(rowPixels)
+      # a 32-bit format has no padding at the end of each row, so the bytes are exactly
+      # width * height * 4 long
+      rgbaImage = self._image.convertToFormat(QtGui.QImage.Format.Format_RGBA8888)
+      rgbaBytes = bytes(rgbaImage.constBits())[:width * height * 4]
 
-      self.guiRenderer.sendResponse(responseId, pixels)
+      self.guiRenderer.sendResponse(responseId, [width, height, rgbaBytes])
 
    def _setPixels(self, args, responseId):
       """

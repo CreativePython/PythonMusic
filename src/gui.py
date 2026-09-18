@@ -3727,7 +3727,17 @@ class Icon(Graphics):
    def _fetchPixelCache(self):
       """"""
       if self._pixelCache is None:
-         self._pixelCache = _handler().sendQuery('getPixels', self._objectId)
+         # the renderer sends the pixels as raw bytes, four per pixel (red, green, blue,
+         # alpha), row by row from the top-left, which is much faster to send than lists;
+         # turn them into rows of [red, green, blue, alpha] lists here
+         width, height, rgbaBytes = _handler().sendQuery('getPixels', self._objectId)
+         bytesPerRow = width * 4
+         pixelRows   = []
+         for rowStart in range(0, height * bytesPerRow, bytesPerRow):
+            rowEnd   = rowStart + bytesPerRow
+            pixelRow = [list(rgbaBytes[pixelStart:pixelStart + 4]) for pixelStart in range(rowStart, rowEnd, 4)]
+            pixelRows.append(pixelRow)
+         self._pixelCache = pixelRows
 
    def getPixel(self, column, row):
       """Return the color of one pixel.
