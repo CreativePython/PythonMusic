@@ -1555,14 +1555,9 @@ class Display(Interactable):
       """
       _handler().sendCommand('draw', self._objectId, {
          'shape':      'point',
-         'x':          x - 1,
-         'y':          y - 1,
-         'width':      2,
-         'height':     2,
+         'x':          x,
+         'y':          y,
          'color':      color.getRGBA(),
-         'fill':       True,
-         'thickness':  1,
-         'rotation':   0,
          'visibility': visibility,
       })
 

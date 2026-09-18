@@ -381,7 +381,7 @@ class GuiRenderer:
                self.sendResponse(responseId, [])
       # flush deferred draw layer updates accumulated during this tick
       for display in self._dirtyDisplays:
-         display._drawLayer.setPixmap(display._drawPixmap)
+         display._flushDrawLayer()
       self._dirtyDisplays.clear()
 
 
@@ -1248,6 +1248,9 @@ class DisplayMirror:
       self._drawLayer  = QtWidgets.QGraphicsPixmapItem(self._drawPixmap)
       self._drawLayer.setZValue(-1e9)
       self._scene.addItem(self._drawLayer)
+      # one QPainter shared by every draw call in a render tick; opened on the first
+      # draw and ended by _flushDrawLayer() at the end of the tick
+      self._drawPainter = None
 
       self._commandHandlers = {
          'show':                 self._show,
@@ -1284,7 +1287,7 @@ class DisplayMirror:
          'rectangle': self._drawRectangle,
          'oval':      self._drawOval,
          'circle':    self._drawOval,
-         'point':     self._drawOval,
+         'point':     self._drawPoint,
          'arc':       self._drawArc,
          'line':      self._drawLine,
          'polyline':  self._drawPolyline,
@@ -1451,6 +1454,7 @@ class DisplayMirror:
 
          # Recreate the draw layer at the new dimensions.  The old drawing is cleared
          # because scaling painted geometry would distort it.
+         self._endDrawPainter()
          self._drawPixmap = self._makeDrawPixmap(width, height)
          self.guiRenderer._dirtyDisplays.add(self)
 
@@ -1623,6 +1627,7 @@ class DisplayMirror:
 
    def _clearDrawing(self, args, responseId):
       """Clears all one-time drawn content from the draw layer."""
+      self._endDrawPainter()   # a pixmap can't be filled while a painter is open on it
       self._drawPixmap.fill(QtCore.Qt.GlobalColor.transparent)
       self.guiRenderer._dirtyDisplays.add(self)
 
@@ -1643,19 +1648,39 @@ class DisplayMirror:
       return pixmap
 
    def _openDrawPainter(self, visibility=100):
-      """Opens an antialiased QPainter on the draw pixmap and returns it.  The painter's
-      opacity is set from visibility (0 = invisible, 100 = fully visible) so every shape
-      it paints is drawn at that opacity."""
-      painter = QtGui.QPainter(self._drawPixmap)
-      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-      painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+      """
+      Returns the draw layer's shared antialiased QPainter, opening it on the first draw
+      of the tick and marking this display dirty for the end-of-tick flush.  Saves the
+      painter's state so the shape's pen, brush, font, and transform are undone by
+      _closeDrawPainter().  Opacity is set from visibility (0 = invisible, 100 = fully
+      visible) so the shape is drawn at that opacity.
+      """
+      if self._drawPainter is None:
+         self._drawPainter = QtGui.QPainter(self._drawPixmap)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+         self.guiRenderer._dirtyDisplays.add(self)
+      painter = self._drawPainter
+      painter.save()
       painter.setOpacity(max(0, min(100, visibility)) / 100.0)
       return painter
 
    def _closeDrawPainter(self, painter):
-      """Ends the painter and marks this display's draw layer dirty for deferred flush."""
-      painter.end()
-      self.guiRenderer._dirtyDisplays.add(self)
+      """Restores the painter's state after one shape.  The painter stays open until the
+      end-of-tick flush."""
+      painter.restore()
+
+   def _endDrawPainter(self):
+      """Ends the shared painter, if open, so the draw pixmap can be shown, cleared, or
+      replaced."""
+      if self._drawPainter is not None:
+         self._drawPainter.end()
+         self._drawPainter = None
+
+   def _flushDrawLayer(self):
+      """Ends the shared painter and hands the finished draw pixmap to the scene."""
+      self._endDrawPainter()
+      self._drawLayer.setPixmap(self._drawPixmap)
 
    def _makeDrawPen(self, color, thickness):
       """Returns a QPen for the given [r,g,b,a] color and line thickness."""
@@ -1707,6 +1732,26 @@ class DisplayMirror:
       else:
          painter.drawEllipse(QtCore.QRectF(x, y, width, height))
 
+      self._closeDrawPainter(painter)
+
+   def _drawPoint(self, args):
+      """
+      Paints a single pixel onto the draw layer.  Filled without antialiasing so the
+      point stays one crisp pixel instead of blending into its neighbors.
+
+      Args:
+        x, y  — the pixel's top-left corner
+        color — [r, g, b, a]
+      """
+      x          = args.get('x',          0)
+      y          = args.get('y',          0)
+      color      = args.get('color',      [0, 0, 0, 255])
+      visibility = args.get('visibility', 100)
+
+      painter = self._openDrawPainter(visibility)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
+      r, g, b, a = color
+      painter.fillRect(QtCore.QRectF(x, y, 1, 1), QtGui.QColor(r, g, b, a))
       self._closeDrawPainter(painter)
 
    def _drawRectangle(self, args):
@@ -2014,7 +2059,7 @@ class DisplayMirror:
       # End-of-tick flush hasn't happened yet; sync the draw layer now so any
       # draw* calls made earlier in this batch are included in the grab.
       if self in self.guiRenderer._dirtyDisplays:
-         self._drawLayer.setPixmap(self._drawPixmap)
+         self._flushDrawLayer()
          self.guiRenderer._dirtyDisplays.discard(self)
 
       # grab() synchronously paints the window, including the QGraphicsView, which
