@@ -13,6 +13,7 @@ key bindings.
 before any window builds its menu bar, so every window reads the same list.
 """
 from pem.config import pemConf
+from pem import isFrozen
 
 
 def build_menudefs(mac_app_menu=False, carbon_app_cascade=False):
@@ -26,6 +27,9 @@ def build_menudefs(mac_app_menu=False, carbon_app_cascade=False):
     carbon_app_cascade -- True on Carbon Aqua Tk, which needs an 'application'
     cascade of PEM's own to hold About PEM.  Cocoa Aqua Tk fills that menu
     itself, from the Tcl commands macosx.overrideRootMenu() registers.
+
+    Create Executable is left out of the frozen PEM app: building a student's
+    program runs PyInstaller, which needs a regular Python installation.
     """
     file_items = [
         ('_New', '<<open-new-window>>'),
@@ -37,8 +41,13 @@ def build_menudefs(mac_app_menu=False, carbon_app_cascade=False):
         ('_Close', '<<close-window>>'),
         ('Close _All', '<<close-all-windows>>'),
         None,
-        ('Create _Executable', '<<create-executable>>'),
-        None,
+        ]
+    if not isFrozen():
+        file_items += [
+            ('Create _Executable', '<<create-executable>>'),
+            None,
+            ]
+    file_items += [
         ('_Print...', '<<print-window>>'),
         ]
     if not mac_app_menu:

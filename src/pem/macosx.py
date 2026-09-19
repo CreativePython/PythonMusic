@@ -7,6 +7,8 @@ from sys import platform  # Used in _init_tk_type, changed by test.
 
 import tkinter
 
+from pem import isFrozen
+
 
 ## Define functions that query the Mac graphics type.
 ## _tk_type and its initializer are private to this section.
@@ -285,8 +287,8 @@ def _setDockIcon():
     No-op when running as a bundled .app (PyInstaller sets the icon via the
     .icns file) or when pyobjc-framework-Cocoa is not installed.
     """
-    import sys, os
-    if getattr(sys, 'frozen', False):
+    import os
+    if isFrozen():
         return
     try:
         from AppKit import NSApp, NSImage
@@ -314,8 +316,7 @@ def setApplicationName(name):
     the name from the bundle's Info.plist), or when pyobjc-framework-Cocoa is
     not installed.
     """
-    import sys
-    if platform != 'darwin' or getattr(sys, 'frozen', False):
+    if platform != 'darwin' or isFrozen():
         return
     try:
         from Foundation import NSBundle, NSProcessInfo

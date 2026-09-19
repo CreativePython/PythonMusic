@@ -60,6 +60,14 @@
 # through the MRO at the time the dict is built, subclass overrides (e.g.
 # RectangleMirror._setSize) are picked up automatically without extra wiring.
 #
+# Merged commands
+# ---------------
+# GuiHandler merges back-to-back commands with the same action, target, and arg names
+# into one 'merged' command (arg names once, each command's values as a tuple), so tight
+# loops like drawPoint or setPixel are cheap to send.  GuiRenderer._executeMerged unpacks
+# a run back into ordinary commands, unless the target mirror lists a faster handler for
+# runs of that action in its _mergedHandlers dict; those take (argNames, rows).
+#
 # Event handling
 # --------------
 # GuiHandler.registerEvent() stores a callback locally and sends a 'registerEvent'
@@ -86,6 +94,101 @@ _OPEN  = 1
 _CHORD = 2
 
 _RENDER_RATE = 60   # default timer ticks per second
+
+# Control styling — Qt's own styling leaves controls taller and squarer than JEM's.
+# These are applied to the whole application (see GuiRenderer.__init__), so each
+# control mirror's own stylesheet only has to carry its colors.
+_CONTROL_BORDER_WIDTH   = 1    # px, the outline drawn around a control
+_CONTROL_CORNER_RADIUS  = 5    # px, how far the corners are rounded
+_CONTROL_PADDING_TOP    = 2    # px, between a button's text and its top/bottom edges
+_FIELD_PADDING_TOP      = 1    # px, the same for a text field or text area
+_FIELD_PADDING_SIDE     = 4    # px, between a field's text and its left/right edges
+_TEXT_AREA_DOC_MARGIN   = 2    # px, the text area's own margin inside its border
+_COMBO_PADDING_SIDE     = 12   # px, between a drop-down list's text and its left/right edges
+_DROP_DOWN_WIDTH        = 20   # px, the arrow area at the right of a drop-down list
+_ARROW_WIDTH            = 9    # px, across the triangle drawn in that area
+_ARROW_HEIGHT           = 5    # px, from the triangle's flat top to its point
+_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
+
+# A list draws each row's text a few pixels in from the row's edge on its own (one past
+# the style's focus-frame margin), so the padding below makes up the rest of the distance
+# to where the closed box above shows its text.
+_LIST_ITEM_TEXT_MARGIN = 5
+_LIST_TEXT_INDENT      = _COMBO_PADDING_SIDE + _CONTROL_BORDER_WIDTH - _LIST_ITEM_TEXT_MARGIN
+
+# macOS's own highlight blue, used for a drop-down list's arrow area and for the
+# highlighted row in its list.  Qt would otherwise use the palette's highlight, which is
+# blue while the Display is the active window and grey while it is not.
+_HIGHLIGHT_COLOR      = (0, 122, 255, 255)
+_HIGHLIGHT_TEXT_COLOR = (255, 255, 255, 255)
+
+def _asRgba(color):
+   """Formats an (r, g, b, a) color as the rgba(...) text a stylesheet expects."""
+   r, g, b, a = color
+   return f'rgba({r}, {g}, {b}, {a})'
+_PROXY_MAXIMUM_SIZE     = 16777215   # Qt's QWIDGETSIZE_MAX, i.e. no limit
+
+# how much wider and taller a field is than the text it holds
+_FIELD_EXTRA_WIDTH  = 2 * (_FIELD_PADDING_SIDE + _CONTROL_BORDER_WIDTH)
+_FIELD_EXTRA_HEIGHT = 2 * (_FIELD_PADDING_TOP  + _CONTROL_BORDER_WIDTH)
+
+_CONTROL_STYLESHEET = f"""
+QPushButton {{
+   padding: {_CONTROL_PADDING_TOP}px 14px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QComboBox {{
+   padding: {_FIELD_PADDING_TOP}px {_COMBO_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QComboBox::drop-down {{
+   width: {_DROP_DOWN_WIDTH}px;
+   border: none;
+   background: transparent;
+}}
+QComboBox QAbstractItemView::item {{
+   padding-left: {_LIST_TEXT_INDENT}px;
+}}
+QComboBox QAbstractItemView QScrollBar:vertical {{
+   width: {_LIST_SCROLLBAR_WIDTH}px;
+   margin: 0px;
+   background: transparent;
+}}
+QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+   min-height: 20px;
+   border-radius: {_LIST_SCROLLBAR_WIDTH // 2}px;
+   background: rgba(150, 150, 150, 255);
+}}
+QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
+   height: 0px;
+}}
+QComboBox QAbstractItemView QScrollBar::add-page:vertical,
+QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+   background: transparent;
+}}
+QLineEdit {{
+   padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+QTextEdit {{
+   padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+   border-radius: {_CONTROL_CORNER_RADIUS}px;
+}}
+"""
+
+# the controls the stylesheet above gives rounded corners; _QProxyWidget.paint keeps
+# each of these inside its corners
+_ROUNDED_CONTROLS = (
+   QtWidgets.QPushButton,
+   QtWidgets.QComboBox,
+   QtWidgets.QLineEdit,
+   QtWidgets.QTextEdit,
+)
 
 
 #######################################################################################
@@ -118,6 +221,10 @@ class GuiRenderer:
       # QApplication must be created first; it owns the Qt event loop.
       self.qApplication = QtWidgets.QApplication([])
 
+      # padding, border, and corner rounding for every control.  Each control mirror
+      # sets its own colors on top of this; the two stylesheets combine.
+      self.qApplication.setStyleSheet(_CONTROL_STYLESHEET)
+
       # Do not quit when the last window is closed — the child stays alive
       # until the parent closes the admin pipe, triggering _receiveAdminMessage.
       self.qApplication.setQuitOnLastWindowClosed(False)
@@ -134,10 +241,15 @@ class GuiRenderer:
       self._registeredEvents = set()
 
       # DisplayMirrors that received draw calls this tick and need a deferred setPixmap.
-      # Populated by DisplayMirror._markDrawLayerDirty(); flushed at the end of
+      # Populated by DisplayMirror._openDrawPainter(); flushed at the end of
       # _processCommandBuffer so Qt sees one atomic update per tick rather than one
       # per draw primitive.
       self._dirtyDisplays = set()
+
+      # IconMirrors whose pixels changed this tick and need their on-screen image
+      # rebuilt.  Populated by IconMirror's pixel setters; flushed by _flushDirtyIcons()
+      # so a burst of setPixel calls costs one rebuild per tick rather than one per pixel.
+      self._dirtyIcons = set()
 
    def run(self):
       """
@@ -280,10 +392,17 @@ class GuiRenderer:
             responseId = command.get('responseId')
             if responseId is not None:
                self.sendResponse(responseId, [])
-      # flush deferred draw layer updates accumulated during this tick
+      # flush deferred draw layer and icon updates accumulated during this tick
       for display in self._dirtyDisplays:
-         display._drawLayer.setPixmap(display._drawPixmap)
+         display._flushDrawLayer()
       self._dirtyDisplays.clear()
+      self._flushDirtyIcons()
+
+   def _flushDirtyIcons(self):
+      """Rebuilds the on-screen image of every Icon whose pixels changed since the last flush."""
+      for icon in self._dirtyIcons:
+         icon._applyExtent()
+      self._dirtyIcons.clear()
 
 
    def _executeCommand(self, command):
@@ -436,6 +555,10 @@ class GuiRenderer:
             mirror = MenuMirror(objectId, args, self)
             self._objectRegistry[objectId] = mirror
 
+      # ── Merged Commands ─────────────────────────────────────────────
+      elif action == 'merged':
+         self._executeMerged(target, args)
+
       # ── Object Commands ─────────────────────────────────────────────
       else:
          # any other commands are defined by their target objects
@@ -445,6 +568,36 @@ class GuiRenderer:
             mirrorObject.handleCommand(action, args, responseId)
 
       return True
+
+   def _executeMerged(self, target, args):
+      """
+      Runs a 'merged' command: a run of back-to-back commands with the same action,
+      target, and arg names, packed by GuiHandler._appendCommand().
+
+      If the target mirror has a handler for runs of this action (in its _mergedHandlers
+      dict), the whole run goes to it at once, as (argNames, rows).  Otherwise each
+      command is rebuilt and executed as if it had arrived alone, so any action can be
+      merged safely; a mirror only needs a run handler to make a run faster.
+      """
+      action   = args['action']
+      argNames = args['argNames']
+      rows     = args['rows']
+
+      mirrorObject   = self._objectRegistry.get(target)
+      mergedHandlers = getattr(mirrorObject, '_mergedHandlers', {})
+      runHandler     = mergedHandlers.get(action)
+
+      if runHandler is not None:
+         runHandler(argNames, rows)
+      else:
+         for row in rows:
+            command = _createCommand(action, target, dict(zip(argNames, row)))
+            # one failing command doesn't stop the rest, matching _processCommandBuffer
+            try:
+               self._executeCommand(command)
+            except Exception:
+               import traceback
+               traceback.print_exc()
 
    def sendResponse(self, responseId, values=None):
       """Sends a response back to the parent process."""
@@ -675,7 +828,122 @@ class _QPolygonItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPolygonItem):
    pass
 
 class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
-   pass
+   def boundingRect(self):
+      # measure the children as they are now; QGraphicsItemGroup only measures them
+      # when they are added, so its area goes stale once they move or resize
+      return self.childrenBoundingRect()
+
+
+class _QComboBox(QtWidgets.QComboBox):
+   """
+   QComboBox whose popup list draws above every other item in the scene.
+
+   Inside a QGraphicsProxyWidget, Qt shows the popup as a child item of the combo's
+   proxy, so it only stacks among that proxy's children and anything above the combo
+   covers it.  While the popup is open, we lift it to a top-level item (keeping the
+   combo's on-screen placement) and put it back under the combo once it hides.
+
+   Qt also places the popup slightly left of the combo and narrower than it, so we line
+   it up under the combo ourselves.
+   """
+
+   _POPUP_Z_VALUE = 1e9   # above any z-value a Display or Group assigns
+
+   def __init__(self):
+      QtWidgets.QComboBox.__init__(self)
+      self._liftedPopup   = None    # the popup's scene item while it is lifted
+      self._watchingPopup = False   # whether the popup window's hide event is filtered
+
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paintEvent(self, event):
+      """
+      Draws the combo, then its arrow: a white triangle on a highlighted background.
+
+      The control stylesheet empties the arrow area, because a styled drop-down loses the
+      arrow the platform would have drawn there.  Painting it here keeps it visible over
+      any color a program gives the list, and marks the part of the box that opens it.
+      """
+      QtWidgets.QComboBox.paintEvent(self, event)
+
+      painter = QtGui.QPainter(self)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+
+      # keep the arrow's background inside the box's rounded corners
+      insideBorder = QtCore.QRectF(self.rect()).adjusted(
+         _CONTROL_BORDER_WIDTH, _CONTROL_BORDER_WIDTH, -_CONTROL_BORDER_WIDTH, -_CONTROL_BORDER_WIDTH)
+      roundedBox = QtGui.QPainterPath()
+      roundedBox.addRoundedRect(insideBorder, _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      painter.setClipPath(roundedBox)
+
+      arrowArea = QtCore.QRectF(insideBorder.right() - _DROP_DOWN_WIDTH, insideBorder.top(),
+                                _DROP_DOWN_WIDTH, insideBorder.height())
+      painter.fillRect(arrowArea, QtGui.QColor(*_HIGHLIGHT_COLOR))
+
+      # a triangle pointing down, centered in that area
+      centerX      = arrowArea.center().x()
+      centerY      = arrowArea.center().y()
+      halfWidth    = _ARROW_WIDTH  / 2.0
+      halfHeight   = _ARROW_HEIGHT / 2.0
+      arrowCorners = QtGui.QPolygonF([
+         QtCore.QPointF(centerX - halfWidth, centerY - halfHeight),
+         QtCore.QPointF(centerX + halfWidth, centerY - halfHeight),
+         QtCore.QPointF(centerX,             centerY + halfHeight),
+      ])
+      painter.setPen(QtCore.Qt.PenStyle.NoPen)
+      painter.setBrush(QtGui.QColor(*_HIGHLIGHT_TEXT_COLOR))
+      painter.drawPolygon(arrowCorners)
+
+   # ── Popup ──────────────────────────────────────────────────────────────────
+
+   def showPopup(self):
+      # a popup list hides its scrollbar by default, and on macOS the scrollbar it would
+      # show fades in and out with the mouse; ask for one that stays while it is needed
+      self.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+      QtWidgets.QComboBox.showPopup(self)
+      comboProxy = self.graphicsProxyWidget()
+      children   = comboProxy.childItems() if comboProxy is not None else []
+      if children:
+         popupItem = children[0]
+         if not self._watchingPopup:
+            # the popup can close without calling hidePopup (e.g. clicking outside it),
+            # so watch its window's hide event instead
+            self.view().window().installEventFilter(self)
+            self._watchingPopup = True
+
+         # match the combo's width, then read back where Qt put the popup: a popup that
+         # would run off the bottom of the screen is placed above the combo instead, and
+         # we keep whichever side that is
+         self.view().window().setFixedWidth(self.width())
+         popupSitsAbove = popupItem.y() < 0
+         if popupSitsAbove:
+            popupTop = -popupItem.boundingRect().height()
+         else:
+            popupTop = self.height()
+
+         # line the popup up under (or over) the combo, and carry the combo's own
+         # placement, since the popup no longer hangs off it
+         popupOffset = QtGui.QTransform.fromTranslate(popupItem.x(), popupItem.y())
+         placement   = QtGui.QTransform.fromTranslate(0, popupTop) * comboProxy.sceneTransform()
+         popupItem.setParentItem(None)
+         popupItem.setTransform(popupOffset.inverted()[0] * placement)
+         popupItem.setZValue(self._POPUP_Z_VALUE)
+         self._liftedPopup = popupItem
+
+   def eventFilter(self, watched, event):
+      if event.type() == QtCore.QEvent.Type.Hide and self._liftedPopup is not None:
+         # put the popup back under the combo, so it moves and is removed along with it
+         self._liftedPopup.setParentItem(self.graphicsProxyWidget())
+         self._liftedPopup.resetTransform()
+         self._liftedPopup.setZValue(0)
+         self._liftedPopup = None
+
+         # a popup dismissed from outside the window (e.g. by clicking another app) can
+         # hide without this running, leaving the combo still expecting to be closed and
+         # ignoring the next click; closing it here resets that
+         QtWidgets.QComboBox.hidePopup(self)
+      return False
 
 
 class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
@@ -694,6 +962,24 @@ class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
    def __init__(self):
       QtWidgets.QGraphicsProxyWidget.__init__(self)
       self._pressScenePos = None   # scene pos at last press, for click detection
+
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paint(self, painter, option, widget=None):
+      """
+      Draws the embedded widget, with the rounded controls kept inside their corners.
+
+      A widget fills its whole rectangle before the control stylesheet draws its rounded
+      box on top, so its square corners would otherwise show outside that box.  Clipping
+      to the same rounded shape hides them.  Controls the stylesheet leaves square are
+      drawn untouched, so a slider's handle and a check box's tick keep their full size.
+      """
+      if isinstance(self.widget(), _ROUNDED_CONTROLS):
+         roundedShape = QtGui.QPainterPath()
+         roundedShape.addRoundedRect(self.boundingRect(), _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+         painter.setClipPath(roundedShape, QtCore.Qt.ClipOperation.IntersectClip)
+
+      QtWidgets.QGraphicsProxyWidget.paint(self, painter, option, widget)
 
    # ── Mouse ──────────────────────────────────────────────────────────────────
 
@@ -1016,6 +1302,9 @@ class DisplayMirror:
       self._drawLayer  = QtWidgets.QGraphicsPixmapItem(self._drawPixmap)
       self._drawLayer.setZValue(-1e9)
       self._scene.addItem(self._drawLayer)
+      # one QPainter shared by every draw call in a render tick; opened on the first
+      # draw and ended by _flushDrawLayer() at the end of the tick
+      self._drawPainter = None
 
       self._commandHandlers = {
          'show':                 self._show,
@@ -1052,13 +1341,18 @@ class DisplayMirror:
          'rectangle': self._drawRectangle,
          'oval':      self._drawOval,
          'circle':    self._drawOval,
-         'point':     self._drawOval,
+         'point':     self._drawPoint,
          'arc':       self._drawArc,
          'line':      self._drawLine,
          'polyline':  self._drawPolyline,
          'polygon':   self._drawPolygon,
          'icon':      self._drawIcon,
          'label':     self._drawLabel,
+      }
+
+      # handlers for runs of merged commands (see GuiRenderer._executeMerged)
+      self._mergedHandlers = {
+         'draw': self._drawMerged,
       }
 
       self._popupMenu = None
@@ -1219,6 +1513,7 @@ class DisplayMirror:
 
          # Recreate the draw layer at the new dimensions.  The old drawing is cleared
          # because scaling painted geometry would distort it.
+         self._endDrawPainter()
          self._drawPixmap = self._makeDrawPixmap(width, height)
          self.guiRenderer._dirtyDisplays.add(self)
 
@@ -1389,8 +1684,45 @@ class DisplayMirror:
       if handler is not None:
          handler(args)
 
+   def _drawMerged(self, argNames, rows):
+      """
+      Paints a run of merged draw commands (see GuiRenderer._executeMerged).
+
+      A run of points, e.g. an image painted pixel by pixel with drawPoint(), is painted
+      in one tight loop that reads each point's values straight from its row and keeps
+      one painter state for as long as the visibility stays the same.  Same result as
+      _drawPoint(), without per-point overhead.  Any other run is drawn one command at a
+      time by the usual handlers.
+      """
+      shapeIndex = argNames.index('shape')
+      allPoints  = all(row[shapeIndex] == 'point' for row in rows)
+
+      if allPoints:
+         xIndex          = argNames.index('x')
+         yIndex          = argNames.index('y')
+         colorIndex      = argNames.index('color')
+         visibilityIndex = argNames.index('visibility')
+
+         painter           = None
+         currentVisibility = None
+         for row in rows:
+            visibility = row[visibilityIndex]
+            if visibility != currentVisibility:
+               if painter is not None:
+                  self._closeDrawPainter(painter)
+               painter           = self._openDrawPainter(visibility)
+               currentVisibility = visibility
+            r, g, b, a = row[colorIndex]
+            painter.fillRect(int(row[xIndex]), int(row[yIndex]), 1, 1, QtGui.QColor(r, g, b, a))
+         if painter is not None:
+            self._closeDrawPainter(painter)
+      else:
+         for row in rows:
+            self._draw(dict(zip(argNames, row)), None)
+
    def _clearDrawing(self, args, responseId):
       """Clears all one-time drawn content from the draw layer."""
+      self._endDrawPainter()   # a pixmap can't be filled while a painter is open on it
       self._drawPixmap.fill(QtCore.Qt.GlobalColor.transparent)
       self.guiRenderer._dirtyDisplays.add(self)
 
@@ -1411,19 +1743,39 @@ class DisplayMirror:
       return pixmap
 
    def _openDrawPainter(self, visibility=100):
-      """Opens an antialiased QPainter on the draw pixmap and returns it.  The painter's
-      opacity is set from visibility (0 = invisible, 100 = fully visible) so every shape
-      it paints is drawn at that opacity."""
-      painter = QtGui.QPainter(self._drawPixmap)
-      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-      painter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+      """
+      Returns the draw layer's shared antialiased QPainter, opening it on the first draw
+      of the tick and marking this display dirty for the end-of-tick flush.  Saves the
+      painter's state so the shape's pen, brush, font, and transform are undone by
+      _closeDrawPainter().  Opacity is set from visibility (0 = invisible, 100 = fully
+      visible) so the shape is drawn at that opacity.
+      """
+      if self._drawPainter is None:
+         self._drawPainter = QtGui.QPainter(self._drawPixmap)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+         self.guiRenderer._dirtyDisplays.add(self)
+      painter = self._drawPainter
+      painter.save()
       painter.setOpacity(max(0, min(100, visibility)) / 100.0)
       return painter
 
    def _closeDrawPainter(self, painter):
-      """Ends the painter and marks this display's draw layer dirty for deferred flush."""
-      painter.end()
-      self.guiRenderer._dirtyDisplays.add(self)
+      """Restores the painter's state after one shape.  The painter stays open until the
+      end-of-tick flush."""
+      painter.restore()
+
+   def _endDrawPainter(self):
+      """Ends the shared painter, if open, so the draw pixmap can be shown, cleared, or
+      replaced."""
+      if self._drawPainter is not None:
+         self._drawPainter.end()
+         self._drawPainter = None
+
+   def _flushDrawLayer(self):
+      """Ends the shared painter and hands the finished draw pixmap to the scene."""
+      self._endDrawPainter()
+      self._drawLayer.setPixmap(self._drawPixmap)
 
    def _makeDrawPen(self, color, thickness):
       """Returns a QPen for the given [r,g,b,a] color and line thickness."""
@@ -1475,6 +1827,26 @@ class DisplayMirror:
       else:
          painter.drawEllipse(QtCore.QRectF(x, y, width, height))
 
+      self._closeDrawPainter(painter)
+
+   def _drawPoint(self, args):
+      """
+      Paints a single pixel onto the draw layer.  The position is truncated to a whole
+      pixel, so the point stays one crisp pixel instead of blending into its neighbors
+      (antialiasing has no effect on a pixel-aligned fill).
+
+      Called once per point, often hundreds of thousands of times, so it reads args
+      directly: gui.py's drawPoint() always sends every field.
+
+      Args:
+        x, y       — the pixel's top-left corner
+        color      — [r, g, b, a]
+        visibility — 0 (invisible) to 100 (fully visible)
+      """
+      r, g, b, a = args['color']
+
+      painter = self._openDrawPainter(args['visibility'])
+      painter.fillRect(int(args['x']), int(args['y']), 1, 1, QtGui.QColor(r, g, b, a))
       self._closeDrawPainter(painter)
 
    def _drawRectangle(self, args):
@@ -1782,8 +2154,9 @@ class DisplayMirror:
       # End-of-tick flush hasn't happened yet; sync the draw layer now so any
       # draw* calls made earlier in this batch are included in the grab.
       if self in self.guiRenderer._dirtyDisplays:
-         self._drawLayer.setPixmap(self._drawPixmap)
+         self._flushDrawLayer()
          self.guiRenderer._dirtyDisplays.discard(self)
+      self.guiRenderer._flushDirtyIcons()
 
       # grab() synchronously paints the window, including the QGraphicsView, which
       # renders the scene (every item, controls included) into the captured pixmap.
@@ -2472,8 +2845,18 @@ class IconMirror(_GraphicsMirror):
    QGraphicsRectItem (behind) and a QGraphicsPixmapItem (the image, in front).
 
    Unlike other mirrors, Icon does most of its work on the Qt side because pixel
-   operations must happen where the QPixmap lives.  This means IconMirror has
+   operations must happen where the image lives.  This means IconMirror has
    getters (getPixel, getPixels) that send responses back through the pipe.
+
+   The pixels live in a QImage (_image), which reads and writes single pixels cheaply.
+   Its size is always the icon's size (_width x _height): resizing resamples the pixels,
+   and cropping cuts them.  The QGraphicsPixmapItem shows a QPixmap copy that
+   _applyExtent() rebuilds; pixel setters mark the icon dirty so that rebuild happens
+   once per render tick.
+
+   Resizing resamples from _sourceImage, the pixels as they were before the first resize
+   since the last edit, so repeated resizes don't compound quality loss.  Any edit (a pixel
+   setter or crop) sets _sourceImage to None, meaning the current pixels are the source.
 
    A QGraphicsPixmapItem has no pen or brush, so color/fill/thickness can't act on
    the image the way they act on a shape.  Instead they style the backing rectangle
@@ -2495,27 +2878,44 @@ class IconMirror(_GraphicsMirror):
       width    = args.get('width')
       height   = args.get('height')
 
-      # build pixmap
-      pixmap = QtGui.QPixmap(filename)
+      # load the image
+      image = QtGui.QImage(filename)
 
-      if pixmap.isNull():
-         # file failed to load — create blank pixmap
+      # reported to the parent by _getSize, which prints a warning
+      self._loadFailed = image.isNull()
+      if self._loadFailed:
+         # file failed to load — create a blank white image
          if width is None:
             width = 600
          if height is None:
             height = 400
-         pixmap = QtGui.QPixmap(width, height)
+         image = QtGui.QImage(int(width), int(height), QtGui.QImage.Format.Format_ARGB32)
+         image.fill(QtGui.QColor(255, 255, 255))
 
-      # resolve width/height from pixmap if not specified
+      # resolve width/height from the image if not specified
       if width is None and height is None:
-         width  = pixmap.width()
-         height = pixmap.height()
+         width  = image.width()
+         height = image.height()
       elif width is None:
-         width = int(pixmap.width() * (height / pixmap.height()))
+         width = int(image.width() * (height / image.height()))
       elif height is None:
-         height = int(pixmap.height() * (width / pixmap.width()))
+         height = int(image.height() * (width / image.width()))
+      width  = max(1, int(round(width)))    # an image is a whole number of pixels
+      height = max(1, int(round(height)))
 
-      self._pixmap = pixmap   # original (unscaled) pixmap for quality rescaling
+      # Files can load as grayscale or palette images, which can't hold arbitrary colors,
+      # so convert once to full color.  Non-premultiplied alpha, so getPixel returns
+      # exactly what setPixel wrote.
+      image = image.convertToFormat(QtGui.QImage.Format.Format_ARGB32)
+
+      # a requested size resamples the loaded pixels; the loaded image stays the source
+      # for later resizes
+      if image.width() == width and image.height() == height:
+         self._image       = image
+         self._sourceImage = None
+      else:
+         self._image       = self._resample(image, width, height)
+         self._sourceImage = image
       self._width  = width
       self._height = height
       self._cx       = args.get('cx',       0.0)
@@ -2547,6 +2947,11 @@ class IconMirror(_GraphicsMirror):
          'setPixels': self._setPixels,
          'write':     self._write,
       })
+
+      # handlers for runs of merged commands (see GuiRenderer._executeMerged)
+      self._mergedHandlers = {
+         'setPixel': self._setPixelMerged,
+      }
 
       self._applyColor()       # color the backing rectangle (pen, plus brush if filled)
       self._applyThickness()   # the backing rectangle's border width
@@ -2583,21 +2988,44 @@ class IconMirror(_GraphicsMirror):
 
    def _getSize(self, args, responseId):
       """
-      Returns [width, height] for this item.
-      Used to resolve dimensions after creation, since pixel data lives in Qt.
+      Returns [width, height, loadFailed] for this item.
+      Used to resolve dimensions after creation, since pixel data lives in Qt, and to
+      let the parent warn when the image file could not be loaded.
       """
-      self.guiRenderer.sendResponse(responseId, [self._width, self._height])
+      self.guiRenderer.sendResponse(responseId, [self._width, self._height, self._loadFailed])
+
+   def _resample(self, image, width, height):
+      """Returns a smoothly resampled copy of image at exactly width x height pixels."""
+      return image.scaled(width, height,
+                          QtCore.Qt.AspectRatioMode.IgnoreAspectRatio,
+                          QtCore.Qt.TransformationMode.SmoothTransformation)
+
+   def _setExtent(self, args, responseId):
+      """
+      Resizes the icon by resampling its pixels to the new size, working from the source
+      image so repeated resizes don't compound quality loss.
+      """
+      width  = max(1, int(round(args.get('width',  self._width))))
+      height = max(1, int(round(args.get('height', self._height))))
+
+      if self._sourceImage is None:
+         self._sourceImage = self._image   # first resize since the last edit
+      self._image  = self._resample(self._sourceImage, width, height)
+      self._width  = width
+      self._height = height
+      self.guiRenderer._dirtyIcons.discard(self)   # rebuilt just below
+      self.qObject.prepareGeometryChange()
+      self._applyExtent()
 
    def _applyExtent(self):
       """
-      Scales the image from the original to the current size and centers both it and the
-      backing rectangle on the origin, so the item's transform turns and scales them about
-      their center.
+      Shows the current pixels and centers both the image and the backing rectangle on
+      the origin, so the item's transform turns and scales them about their center.
       """
-      width  = max(1, int(self._width))
-      height = max(1, int(self._height))
-      scaledPixmap = self._pixmap.scaled(width, height)
-      self._qPixmapObject.setPixmap(scaledPixmap)
+      width  = self._width
+      height = self._height
+      pixmap = QtGui.QPixmap.fromImage(self._image)
+      self._qPixmapObject.setPixmap(pixmap)
       self._qPixmapObject.setOffset(-width / 2.0, -height / 2.0)
       self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
 
@@ -2605,16 +3033,18 @@ class IconMirror(_GraphicsMirror):
 
    def _crop(self, args, responseId):
       """
-      Crops the original pixmap to the given rectangle, then recenters it on the origin.
+      Crops the pixels to the given rectangle, then recenters them on the origin.  The
+      cropped pixels become the source for later resizes.
       """
-      x      = args.get('x', 0)
-      y      = args.get('y', 0)
-      width  = args.get('width',  self._width)
-      height = args.get('height', self._height)
+      x      = int(args.get('x', 0))
+      y      = int(args.get('y', 0))
+      width  = int(args.get('width',  self._width))    # whole pixels, matching gui.py's crop()
+      height = int(args.get('height', self._height))
 
-      self._pixmap = self._pixmap.copy(x, y, width, height)
-      self._width  = width
-      self._height = height
+      self._image       = self._image.copy(x, y, width, height)
+      self._sourceImage = None
+      self._width       = width
+      self._height      = height
       self.qObject.prepareGeometryChange()
       self._applyExtent()
 
@@ -2622,69 +3052,74 @@ class IconMirror(_GraphicsMirror):
 
    def _getPixel(self, args, responseId):
       """
-      Returns [r, g, b, a] for the pixel at (column, row) on the original pixmap.
+      Returns [r, g, b, a] for the pixel at (column, row).
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
-      image  = self._pixmap.toImage()
-      color  = image.pixelColor(column, row)
+      color  = self._image.pixelColor(column, row)
       self.guiRenderer.sendResponse(responseId, [color.red(), color.green(), color.blue(), color.alpha()])
 
    def _setPixel(self, args, responseId):
       """
-      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] on the original pixmap
-      (alpha defaults to opaque), then rescales to current display dimensions.
+      Sets the pixel at (column, row) to [r, g, b] or [r, g, b, a] (alpha defaults to
+      opaque).  The on-screen image is rebuilt at the end of the tick.
       """
       column = args.get('column', 0)
       row    = args.get('row', 0)
       color  = args.get('color', [0, 0, 0])
 
-      image = self._pixmap.toImage().convertToFormat(QtGui.QImage.Format.Format_ARGB32)
-      image.setPixelColor(column, row, _qColorFromChannels(color))
-      self._pixmap = QtGui.QPixmap.fromImage(image)
+      self._image.setPixelColor(column, row, _qColorFromChannels(color))
+      self._sourceImage = None
+      self.guiRenderer._dirtyIcons.add(self)
 
-      scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self._qPixmapObject.setPixmap(scaledPixmap)
+   def _setPixelMerged(self, argNames, rows):
+      """
+      Sets a run of merged setPixel commands (see GuiRenderer._executeMerged) in one
+      loop, reading each pixel's values straight from its row.  Same result as calling
+      _setPixel() for each, without per-pixel overhead.
+      """
+      columnIndex = argNames.index('column')
+      rowIndex    = argNames.index('row')
+      colorIndex  = argNames.index('color')
+
+      for values in rows:
+         self._image.setPixelColor(values[columnIndex], values[rowIndex], _qColorFromChannels(values[colorIndex]))
+
+      self._sourceImage = None
+      self.guiRenderer._dirtyIcons.add(self)
 
    def _getPixels(self, args, responseId):
       """
-      Returns all pixels as a 2D list of [r, g, b, a] values from the original pixmap.
+      Returns all pixels as [width, height, rgbaBytes]: the raw bytes of the image, four
+      per pixel (red, green, blue, alpha), row by row from the top-left.  gui.py's
+      Icon._fetchPixelCache() builds the [r, g, b, a] rows from them.  Sending bytes is
+      far faster than building one list per pixel here and pickling them all.
       """
-      image  = self._pixmap.toImage()
-      image  = image.convertToFormat(QtGui.QImage.Format.Format_RGBA8888)
-      width  = image.width()
-      height = image.height()
+      width  = self._width
+      height = self._height
 
-      pixels = []
-      for row in range(height):
-         rowPixels = []
-         for col in range(width):
-            color = image.pixelColor(col, row)
-            rowPixels.append([color.red(), color.green(), color.blue(), color.alpha()])
-         pixels.append(rowPixels)
+      # a 32-bit format has no padding at the end of each row, so the bytes are exactly
+      # width * height * 4 long
+      rgbaImage = self._image.convertToFormat(QtGui.QImage.Format.Format_RGBA8888)
+      rgbaBytes = bytes(rgbaImage.constBits())[:width * height * 4]
 
-      self.guiRenderer.sendResponse(responseId, pixels)
+      self.guiRenderer.sendResponse(responseId, [width, height, rgbaBytes])
 
    def _setPixels(self, args, responseId):
       """
-      Sets all pixels from a 2D list of [r, g, b] or [r, g, b, a] values (alpha defaults
-      to opaque).  Rebuilds the pixmap and rescales to current display dimensions.
+      Writes a 2D list of [r, g, b] or [r, g, b, a] values (alpha defaults to opaque) into
+      the image, starting at its top-left.  gui.py has already checked that the grid fits;
+      a smaller grid leaves the rest of the image unchanged.  The on-screen image is rebuilt
+      at the end of the tick.
       """
       pixels = args.get('pixels', [])
-      if not pixels:
-         return
 
-      height = len(pixels)
-      width  = len(pixels[0])
+      for row in range(len(pixels)):
+         for col in range(len(pixels[row])):
+            self._image.setPixelColor(col, row, _qColorFromChannels(pixels[row][col]))
 
-      image = QtGui.QImage(width, height, QtGui.QImage.Format.Format_RGBA8888)
-      for row in range(height):
-         for col in range(width):
-            image.setPixelColor(col, row, _qColorFromChannels(pixels[row][col]))
-
-      self._pixmap = QtGui.QPixmap.fromImage(image)
-      scaledPixmap = self._pixmap.scaled(self._width, self._height)
-      self._qPixmapObject.setPixmap(scaledPixmap)
+      self._sourceImage = None
+      self.guiRenderer._dirtyIcons.add(self)
 
    # ── Write ──────────────────────────────────────────────────────────────────
 
@@ -2702,8 +3137,8 @@ class IconMirror(_GraphicsMirror):
       width    = args.get('width')
       height   = args.get('height')
 
-      iconWidth  = max(1, int(round(self._width)))
-      iconHeight = max(1, int(round(self._height)))
+      iconWidth  = self._width
+      iconHeight = self._height
       thickness  = self._thickness
       margin     = thickness / 2.0          # the border straddles the rect edge, half outside
       canvasW    = iconWidth  + thickness   # grow the canvas to hold the whole border
@@ -2718,7 +3153,7 @@ class IconMirror(_GraphicsMirror):
       painter.setPen(self._qBackgroundObject.pen())
       painter.setBrush(self._qBackgroundObject.brush())
       painter.drawRect(QtCore.QRectF(margin, margin, iconWidth, iconHeight))
-      painter.drawPixmap(QtCore.QPointF(margin, margin), self._pixmap.scaled(iconWidth, iconHeight))
+      painter.drawImage(QtCore.QPointF(margin, margin), self._image)
       painter.end()
 
       # 2. fade the whole composite by the icon's visibility, so overlapping parts fade as
@@ -3132,6 +3567,14 @@ class _ControlMirror(_DrawableMirror):
       width  = max(1, int(self._width))
       height = max(1, int(self._height))
       self._widget.setFixedSize(width, height)
+
+      # a proxy holds on to the size limits its widget had when it was embedded, so
+      # clear them before resizing; otherwise the proxy stays at the widget's original
+      # size and the control keeps a box larger than what is drawn
+      self.qObject.setMinimumSize(0, 0)
+      self.qObject.setMaximumSize(_PROXY_MAXIMUM_SIZE, _PROXY_MAXIMUM_SIZE)
+      self.qObject.resize(width, height)
+
       self._applyTransform()
 
    # ── Event helper ───────────────────────────────────────────────────────────
@@ -3380,7 +3823,7 @@ class DropDownListMirror(_ControlMirror):
       items = args.get('items', [])
       color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
 
-      widget = QtWidgets.QComboBox()
+      widget = _QComboBox()
       widget.addItems(items)
       widget.adjustSize()
       self._width  = widget.width()
@@ -3401,8 +3844,10 @@ class DropDownListMirror(_ControlMirror):
    def _applyColor(self, color):
       r, g, b, a = color
       self._widget.setStyleSheet(
-         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
-         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; combobox-popup: 0; }}"
+         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black;"
+         f" selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};"
+         f" selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)}; }}"
       )
 
    def _setColor(self, args, responseId):
@@ -3448,19 +3893,13 @@ class TextFieldMirror(_ControlMirror):
          self._width  = width
          self._height = height
       elif columns is not None:
-         fm       = QtGui.QFontMetrics(widget.font())
-         charW    = fm.horizontalAdvance('M')
-         charH    = fm.lineSpacing()
-         margins  = widget.textMargins()
-         hMargin  = margins.left() + margins.right()
-         vMargin  = margins.top()  + margins.bottom()
-         frameOpt = QtWidgets.QStyleOptionFrame()
-         widget.initStyleOption(frameOpt)
-         frame    = widget.style().pixelMetric(
-            QtWidgets.QStyle.PixelMetric.PM_DefaultFrameWidth, frameOpt, widget
-         )
-         w = (charW * columns) + hMargin + (2 * frame)
-         h = charH + vMargin + (2 * frame)
+         # leave room for the padding and border the control stylesheet draws, so the
+         # field still holds the number of characters it was asked for
+         fm    = QtGui.QFontMetrics(widget.font())
+         charW = fm.horizontalAdvance('M')
+         charH = fm.lineSpacing()
+         w = (charW * columns) + _FIELD_EXTRA_WIDTH
+         h = charH + _FIELD_EXTRA_HEIGHT
          widget.setFixedSize(w, h)
          self._width  = w
          self._height = h
@@ -3543,6 +3982,7 @@ class TextAreaMirror(_ControlMirror):
       rows    = args.get('rows')
 
       widget = QtWidgets.QTextEdit(str(text))
+      widget.document().setDocumentMargin(_TEXT_AREA_DOC_MARGIN)
       self._wrapWidget(widget)
 
       if font is not None:
@@ -3553,9 +3993,11 @@ class TextAreaMirror(_ControlMirror):
          self._width  = width
          self._height = height
       elif columns is not None or rows is not None:
+         # leave room for the padding, border, and document margin drawn around the
+         # text, so the area still holds the rows and columns it was asked for
          fm = QtGui.QFontMetrics(widget.font())
-         w  = fm.horizontalAdvance('M') * (columns or 8)
-         h  = fm.lineSpacing()          * (rows    or 5)
+         w  = (fm.horizontalAdvance('M') * (columns or 8)) + _FIELD_EXTRA_WIDTH  + (2 * _TEXT_AREA_DOC_MARGIN)
+         h  = (fm.lineSpacing()          * (rows    or 5)) + _FIELD_EXTRA_HEIGHT + (2 * _TEXT_AREA_DOC_MARGIN)
          widget.setFixedSize(w, h)
          self._width  = w
          self._height = h

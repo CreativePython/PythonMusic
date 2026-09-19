@@ -499,7 +499,7 @@ def generateSpecFile():
    console  = False    # show terminal while running?  (turn this off if we have a GUI)
 
    # get all standard library modules to ensure complete inclusion
-   # We add these to datas to allow recursive PyInstaller (create executable) to find the standard libraries on disk
+   # We add these to datas so student code running inside the PEM app can import any standard library module (e.g. wave, sqlite3), not just the ones PEM itself uses
    stdlibPath = Path(os.path.dirname(os.__file__))
    for item in stdlibPath.iterdir():
       # check each item in our PATH

@@ -47,12 +47,20 @@ import queue
 import atexit
 import os
 import sys
+import socket
 from pathlib import Path
 
 # Sender thread tick rate.  High enough that the final partial batch after a
 # burst (e.g. a tight for loop) reaches Qt within a few milliseconds.
 _FLUSH_RATE      = 200
 _MAX_BUFFER_SIZE = 512   # flush inline when buffer reaches this size
+
+# Kernel buffer size (bytes) for each end of the command pipe, macOS/Linux only.  The
+# macOS default is far smaller than one full command batch, so every send would block
+# until the renderer next reads, making the two processes take turns instead of working
+# in parallel.  Large enough to hold many batches, small enough that the parent can't run
+# far ahead of what's on screen.  (Linux caps the request at net.core.wmem_max/rmem_max.)
+_PIPE_BUFFER_SIZE = 1024 * 1024
 
 # Maximum time (seconds) GuiHandler.__init__ will wait for the child to send
 # its READY handshake before giving up and raising a diagnostic error.
@@ -86,6 +94,19 @@ def _logPath():
 # Keeping them here avoids any import of Qt in the parent process — GuiRenderer imports
 # these helpers from this file, not the other way around.
 #######################################################################################
+
+def _enlargePipeBuffers(connection):
+   """
+   Raises the send and receive buffer sizes of one end of a duplex Pipe to
+   _PIPE_BUFFER_SIZE.  On macOS/Linux a duplex Pipe is a Unix socket pair, so this is a
+   socket option on the underlying file descriptor.  Windows uses named pipes, which
+   this doesn't apply to, so they are left at their defaults.
+   """
+   if sys.platform != 'win32':
+      # fromfd() works on a duplicate descriptor; the option applies to the shared socket
+      with socket.fromfd(connection.fileno(), socket.AF_UNIX, socket.SOCK_STREAM) as pipeSocket:
+         pipeSocket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, _PIPE_BUFFER_SIZE)
+         pipeSocket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, _PIPE_BUFFER_SIZE)
 
 def _createCommand(action, target, args=None, responseId=None):
    """
@@ -213,6 +234,8 @@ class GuiHandler:
       """
       parentCommandConnection, childCommandConnection = multiprocessing.Pipe(duplex=True)
       self.connection = parentCommandConnection
+      _enlargePipeBuffers(parentCommandConnection)
+      _enlargePipeBuffers(childCommandConnection)   # before spawn, so the child's end keeps it
 
       # spawn everywhere except Linux dev.  Each PythonMusic interpreter spawns
       # exactly one Qt child, so the forkserver/fork speedup has nothing to
@@ -485,14 +508,68 @@ class GuiHandler:
       """
       Queues a fire-and-forget command in the command buffer.  The sender thread
       flushes on each tick.  Thread-safe.
+
+      Back-to-back commands with the same action, target, and arg names are merged
+      into one 'merged' command (see _appendCommand), so a tight loop of small commands
+      (e.g. drawPoint, setPixel) is cheap to send.  A run holds at most _maxBufferSize
+      commands, the same limit as the buffer itself.
       """
-      command = _createCommand(action, target, args)
       with self._bufferLock:
-         self._commandBuffer.append(command)
-         flush_now = len(self._commandBuffer) >= self._maxBufferSize
+         runLength = self._appendCommand(action, target, args)
+         flush_now = (len(self._commandBuffer) >= self._maxBufferSize
+                      or runLength >= self._maxBufferSize)
       if flush_now and self._callbackActive.acquire(blocking=False):
          self._callbackActive.release()
          self._flushBuffer()
+
+   def _appendCommand(self, action, target, args):
+      """
+      Adds a command to the buffer, merging it with the buffer's last command when both
+      have the same action, target, and arg names.  A merged command stores the arg names
+      once and each command's arg values as a tuple:
+
+         {'action': 'merged', 'target': target,
+          'args': {'action': action, 'argNames': (...), 'rows': [(...), (...), ...]}}
+
+      That is far cheaper to pickle than one dict per command, and lets the renderer
+      handle the whole run at once (see GuiRenderer._executeMerged).  Order is kept,
+      since only neighbors merge.  A lone command is left in its normal form; it becomes
+      a run only when a matching command arrives right behind it.
+
+      Caller holds _bufferLock.  Returns the length of the run the command is in (1 if
+      it was not merged).
+      """
+      if args is None:
+         args = {}
+      argNames = tuple(args)
+
+      lastCommand = self._commandBuffer[-1] if self._commandBuffer else None
+      runLength   = 1
+
+      if lastCommand is not None and lastCommand['target'] == target:
+         lastArgs = lastCommand['args']
+
+         extendsRun = (lastCommand['action'] == 'merged'
+                       and lastArgs['action']   == action
+                       and lastArgs['argNames'] == argNames)
+         startsRun  = (lastCommand['action'] == action
+                       and tuple(lastArgs) == argNames)
+
+         if extendsRun:
+            lastArgs['rows'].append(tuple(args.values()))
+            runLength = len(lastArgs['rows'])
+         elif startsRun:
+            # the second matching command: turn the last command into a run of two
+            self._commandBuffer[-1] = _createCommand('merged', target, {
+               'action':   action,
+               'argNames': argNames,
+               'rows':     [tuple(lastArgs.values()), tuple(args.values())],
+            })
+            runLength = 2
+
+      if runLength == 1:
+         self._commandBuffer.append(_createCommand(action, target, args))
+      return runLength
 
    def sendQuery(self, action, target, args=None):
       """

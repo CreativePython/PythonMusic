@@ -31,6 +31,7 @@ dependencies = [
    "sounddevice>=0.5.2",
    "soundfile>=0.13.1",
    "tqdm>=4.67.1",
+   "numpy>=2.5.2",
    "pooch>=1.8",
    "pypianoroll>=1.0",
    "verovio>=5.6.0",
