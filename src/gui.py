@@ -4474,7 +4474,7 @@ class MusicControl(Group):
          self._value = newValue
          self._updateAppearance()
          if (self._action is not None) and callable(self._action):
-            self._action(self._value)  # call user function
+            self._action(self.getValue())  # call user function
 
 
    # ── Color ────────────────────────────────────────────────────────────────
@@ -5148,7 +5148,7 @@ class XYPad(MusicControl):
        y1 (int or float): The vertical position of the top-left corner, in pixels.
        x2 (int or float): The horizontal position of the bottom-right corner, in pixels.
        y2 (int or float): The vertical position of the bottom-right corner, in pixels.
-       action (Callable, optional): The function to call when the bubble moves; it receives the new [x, y] value.
+       action (Callable, optional): The function to call when the bubble moves; it receives the new x and y as two separate values.
        foregroundColor (Color, optional): The color of the bubble.
        backgroundColor (Color, optional): The color behind the bubble.
        outlineColor (Color, optional): The outline color.
@@ -5158,7 +5158,7 @@ class XYPad(MusicControl):
        rotation (int or float, optional): How far to turn the pad, in degrees, counter-clockwise.
        visibility (int, optional): How visible the pad is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, x1, y1, x2, y2, action=None, foregroundColor=Color.RED, backgroundColor=Color.BLACK, outlineColor=Color.CLEAR, outlineThickness=2, trackerRadius=10, crosshairThickness=None, rotation=0, visibility=100):
+   def __init__(self, x1, y1, x2, y2, action=None, foregroundColor=Color.RED, backgroundColor=Color.BLACK, outlineColor=Color.RED, outlineThickness=2, trackerRadius=10, crosshairThickness=None, rotation=0, visibility=100):
       """"""
       MusicControl.__init__(self, action)
 
@@ -5271,8 +5271,8 @@ class XYPad(MusicControl):
       """Return the bubble's position within the pad.
 
       Returns:
-          x (int or float): The horizontal position of the bubble within the pad, in pixels.
-          y (int or float): The vertical position of the bubble within the pad, in pixels.
+          x (int): The horizontal position of the bubble within the pad, in pixels.
+          y (int): The vertical position of the bubble within the pad, in pixels.
       """
       x, y = self._value
       return x, y
@@ -5280,17 +5280,23 @@ class XYPad(MusicControl):
    def setValue(self, x, y):
       """Set the bubble's position within the pad.
 
-      Positions outside the pad are clamped to its edges. Moves the bubble and calls the
-      update function.
+      Positions outside the pad are clamped to its edges and rounded to whole pixels. Moves
+      the bubble and calls the update function.
 
       Args:
           x (int or float): The new horizontal position within the pad, in pixels.
           y (int or float): The new vertical position within the pad, in pixels.
       """
       width, height = self._backgroundShape.getSize()
-      x = max(0, min(x, width))            # clamp values
-      y = max(0, min(y, height))           # ...
-      MusicControl.setValue(self, [x, y])  # update value and call user function
+      x = int(round(max(0, min(x, width))))    # clamp values to whole pixels
+      y = int(round(max(0, min(y, height))))   # ...
+
+      # the pad's value is a pair, so the user function receives x and y separately
+      if [x, y] != self._value:  # only update if value has changed
+         self._value = [x, y]
+         self._updateAppearance()
+         if (self._action is not None) and callable(self._action):
+            self._action(x, y)  # call user function
 
 
 #######################################################################################
