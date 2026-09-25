@@ -47,6 +47,8 @@
 #         - Added get/set size/width/height functions
 #         - Added get/set center functions
 #         - Added getEndpoints and getBoundingBox
+#         - Position and size functions describe the box before rotation; added
+#           getBounding* functions for the upright box around the rotated object
 #         - Added get/set length to Line
 #         - Added Polyline class
 #         - Added alpha channel to Icon get/set pixel functions
@@ -2165,6 +2167,27 @@ class Drawable(Interactable):
       yPoints = placedCorners[1]
       return xPoints, yPoints
 
+   def _sceneBox(self):
+      """"""
+      # the object's own box before rotation: centered on its center, scaled as it appears
+      centerX, centerY, _, scaleX, scaleY = _decomposeAffine(self._getSceneMatrix())
+      baseWidth, baseHeight = self._baseExtent()
+      width  = baseWidth  * abs(scaleX)
+      height = baseHeight * abs(scaleY)
+      left   = centerX - width  / 2.0
+      top    = centerY - height / 2.0
+      return left, top, width, height
+
+   def _sceneBoundingBox(self):
+      """"""
+      # the upright box around the rotated object
+      xPoints, yPoints = self._sceneEndpoints()
+      left   = xPoints.min()
+      top    = yPoints.min()
+      width  = xPoints.max() - left
+      height = yPoints.max() - top
+      return left, top, width, height
+
    def _visibleUnrotatedOutline(self):
       """"""
       # the object's outline (its corners, or its actual points for point-defined shapes)
@@ -2204,14 +2227,97 @@ class Drawable(Interactable):
           xPoints (list[int or float]): The horizontal positions of the box's four corners, in pixels.
           yPoints (list[int or float]): The vertical positions of the box's four corners, in pixels.
       """
-      xPoints, yPoints = self._sceneEndpoints()
-      leftX   = self._asNumber(xPoints.min())
-      rightX  = self._asNumber(xPoints.max())
-      topY    = self._asNumber(yPoints.min())
-      bottomY = self._asNumber(yPoints.max())
+      left, top, width, height = self._sceneBoundingBox()
+      leftX   = self._asNumber(left)
+      rightX  = self._asNumber(left + width)
+      topY    = self._asNumber(top)
+      bottomY = self._asNumber(top + height)
       xPoints = [leftX, leftX, rightX, rightX]
       yPoints = [topY, bottomY, bottomY, topY]
       return xPoints, yPoints
+
+   def getBoundingPosition(self):
+      """Return the top-left corner of the object's bounding box.
+
+      The bounding box is the smallest upright box that surrounds the object, so it moves
+      as the object rotates. For the object's own position before rotation, use
+      getPosition().
+
+      Returns:
+          x (int or float): The horizontal position of the bounding box's top-left corner, in pixels.
+          y (int or float): The vertical position of the bounding box's top-left corner, in pixels.
+      """
+      left, top, _, _ = self._sceneBoundingBox()
+      x = self._asNumber(left)
+      y = self._asNumber(top)
+      return x, y
+
+   def getBoundingX(self):
+      """Return the horizontal position of the object's bounding box.
+
+      Returns:
+          x (int or float): The horizontal position of the bounding box's top-left corner, in pixels.
+      """
+      # updates to getBoundingPosition() automatically update how this method works
+      x, _ = self.getBoundingPosition()
+      return x
+
+   def getBoundingY(self):
+      """Return the vertical position of the object's bounding box.
+
+      Returns:
+          y (int or float): The vertical position of the bounding box's top-left corner, in pixels.
+      """
+      # updates to getBoundingPosition() automatically update how this method works
+      _, y = self.getBoundingPosition()
+      return y
+
+   def getBoundingSize(self):
+      """Return the width and height of the object's bounding box.
+
+      The bounding box is the smallest upright box that surrounds the object, so it grows
+      as the object rotates. For the object's own size before rotation, use getSize().
+
+      Returns:
+          width (int or float): The bounding box's width, in pixels.
+          height (int or float): The bounding box's height, in pixels.
+      """
+      _, _, width, height = self._sceneBoundingBox()
+      width  = self._asNumber(width)
+      height = self._asNumber(height)
+      return width, height
+
+   def getBoundingWidth(self):
+      """Return the width of the object's bounding box.
+
+      Returns:
+          width (int or float): The bounding box's width, in pixels.
+      """
+      # updates to getBoundingSize() automatically update how this method works
+      width, _ = self.getBoundingSize()
+      return width
+
+   def getBoundingHeight(self):
+      """Return the height of the object's bounding box.
+
+      Returns:
+          height (int or float): The bounding box's height, in pixels.
+      """
+      # updates to getBoundingSize() automatically update how this method works
+      _, height = self.getBoundingSize()
+      return height
+
+   def getBoundingCenter(self):
+      """Return the center point of the object's bounding box.
+
+      Returns:
+          centerX (int or float): The horizontal position of the bounding box's center, in pixels.
+          centerY (int or float): The vertical position of the bounding box's center, in pixels.
+      """
+      left, top, width, height = self._sceneBoundingBox()
+      centerX = self._asNumber(left + width / 2.0)
+      centerY = self._asNumber(top + height / 2.0)
+      return centerX, centerY
 
    def getGroup(self):
       """Return the Group this object belongs to.
@@ -2277,31 +2383,31 @@ class Drawable(Interactable):
       self._pushTransform()
 
    def getPosition(self):
-      """Return the object's position, the top-left corner of its bounding box.
+      """Return the object's position, the top-left corner of its box before rotation.
+
+      The object rotates about its center, so this is where its top-left corner would be
+      if it were not rotated. For the upright box around the rotated object, use
+      getBoundingPosition().
 
       Returns:
           x (int or float): The horizontal position of the top-left corner, in pixels.
           y (int or float): The vertical position of the top-left corner, in pixels.
       """
-      coordinates = self._sceneEndpoints()
-      x = self._asNumber(coordinates[0].min())
-      y = self._asNumber(coordinates[1].min())
+      left, top, _, _ = self._sceneBox()
+      x = self._asNumber(left)
+      y = self._asNumber(top)
       return x, y
 
    def setPosition(self, x, y):
-      """Move the object so the top-left corner of its bounding box sits at the given point.
+      """Move the object so the top-left corner of its box before rotation sits at the given point.
 
       Args:
           x (int or float): The new horizontal position, in pixels.
           y (int or float): The new vertical position, in pixels.
       """
-      # shift the center by however far the bounding-box corner needs to move; exact
-      # values are used here so repeated moves do not slowly drift
-      xPoints, yPoints = self._sceneEndpoints()
-      currentLeft = xPoints.min()
-      currentTop  = yPoints.min()
-      centerX, centerY = self._sceneCenter()
-      self.setCenter(centerX + (x - currentLeft), centerY + (y - currentTop))
+      # exact values are used here so repeated moves do not slowly drift
+      _, _, width, height = self._sceneBox()
+      self.setCenter(x + width / 2.0, y + height / 2.0)
 
    def getX(self):
       """Return the object's horizontal position.
@@ -2441,15 +2547,17 @@ class Drawable(Interactable):
    def getSize(self):
       """Return the object's width and height.
 
-      These are the size of its upright bounding box, so they grow as the object rotates.
+      These are the object's own size before rotation, so they stay the same as it
+      rotates. For the size of the upright box around the rotated object, use
+      getBoundingSize().
 
       Returns:
           width (int or float): The width, in pixels.
           height (int or float): The height, in pixels.
       """
-      xPoints, yPoints = self._sceneEndpoints()
-      width  = self._asNumber(xPoints.max() - xPoints.min())
-      height = self._asNumber(yPoints.max() - yPoints.min())
+      _, _, width, height = self._sceneBox()
+      width  = self._asNumber(width)
+      height = self._asNumber(height)
       return width, height
 
    def setSize(self, width, height):
@@ -2461,9 +2569,7 @@ class Drawable(Interactable):
       """
       # measure the current size from exact values, then hand the target and current
       # sizes to _resize so each kind of shape can fit itself to the target
-      xPoints, yPoints = self._sceneEndpoints()
-      currentWidth  = xPoints.max() - xPoints.min()
-      currentHeight = yPoints.max() - yPoints.min()
+      _, _, currentWidth, currentHeight = self._sceneBox()
 
       targetWidth  = width  if width  is not None else currentWidth
       targetHeight = height if height is not None else currentHeight
@@ -2802,13 +2908,12 @@ class Rectangle(Graphics):
       })
 
    def __str__(self):
-      # describe the rectangle the way it was created: the two corners of its upright
-      # (unrotated) shape, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the rectangle the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Rectangle(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2857,13 +2962,12 @@ class Oval(Graphics):
       })
 
    def __str__(self):
-      # describe the oval the way it was created: the two corners of its upright
-      # (unrotated) box, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the oval the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Oval(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2909,10 +3013,7 @@ class Circle(Oval):
 
    def __str__(self):
       x, y      = self.getCenter()
-      # radius from the un-rotated outline, so it stays the circle's true radius even if
-      # the circle has been scaled or turned
-      xPoints   = self._visibleUnrotatedOutline()[0]
-      radius    = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
+      radius    = self.getRadius()
       color     = self.getColor()
       fill      = self.getFill()
       thickness = self.getThickness()
@@ -3093,13 +3194,12 @@ class Arc(Graphics):
       })
 
    def __str__(self):
-      # describe the arc the way it was created: the two corners of its upright
-      # (unrotated) box, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the arc the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Arc(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'startAngle = {self._startAngle}, endAngle = {self._endAngle}, '
               f'style = {self._style}, color = {self.getColor()}, fill = {self.getFill()}, '
@@ -3192,10 +3292,7 @@ class ArcCircle(Arc):
 
    def __str__(self):
       x, y       = self.getCenter()
-      # radius from the un-rotated outline, so it stays the circle's true radius even if
-      # the arc has been scaled or turned
-      xPoints    = self._visibleUnrotatedOutline()[0]
-      radius     = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
+      radius     = self.getRadius()
       startAngle = self._startAngle
       endAngle   = self._endAngle
       style      = self._style
@@ -3603,11 +3700,7 @@ class Icon(Graphics):
       self._pushTransform()
 
    def __str__(self):
-      # report the visible (scaled) size with rotation taken out, since that is what the
-      # constructor takes
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      width  = self._asNumber(max(xPoints) - min(xPoints))
-      height = self._asNumber(max(yPoints) - min(yPoints))
+      width, height = self.getSize()
       return (f'Icon(filename = "{self._filename}", width = {width}, height = {height}, '
               f'backgroundColor = {self.getBackgroundColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
