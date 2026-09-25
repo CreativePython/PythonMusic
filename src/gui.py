@@ -2683,6 +2683,34 @@ class Drawable(Interactable):
       currentRotation = self.getRotation()
       self.setRotation(currentRotation + angle)
 
+   def _rotatePoint(self, x, y):
+      """"""
+      # a point in this object's box before rotation, turned about its center onto the
+      # display, where the object actually appears
+      centerX, centerY = self._sceneCenter()
+      radians = np.radians(-_matrixRotation(self._getSceneMatrix()))   # negated for our CCW, y-down angles
+      cosine  = np.cos(radians)
+      sine    = np.sin(radians)
+      offsetX = x - centerX
+      offsetY = y - centerY
+      rotatedX = float(centerX + (cosine * offsetX - sine * offsetY))
+      rotatedY = float(centerY + (sine * offsetX + cosine * offsetY))
+      return rotatedX, rotatedY
+
+   def _unrotatePoint(self, x, y):
+      """"""
+      # the reverse of _rotatePoint: a display point, turned back about this object's
+      # center so it lines up with getPosition() and getSize()
+      centerX, centerY = self._sceneCenter()
+      radians = np.radians(_matrixRotation(self._getSceneMatrix()))
+      cosine  = np.cos(radians)
+      sine    = np.sin(radians)
+      offsetX = x - centerX
+      offsetY = y - centerY
+      unrotatedX = float(centerX + (cosine * offsetX - sine * offsetY))
+      unrotatedY = float(centerY + (sine * offsetX + cosine * offsetY))
+      return unrotatedX, unrotatedY
+
    # ── Hit Testing ────────────────────────────────────────────────────────────
 
    def _sceneHitOutline(self):
@@ -4167,6 +4195,32 @@ class Group(Drawable):
       self._markParentExtentDirty()
       self._pushTransform()
 
+   def setCenter(self, x, y):
+      """Move the group so its center sits at the given point.
+
+      Args:
+          x (int or float): The new horizontal position of the center, in pixels.
+          y (int or float): The new vertical position of the center, in pixels.
+      """
+      # re-center the group on its items first, so it moves from its true center
+      self._calculateSize()
+      Drawable.setCenter(self, x, y)
+
+   def setRotation(self, rotation, anchorX=None, anchorY=None):
+      """Turn the group to a given angle.
+
+      By default the group turns about its own center. Give an anchor point to turn it
+      about that point instead.
+
+      Args:
+          rotation (int or float): The angle to turn to, in degrees, counter-clockwise.
+          anchorX (int or float, optional): The horizontal position of the point to turn about, in pixels. Defaults to the group's center.
+          anchorY (int or float, optional): The vertical position of the point to turn about, in pixels. Defaults to the group's center.
+      """
+      # re-center the group on its items first, so it turns about its true center
+      self._calculateSize()
+      Drawable.setRotation(self, rotation, anchorX, anchorY)
+
    # ──────────────────────────────────────────────────────────────────────────────
    # TECHNICAL NOTE - keeping a Group centered on its children
    #
@@ -4647,6 +4701,7 @@ class HFader(MusicControl):
    def _defaultAction(self, ex, ey):
       """"""
       # update fader value based on mouse position on the fader
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       fx = self._backgroundShape.getX()  # visual fader position
       x  = ex - fx                       # local event position
 
@@ -4669,10 +4724,10 @@ class HFader(MusicControl):
       fy      = y + padding               # ...
       fWidth  = fWidth * valueRatio       # scale to value
 
-      # size first, then position: in the new model resizing pins the center, so we
-      # set the size and then move the top-left to where the bar should start
+      # find the bar's center in the unrotated fader, then turn it to match the fader
+      centerX, centerY = self._backgroundShape._rotatePoint(fx + fWidth / 2, fy + fHeight / 2)
       self._foregroundShape.setSize(fWidth, fHeight)
-      self._foregroundShape.setPosition(fx, fy)
+      self._foregroundShape.setCenter(centerX, centerY)
 
    def setValue(self, newValue):
       """Set the fader's value.
@@ -4730,6 +4785,7 @@ class VFader(HFader):
    def _defaultAction(self, ex, ey):
       """"""
       # update fader value based on mouse position on the fader
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       fy = self._backgroundShape.getY()  # visual fader position
       y  = ey - fy                       # local event position
 
@@ -4756,10 +4812,10 @@ class VFader(HFader):
       fy      = fy + (fHeight * (1 - valueRatio))
       fHeight = fHeight * valueRatio
 
-      # size first, then position: in the new model resizing pins the center, so we
-      # set the size and then move the top-left to where the bar should start
+      # find the bar's center in the unrotated fader, then turn it to match the fader
+      centerX, centerY = self._backgroundShape._rotatePoint(fx + fWidth / 2, fy + fHeight / 2)
       self._foregroundShape.setSize(fWidth, fHeight)
-      self._foregroundShape.setPosition(fx, fy)
+      self._foregroundShape.setCenter(centerX, centerY)
 
    def setValue(self, newValue):
       """Set the fader's value.
@@ -4875,6 +4931,7 @@ class Rotary(MusicControl):
    def _defaultAction(self, ex, ey):
       """"""
       # update rotary value based on mouse position
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       rx, ry = self._backgroundShape.getPosition()  # visual rotary position
       x = ex - rx                                   # local event position
       y = ey - ry                                   # ...
@@ -5188,6 +5245,7 @@ class XYPad(MusicControl):
 
    def _defaultAction(self, ex, ey):
       """"""
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       mx, my = self._backgroundShape.getPosition()  # visual XYPad position
       x = ex - mx                                   # local event position
       y = ey - my                                   # ...
@@ -5197,12 +5255,17 @@ class XYPad(MusicControl):
       """"""
       vx, vy = self._value                          # local value position
       mx, my = self._backgroundShape.getPosition()  # visual XYPad position
+      cx, cy = self._backgroundShape.getCenter()    # visual XYPad center
       x = mx + vx                                   # visual value position
       y = my + vy                                   # ...
 
-      self._trackerXLine.setX(x)
-      self._trackerYLine.setY(y)
-      self._foregroundShape.setCenter(x, y)
+      # find each center in the unrotated pad, then turn it to match the pad
+      xLineX, xLineY     = self._backgroundShape._rotatePoint(x, cy)
+      yLineX, yLineY     = self._backgroundShape._rotatePoint(cx, y)
+      trackerX, trackerY = self._backgroundShape._rotatePoint(x, y)
+      self._trackerXLine.setCenter(xLineX, xLineY)
+      self._trackerYLine.setCenter(yLineX, yLineY)
+      self._foregroundShape.setCenter(trackerX, trackerY)
 
    def getValue(self):
       """Return the bubble's position within the pad.
