@@ -2319,6 +2319,26 @@ class Drawable(Interactable):
       centerY = self._asNumber(top + height / 2.0)
       return centerX, centerY
 
+   def getBoundingCenterX(self):
+      """Return the horizontal center of the object's bounding box.
+
+      Returns:
+          x (int or float): The horizontal center of the bounding box, in pixels.
+      """
+      # updates to getBoundingCenter() automatically update how this method works
+      x, _ = self.getBoundingCenter()
+      return x
+
+   def getBoundingCenterY(self):
+      """Return the vertical center of the object's bounding box.
+
+      Returns:
+          y (int or float): The vertical center of the bounding box, in pixels.
+      """
+      # updates to getBoundingCenter() automatically update how this method works
+      _, y = self.getBoundingCenter()
+      return y
+
    def getGroup(self):
       """Return the Group this object belongs to.
 
