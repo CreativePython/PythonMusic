@@ -104,11 +104,16 @@ _CONTROL_PADDING_TOP    = 2    # px, between a button's text and its top/bottom 
 _FIELD_PADDING_TOP      = 1    # px, the same for a text field or text area
 _FIELD_PADDING_SIDE     = 4    # px, between a field's text and its left/right edges
 _TEXT_AREA_DOC_MARGIN   = 2    # px, the text area's own margin inside its border
+_LINE_EDIT_TEXT_MARGIN  = 2    # px, the space a text field keeps on each side of its text
 _COMBO_PADDING_SIDE     = 12   # px, between a drop-down list's text and its left/right edges
 _DROP_DOWN_WIDTH        = 20   # px, the arrow area at the right of a drop-down list
 _ARROW_WIDTH            = 9    # px, across the triangle drawn in that area
 _ARROW_HEIGHT           = 5    # px, from the triangle's flat top to its point
-_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
+_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list or text area
+_CHECK_BOX_SIZE         = 14   # px, across the box a checkbox draws beside its text
+_CHECK_BOX_RADIUS       = 3    # px, how far that box's corners are rounded
+_CHECK_BOX_SPACING      = 5    # px, between that box and the checkbox's text
+_CHECK_MARK_THICKNESS   = 1.8  # px, the line width of the check mark
 
 # A list draws each row's text a few pixels in from the row's edge on its own (one past
 # the style's focus-frame margin), so the padding below makes up the rest of the distance
@@ -116,9 +121,10 @@ _LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
 _LIST_ITEM_TEXT_MARGIN = 5
 _LIST_TEXT_INDENT      = _COMBO_PADDING_SIDE + _CONTROL_BORDER_WIDTH - _LIST_ITEM_TEXT_MARGIN
 
-# macOS's own highlight blue, used for a drop-down list's arrow area and for the
-# highlighted row in its list.  Qt would otherwise use the palette's highlight, which is
-# blue while the Display is the active window and grey while it is not.
+# macOS's own highlight blue, used for a drop-down list's arrow area and highlighted
+# row, a checked checkbox, and selected text in a text field or text area.  Qt would
+# otherwise use the palette's highlight, which differs from system to system, and on
+# macOS is blue while the Display is the active window and grey while it is not.
 _HIGHLIGHT_COLOR      = (0, 122, 255, 255)
 _HIGHLIGHT_TEXT_COLOR = (255, 255, 255, 255)
 
@@ -126,7 +132,41 @@ def _asRgba(color):
    """Formats an (r, g, b, a) color as the rgba(...) text a stylesheet expects."""
    r, g, b, a = color
    return f'rgba({r}, {g}, {b}, {a})'
+
+def _toQFont(font):
+   """
+   Builds a QFont from gui.py's [name, [weight, italic], size].  gui.py's font sizes are
+   pixels, not points: a point's size in pixels depends on the system (macOS draws 72 to
+   the inch, Windows 96), so sizing in pixels makes text the same size everywhere.  A
+   size of zero or less means the default size, the one every label and control starts
+   with.
+   """
+   name, style, size = font
+   weight, italic    = style
+   qFont = QtGui.QFont(name)
+   if size > 0:
+      qFont.setPixelSize(max(1, round(size)))
+   else:
+      qFont.setPixelSize(_DEFAULT_FONT_SIZE)
+   qFont.setWeight(QtGui.QFont.Weight(weight))
+   qFont.setItalic(italic)
+   return qFont
+
+def _fromQFont(qFont):
+   """Describes a QFont as gui.py's [name, [weight, italic], size], with its size in pixels."""
+   size = QtGui.QFontInfo(qFont).pixelSize()
+   return [qFont.family(), [int(qFont.weight()), qFont.italic()], size]
+
+def _defaultQFont():
+   """The font every label and control starts with."""
+   return _toQFont([_DEFAULT_FONT_FAMILY, [int(QtGui.QFont.Weight.Normal), False], _DEFAULT_FONT_SIZE])
 _PROXY_MAXIMUM_SIZE     = 16777215   # Qt's QWIDGETSIZE_MAX, i.e. no limit
+
+# The font every label and control starts with, on every system.  macOS and Windows
+# both include Arial, and Linux usually maps it to Liberation Sans, which has the same
+# letter widths.
+_DEFAULT_FONT_FAMILY = 'Arial'
+_DEFAULT_FONT_SIZE   = 13   # pixels
 
 # how much wider and taller a field is than the text it holds
 _FIELD_EXTRA_WIDTH  = 2 * (_FIELD_PADDING_SIDE + _CONTROL_BORDER_WIDTH)
@@ -148,36 +188,58 @@ QComboBox::drop-down {{
    border: none;
    background: transparent;
 }}
+QComboBox QAbstractItemView {{
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+}}
 QComboBox QAbstractItemView::item {{
    padding-left: {_LIST_TEXT_INDENT}px;
 }}
-QComboBox QAbstractItemView QScrollBar:vertical {{
+QComboBox QAbstractItemView QScrollBar:vertical,
+QTextEdit QScrollBar:vertical {{
    width: {_LIST_SCROLLBAR_WIDTH}px;
    margin: 0px;
-   background: transparent;
+   background: rgba(225, 225, 225, 255);
 }}
-QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+QComboBox QAbstractItemView QScrollBar::handle:vertical,
+QTextEdit QScrollBar::handle:vertical {{
    min-height: 20px;
    border-radius: {_LIST_SCROLLBAR_WIDTH // 2}px;
    background: rgba(150, 150, 150, 255);
 }}
 QComboBox QAbstractItemView QScrollBar::add-line:vertical,
-QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
+QComboBox QAbstractItemView QScrollBar::sub-line:vertical,
+QTextEdit QScrollBar::add-line:vertical,
+QTextEdit QScrollBar::sub-line:vertical {{
    height: 0px;
 }}
 QComboBox QAbstractItemView QScrollBar::add-page:vertical,
-QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+QComboBox QAbstractItemView QScrollBar::sub-page:vertical,
+QTextEdit QScrollBar::add-page:vertical,
+QTextEdit QScrollBar::sub-page:vertical {{
+   background: transparent;
+}}
+QCheckBox {{
+   spacing: {_CHECK_BOX_SPACING}px;
+}}
+QCheckBox::indicator {{
+   width: {_CHECK_BOX_SIZE}px;
+   height: {_CHECK_BOX_SIZE}px;
+   border: none;
    background: transparent;
 }}
 QLineEdit {{
    padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
    border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
    border-radius: {_CONTROL_CORNER_RADIUS}px;
+   selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};
+   selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)};
 }}
 QTextEdit {{
    padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
    border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
    border-radius: {_CONTROL_CORNER_RADIUS}px;
+   selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};
+   selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)};
 }}
 """
 
@@ -220,6 +282,9 @@ class GuiRenderer:
 
       # QApplication must be created first; it owns the Qt event loop.
       self.qApplication = QtWidgets.QApplication([])
+
+      # the same default font on every system, rather than each system's own UI font
+      self.qApplication.setFont(_defaultQFont())
 
       # padding, border, and corner rounding for every control.  Each control mirror
       # sets its own colors on top of this; the two stylesheets combine.
@@ -828,10 +893,64 @@ class _QPolygonItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPolygonItem):
    pass
 
 class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
+   def __init__(self):
+      QtWidgets.QGraphicsItemGroup.__init__(self)
+      # a group draws nothing itself (its children draw themselves), so Qt can skip
+      # painting it; its area still receives mouse events
+      self.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemHasNoContents, True)
+
    def boundingRect(self):
       # measure the children as they are now; QGraphicsItemGroup only measures them
       # when they are added, so its area goes stale once they move or resize
       return self.childrenBoundingRect()
+
+
+class _RoundedCornersEffect(QtWidgets.QGraphicsEffect):
+   """
+   Graphics effect that rounds all four corners of an item and outlines it in the
+   controls' gray.
+
+   Clipping an item to a rounded shape leaves stair-stepped edges wherever its content
+   fills a corner (a highlighted row, a scrollbar), because Qt does not smooth a clip.
+   Instead, this paints the item into an image, trims the image's corners with a
+   smoothed (antialiased) mask, and draws the outline over the result.
+   """
+
+   def draw(self, painter):
+      offset = QtCore.QPoint()   # filled in with where the image's top-left goes
+      pixmap = self.sourcePixmap(QtCore.Qt.CoordinateSystem.LogicalCoordinates, offset,
+                                 QtWidgets.QGraphicsEffect.PixmapPadMode.NoPad)
+      itemArea = QtCore.QRectF(self.sourceBoundingRect())
+
+      # erase the image's corners: the area between its square edge and the rounded shape
+      # (filling a square and a rounded rectangle with the odd-even rule covers only the
+      # area where they differ)
+      image      = pixmap.toImage().convertToFormat(QtGui.QImage.Format.Format_ARGB32_Premultiplied)
+      imageArea  = itemArea.translated(-offset.x(), -offset.y())
+      cornerArea = QtGui.QPainterPath()
+      cornerArea.setFillRule(QtCore.Qt.FillRule.OddEvenFill)
+      cornerArea.addRect(imageArea)
+      cornerArea.addRoundedRect(imageArea, _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      imagePainter = QtGui.QPainter(image)
+      imagePainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+      imagePainter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_DestinationOut)
+      imagePainter.fillPath(cornerArea, QtGui.QColor(0, 0, 0, 255))
+      imagePainter.end()
+
+      painter.save()
+      painter.drawImage(offset, image)
+
+      # the outline's pen straddles its path, so tracing half a border width inside the
+      # item's edge keeps the whole line on the item
+      halfBorder = _CONTROL_BORDER_WIDTH / 2.0
+      outline    = QtGui.QPainterPath()
+      outline.addRoundedRect(itemArea.adjusted(halfBorder, halfBorder, -halfBorder, -halfBorder),
+                             _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+      painter.setPen(QtGui.QPen(QtGui.QColor(150, 150, 150, 255), _CONTROL_BORDER_WIDTH))   # the control outline's gray
+      painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+      painter.drawPath(outline)
+      painter.restore()
 
 
 class _QComboBox(QtWidgets.QComboBox):
@@ -844,10 +963,11 @@ class _QComboBox(QtWidgets.QComboBox):
    combo's on-screen placement) and put it back under the combo once it hides.
 
    Qt also places the popup slightly left of the combo and narrower than it, so we line
-   it up under the combo ourselves.
+   it up under the combo ourselves, and round its corners to match the combo's.
    """
 
-   _POPUP_Z_VALUE = 1e9   # above any z-value a Display or Group assigns
+   _POPUP_Z_VALUE     = 1e9   # above any z-value a Display or Group assigns
+   _FEWEST_ROWS_BELOW = 2     # a list with room for only this many rows below may open above
 
    def __init__(self):
       QtWidgets.QComboBox.__init__(self)
@@ -901,6 +1021,14 @@ class _QComboBox(QtWidgets.QComboBox):
       # show fades in and out with the mouse; ask for one that stays while it is needed
       self.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+      # let Qt size the popup from scratch each time it opens; a height limit left over
+      # from the last time would otherwise stick
+      self.view().window().setMaximumHeight(_PROXY_MAXIMUM_SIZE)
+
+      # show the items in the box's font; the list otherwise keeps its own, which is
+      # smaller on some systems (macOS)
+      self.view().setFont(self.font())
+
       QtWidgets.QComboBox.showPopup(self)
       comboProxy = self.graphicsProxyWidget()
       children   = comboProxy.childItems() if comboProxy is not None else []
@@ -912,6 +1040,9 @@ class _QComboBox(QtWidgets.QComboBox):
             self.view().window().installEventFilter(self)
             self._watchingPopup = True
 
+         if popupItem.graphicsEffect() is None:
+            popupItem.setGraphicsEffect(_RoundedCornersEffect())
+
          # match the combo's width, then read back where Qt put the popup: a popup that
          # would run off the bottom of the screen is placed above the combo instead, and
          # we keep whichever side that is
@@ -920,7 +1051,10 @@ class _QComboBox(QtWidgets.QComboBox):
          if popupSitsAbove:
             popupTop = -popupItem.boundingRect().height()
          else:
-            popupTop = self.height()
+            # keep the list inside the Display, opening it above the combo if there is
+            # too little room below.  Resizing the popup moves its item, so this happens
+            # before the item's position is read below.
+            popupTop = self._fitPopupInsideDisplay(comboProxy)
 
          # line the popup up under (or over) the combo, and carry the combo's own
          # placement, since the popup no longer hangs off it
@@ -930,6 +1064,48 @@ class _QComboBox(QtWidgets.QComboBox):
          popupItem.setTransform(popupOffset.inverted()[0] * placement)
          popupItem.setZValue(self._POPUP_Z_VALUE)
          self._liftedPopup = popupItem
+
+   def _fitPopupInsideDisplay(self, comboProxy):
+      """
+      Sizes the popup to fit inside the Display, and returns where its top goes,
+      measured down from the combo's top.
+
+      A list that would run past the bottom of the Display stops at that edge, and its
+      scrollbar reaches the items that no longer fit.  If that leaves room for only a
+      few rows, and there is more room above the combo, the list opens above it instead
+      and stops at the Display's top edge.
+      """
+      popupWindow = self.view().window()
+      popupTop    = self.height()   # just under the combo
+      views       = comboProxy.scene().views()
+      if views:
+         view = views[0]
+
+         # the part of the scene the Display shows right now (which follows a scrolled
+         # Display), in the combo's own coordinates, where the popup is laid out
+         visibleArea = view.mapToScene(view.viewport().rect()).boundingRect()
+         visibleArea = comboProxy.sceneTransform().inverted()[0].mapRect(visibleArea)
+         roomBelow   = int(visibleArea.bottom() - self.height())
+         roomAbove   = int(-visibleArea.top())
+
+         listFitsBelow    = popupWindow.height() <= roomBelow
+         rowsFittingBelow = roomBelow // max(self.view().sizeHintForRow(0), 1)
+         opensAbove       = (not listFitsBelow and rowsFittingBelow <= self._FEWEST_ROWS_BELOW
+                             and roomAbove > roomBelow)
+         if opensAbove:
+            room = roomAbove
+         else:
+            room = roomBelow
+
+         # keep at least one row showing, even when the combo sits at the very edge
+         room = max(room, self.height())
+         if popupWindow.height() > room:
+            popupWindow.setMaximumHeight(room)
+            self.view().scrollTo(self.view().currentIndex())   # keep the selected item in sight
+
+         if opensAbove:
+            popupTop = -popupWindow.height()
+      return popupTop
 
    def eventFilter(self, watched, event):
       if event.type() == QtCore.QEvent.Type.Hide and self._liftedPopup is not None:
@@ -944,6 +1120,66 @@ class _QComboBox(QtWidgets.QComboBox):
          # ignoring the next click; closing it here resets that
          QtWidgets.QComboBox.hidePopup(self)
       return False
+
+
+class _QCheckBox(QtWidgets.QCheckBox):
+   """
+   QCheckBox that draws its own box and check mark.
+
+   Inside a QGraphicsProxyWidget, macOS's native checkbox never draws its check mark (it
+   only flashes while unchecking), even though the checked state itself is right.  The
+   control stylesheet empties the native box, keeping its size, and we paint one here:
+   white with a gray outline when unchecked, and highlight blue with a white check mark
+   when checked, matching the drop-down list's arrow.  It looks the same on every system.
+   """
+
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paintEvent(self, event):
+      """Draws the checkbox (its background and text), then its box on top."""
+      QtWidgets.QCheckBox.paintEvent(self, event)
+
+      option = QtWidgets.QStyleOptionButton()
+      self.initStyleOption(option)
+      boxArea = QtCore.QRectF(self.style().subElementRect(
+         QtWidgets.QStyle.SubElement.SE_CheckBoxIndicator, option, self))
+
+      painter = QtGui.QPainter(self)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+
+      # the outline's pen straddles its path, so trace half a border width inside the
+      # box's edge to keep the whole line inside it
+      halfBorder = _CONTROL_BORDER_WIDTH / 2.0
+      boxShape   = boxArea.adjusted(halfBorder, halfBorder, -halfBorder, -halfBorder)
+
+      if self.isChecked():
+         fillColor = QtGui.QColor(*_HIGHLIGHT_COLOR)
+         painter.setPen(QtCore.Qt.PenStyle.NoPen)
+      else:
+         fillColor = QtGui.QColor(255, 255, 255, 255)
+         painter.setPen(QtGui.QPen(QtGui.QColor(150, 150, 150, 255), _CONTROL_BORDER_WIDTH))   # the control outline's gray
+      if self.isDown():
+         fillColor = fillColor.darker(115)   # a little darker while the mouse is pressed on it
+      painter.setBrush(fillColor)
+      painter.drawRoundedRect(boxShape, _CHECK_BOX_RADIUS, _CHECK_BOX_RADIUS)
+
+      if self.isChecked():
+         # a check mark: down to the lower left third, then up to the upper right
+         left   = boxArea.left()
+         top    = boxArea.top()
+         width  = boxArea.width()
+         height = boxArea.height()
+         checkMark = QtGui.QPolygonF([
+            QtCore.QPointF(left + width * 0.25, top + height * 0.52),
+            QtCore.QPointF(left + width * 0.43, top + height * 0.70),
+            QtCore.QPointF(left + width * 0.76, top + height * 0.32),
+         ])
+         checkPen = QtGui.QPen(QtGui.QColor(*_HIGHLIGHT_TEXT_COLOR), _CHECK_MARK_THICKNESS)
+         checkPen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+         checkPen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+         painter.setPen(checkPen)
+         painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+         painter.drawPolyline(checkMark)
 
 
 class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
@@ -1224,6 +1460,7 @@ class DisplayMirror:
       self.toolTipQLabel   = None   # shared QLabel for tooltips
       self._overlayOffset  = 14     # px offset from cursor tip to overlay label
       self._toolTipTimer   = None   # QTimer for off-display coordinate polling
+      self._antialias      = args.get('antialias', True)   # smooth edges of shapes and text?
 
       title  = args.get('title',  '')
       width  = args.get('width',  600)
@@ -1271,9 +1508,12 @@ class DisplayMirror:
       self._view.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop)
       self._view.setHorizontalScrollBarPolicy(scrollOff)
       self._view.setVerticalScrollBarPolicy(scrollOff)
-      self._view.setRenderHint(antiAlias,     True)
-      self._view.setRenderHint(smoothPixmap,  True)
-      self._view.setRenderHint(textAntiAlias, True)
+      self._view.setRenderHint(antiAlias,     self._antialias)
+      self._view.setRenderHint(smoothPixmap,  self._antialias)
+      self._view.setRenderHint(textAntiAlias, self._antialias)
+      # without antialiasing, nothing draws past its bounding box, so repaints can skip
+      # the extra margin Qt adds around each changed area
+      self._view.setOptimizationFlag(QtWidgets.QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, not self._antialias)
 
       # Integer GUI coordinates name pixels, but in Qt scene space an integer N is the
       # boundary between pixels N-1 and N, not the center of a pixel.  Shift the view by
@@ -1712,6 +1952,9 @@ class DisplayMirror:
                   self._closeDrawPainter(painter)
                painter           = self._openDrawPainter(visibility)
                currentVisibility = visibility
+               # antialiasing can't change a pixel-aligned fill, only slow it down; the
+               # painter's own setting comes back when this state is closed
+               painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
             r, g, b, a = row[colorIndex]
             painter.fillRect(int(row[xIndex]), int(row[yIndex]), 1, 1, QtGui.QColor(r, g, b, a))
          if painter is not None:
@@ -1744,7 +1987,7 @@ class DisplayMirror:
 
    def _openDrawPainter(self, visibility=100):
       """
-      Returns the draw layer's shared antialiased QPainter, opening it on the first draw
+      Returns the draw layer's shared QPainter, opening it on the first draw
       of the tick and marking this display dirty for the end-of-tick flush.  Saves the
       painter's state so the shape's pen, brush, font, and transform are undone by
       _closeDrawPainter().  Opacity is set from visibility (0 = invisible, 100 = fully
@@ -1752,8 +1995,8 @@ class DisplayMirror:
       """
       if self._drawPainter is None:
          self._drawPainter = QtGui.QPainter(self._drawPixmap)
-         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing,          self._antialias)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, self._antialias)
          self.guiRenderer._dirtyDisplays.add(self)
       painter = self._drawPainter
       painter.save()
@@ -2120,12 +2363,7 @@ class DisplayMirror:
       painter.setPen(QtGui.QColor(r, g, b, a))
 
       if font is not None:
-         name, style, size = font
-         weight, italic    = style
-         qFont = QtGui.QFont(name, size)
-         qFont.setWeight(QtGui.QFont.Weight(weight))
-         qFont.setItalic(italic)
-         painter.setFont(qFont)
+         painter.setFont(_toQFont(font))
 
       # QRectF positions top-left at (x, y), matching Label's setPos behavior
       painter.drawText(
@@ -2924,8 +3162,10 @@ class IconMirror(_GraphicsMirror):
       self._sx       = args.get('sx',       1.0)
       self._sy       = args.get('sy',       1.0)
 
-      # the image itself; its pixels keep their own colors
+      # the image itself; its pixels keep their own colors and stay crisp when turned or
+      # scaled, whatever the Display's antialias setting
       self._qPixmapObject = QtWidgets.QGraphicsPixmapItem()
+      self._qPixmapObject.setTransformationMode(QtCore.Qt.TransformationMode.FastTransformation)
 
       # a rectangle glued behind the image that color/fill/thickness style, just like
       # any other shape (a QGraphicsPixmapItem has no pen or brush of its own)
@@ -3185,78 +3425,82 @@ class IconMirror(_GraphicsMirror):
 
 class LabelMirror(_GraphicsMirror):
    """
-   Mirror of gui.py's Label.  Backed by a QGraphicsItemGroup containing
-   a QGraphicsTextItem (foreground text) and a QGraphicsRectItem (background).
+   Mirror of gui.py's Label.  Backed by a QGraphicsItemGroup holding a QGraphicsRectItem
+   (the background box), with a QGraphicsTextItem (the text) inside it.
 
-   Overrides _applyColor (text color), _applyThickness (background pen), and
-   _setFill (background visibility) because Label's Qt structure differs from
-   simple shape items.
+   The label's size is its box.  By default the box fits the text, but a program can set
+   another size (setSize, or setText / setFont with resize=False); the text then lines up
+   inside the box by the label's alignment, centered top to bottom, and anything outside
+   the box is cut off.
+
+   The label's color is its background, like a control's; its text has a separate text
+   color.  Overrides _applyColor (background brush), _applyThickness (background pen),
+   and _setFill (background visibility) because Label's Qt structure differs from simple
+   shape items.
 
    Constructor args expected in the 'args' dict:
-     text             — string
-     alignment        — int (Qt.AlignmentFlag value: 1=Left, 132=Center, 2=Right)
-     textColor        — [r, g, b, a]
-     backgroundColor  — [r, g, b, a]
-     font             — None or [name, [weight, italic], size]
-     visibility       - percentage (0-100, 0 = transparent)
+     text       — string
+     alignment  — int (Qt.AlignmentFlag value: 1=Left, 132=Center, 2=Right)
+     color      — [r, g, b, a], the background
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
+     visibility - percentage (0-100, 0 = transparent)
    """
 
    def __init__(self, objectId, args, guiRenderer):
       super().__init__(objectId, args, guiRenderer)
 
-      text            = str(args.get('text', ''))
-      alignment       = args.get('alignment', 1)   # 1 = AlignLeft
-      textColor       = args.get('textColor', [0, 0, 0, 255])
-      backgroundColor = args.get('backgroundColor', [0, 0, 0, 0])
-      font            = args.get('font')
+      text      = str(args.get('text', ''))
+      alignment = args.get('alignment', 1)   # 1 = AlignLeft
+      font      = args.get('font')
 
-      self._color           = textColor
-      self._backgroundColor = backgroundColor
-      self._cx       = args.get('cx',       0.0)
-      self._cy       = args.get('cy',       0.0)
-      self._rotation = args.get('rotation', 0)
-      self._sx       = args.get('sx',       1.0)
-      self._sy       = args.get('sy',       1.0)
+      self._color     = args.get('color',     [0, 0, 0, 0])
+      self._textColor = args.get('textColor', [0, 0, 0, 255])
+      self._alignment = alignment
+      self._cx        = args.get('cx',       0.0)
+      self._cy        = args.get('cy',       0.0)
+      self._rotation  = args.get('rotation', 0)
+      self._sx        = args.get('sx',       1.0)
+      self._sy        = args.get('sy',       1.0)
 
-      # foreground text
-      self._qTextObject = QtWidgets.QGraphicsTextItem(text)
-      r, g, b, a = textColor
-      self._qTextObject.setDefaultTextColor(QtGui.QColor(r, g, b, a))
-
-      # background rectangle behind the text
+      # background box; it clips the text, so text too big for a set size is cut off
       self._qBackgroundObject = QtWidgets.QGraphicsRectItem()
-      r, g, b, a = backgroundColor
-      self._qBackgroundObject.setBrush(QtGui.QColor(r, g, b, a))
       self._qBackgroundObject.setPen(QtCore.Qt.PenStyle.NoPen)
+      self._qBackgroundObject.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemClipsChildrenToShape, True)
 
-      # the label is a group holding the background and the text together
+      # foreground text, inside the box
+      self._qTextObject = QtWidgets.QGraphicsTextItem(text, self._qBackgroundObject)
+
+      # the label is a group holding the box (and the text inside it)
       self.qObject = _QGroupItem()
       self.qObject.setHandlesChildEvents(False)
       self.qObject.addToGroup(self._qBackgroundObject)
-      self.qObject.addToGroup(self._qTextObject)
 
+      self._applyColor()
+      self._applyTextColor()
       self._setAlignmentValue(alignment)
       if font is not None:
-         self._applyFont(font)
+         self._qTextObject.setFont(_toQFont(font))
 
-      self._layoutCentered()   # size from the text bounds and center the content
+      self._fitBoxToText()
       self._applyTransform()   # place, rotate, and scale about the center
 
       # add Label-specific command handlers
       self._commandHandlers.update({
-         'getSize':            self._getSize,
-         'setText':            self._setText,
-         'setBackgroundColor': self._setBackgroundColor,
-         'setAlignment':       self._setAlignment,
-         'setFont':            self._setFont,
+         'getSize':      self._getSize,
+         'setText':      self._setText,
+         'setTextColor': self._setTextColor,
+         'setAlignment': self._setAlignment,
+         'getFont':      self._getFont,
+         'setFont':      self._setFont,
       })
 
    # ── Overrides ──────────────────────────────────────────────────────────────
 
    def _applyColor(self):
-      """Sets the text color (not pen/brush — Labels use setDefaultTextColor)."""
+      """Sets the background color (the label's color is its background)."""
       r, g, b, a = self._color
-      self._qTextObject.setDefaultTextColor(QtGui.QColor(r, g, b, a))
+      self._qBackgroundObject.setBrush(QtGui.QColor(r, g, b, a))
 
    def _applyThickness(self):
       """Sets the background rectangle's pen width."""
@@ -3268,7 +3512,7 @@ class LabelMirror(_GraphicsMirror):
       """Controls background visibility.  When unfilled, background is transparent."""
       self._fill = bool(args.get('fill', False))
       if self._fill:
-         r, g, b, a = self._backgroundColor
+         r, g, b, a = self._color
          qColor = QtGui.QColor(r, g, b, a)
       else:
          qColor = QtGui.QColor(0, 0, 0, 0)
@@ -3283,36 +3527,60 @@ class LabelMirror(_GraphicsMirror):
       """
       self.guiRenderer.sendResponse(responseId, [self._width, self._height])
 
+   def _fitBoxToText(self):
+      """Sizes the box to fit the text, then lays the label out."""
+      bounds = self._qTextObject.boundingRect()
+      self._width  = int(bounds.width())
+      self._height = int(bounds.height())
+      self.qObject.prepareGeometryChange()
+      self._applyExtent()
+
+   def _applyExtent(self):
+      """
+      Centers the box on the origin, so the label's transform turns and scales it about
+      its center, and places the text inside the box: across by the alignment, and
+      centered top to bottom.
+      """
+      width      = self._width
+      height     = self._height
+      textBounds = self._qTextObject.boundingRect()
+      self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
+
+      qtFlag = QtCore.Qt.AlignmentFlag(self._alignment)
+      if qtFlag & QtCore.Qt.AlignmentFlag.AlignHCenter:
+         textLeft = -textBounds.width() / 2.0
+      elif qtFlag & QtCore.Qt.AlignmentFlag.AlignRight:
+         textLeft = width / 2.0 - textBounds.width()
+      else:
+         textLeft = -width / 2.0
+      textTop = -textBounds.height() / 2.0
+      self._qTextObject.setPos(textLeft, textTop)
+
    # ── Text ───────────────────────────────────────────────────────────────────
 
    def _setText(self, args, responseId):
-      """Sets the label's text and re-centers it to its new bounds."""
+      """Sets the label's text, then fits the box to it or keeps the box's size."""
       text = str(args.get('text', ''))
       self._qTextObject.setPlainText(text)
-      self.qObject.prepareGeometryChange()
-      self._layoutCentered()
+      self._afterTextChange(args.get('resize', True))
 
-   def _layoutCentered(self):
-      """
-      Takes the size from the text bounds and centers both the text and its background
-      rectangle on the origin, so the label's transform turns and scales it about its
-      center.
-      """
-      bounds = self._qTextObject.boundingRect()
-      width  = bounds.width()
-      height = bounds.height()
-      self._width  = int(width)
-      self._height = int(height)
-      self._qTextObject.setPos(-width / 2.0, -height / 2.0)
-      self._qBackgroundObject.setRect(-width / 2.0, -height / 2.0, width, height)
+   def _afterTextChange(self, resize):
+      """Fits the box to the changed text, or keeps its size and re-places the text."""
+      if resize:
+         self._fitBoxToText()
+      else:
+         self.qObject.prepareGeometryChange()
+         self._applyExtent()
 
-   # ── Background color ──────────────────────────────────────────────────────
+   # ── Text color ─────────────────────────────────────────────────────────────
 
-   def _setBackgroundColor(self, args, responseId):
-      """Sets the background rectangle's fill color."""
-      self._backgroundColor = args.get('color', [0, 0, 0, 0])
-      r, g, b, a = self._backgroundColor
-      self._qBackgroundObject.setBrush(QtGui.QColor(r, g, b, a))
+   def _setTextColor(self, args, responseId):
+      self._textColor = args.get('color', [0, 0, 0, 255])
+      self._applyTextColor()
+
+   def _applyTextColor(self):
+      r, g, b, a = self._textColor
+      self._qTextObject.setDefaultTextColor(QtGui.QColor(r, g, b, a))
 
    # ── Alignment ──────────────────────────────────────────────────────────────
 
@@ -3320,9 +3588,11 @@ class LabelMirror(_GraphicsMirror):
       """Sets text alignment from an integer Qt.AlignmentFlag value."""
       alignment = args.get('alignment', 1)
       self._setAlignmentValue(alignment)
+      self._applyExtent()
 
    def _setAlignmentValue(self, alignment):
-      """Applies alignment to the text item's document."""
+      """Applies alignment to the text item's document, and keeps it for placing the text."""
+      self._alignment = alignment
       qtFlag      = QtCore.Qt.AlignmentFlag(alignment)
       document    = self._qTextObject.document()
       textOption  = document.defaultTextOption()
@@ -3331,22 +3601,13 @@ class LabelMirror(_GraphicsMirror):
 
    # ── Font ───────────────────────────────────────────────────────────────────
 
-   def _setFont(self, args, responseId):
-      """Sets the text font from [name, [weight, italic], size], then re-centers."""
-      font = args.get('font')
-      if font is not None:
-         self._applyFont(font)
-         self.qObject.prepareGeometryChange()
-         self._layoutCentered()
+   def _getFont(self, args, responseId):
+      self.guiRenderer.sendResponse(responseId, [_fromQFont(self._qTextObject.font())])
 
-   def _applyFont(self, font):
-      """Constructs a QFont and applies it to the text item."""
-      name, style, size = font
-      weight, italic    = style
-      qFont = QtGui.QFont(name, size)
-      qFont.setWeight(QtGui.QFont.Weight(weight))
-      qFont.setItalic(italic)
-      self._qTextObject.setFont(qFont)
+   def _setFont(self, args, responseId):
+      """Sets the text font from [name, [weight, italic], size], then fits or keeps the box."""
+      self._qTextObject.setFont(_toQFont(args.get('font')))
+      self._afterTextChange(args.get('resize', True))
 
 
 #######################################################################################
@@ -3589,128 +3850,184 @@ class _ControlMirror(_DrawableMirror):
          self.guiRenderer.sendEvent(eventType, self.objectId, eventArgs or {})
 
 
+class _TextControlMirror(_ControlMirror):
+   """
+   Base class for the controls that show text: Button, CheckBox, DropDownList, TextField,
+   and TextArea.
+
+   Keeps each control's two colors (its background, and its text) and its font.  The
+   stylesheet is rebuilt from both colors whenever either changes, and the font is set
+   again after it, because a stylesheet change can put back the font some systems give
+   that kind of widget (macOS does for buttons and checkboxes).  Also answers getText /
+   setText and getFont / setFont, where a change of text or font either refits the
+   control to its natural size or keeps the size it has.
+
+   Concrete classes must:
+     1. Pass their default background color to __init__.
+     2. Build their QWidget, pass it to self._wrapWidget(widget), then call
+        self._setUpText(args) to apply the starting colors and font and size the control.
+     3. Implement _applyColors() to build the stylesheet from _color and _textColor.
+   They may override _naturalSize() (the size the control fits to), and _getText() /
+   _setText() for widgets whose text is not a plain text() / setText().
+   """
+
+   def __init__(self, objectId, args, guiRenderer, defaultColor):
+      _ControlMirror.__init__(self, objectId, args, guiRenderer)
+
+      self._color     = args.get('color',     defaultColor)
+      self._textColor = args.get('textColor', [0, 0, 0, 255])   # BLACK default
+      self._qFont     = _defaultQFont()
+
+      self._commandHandlers.update({
+         'getText':      self._getText,
+         'setText':      self._setText,
+         'setColor':     self._setColor,
+         'setTextColor': self._setTextColor,
+         'getFont':      self._getFont,
+         'setFont':      self._setFont,
+      })
+
+   def _setUpText(self, args):
+      """Applies the starting colors and font, then sizes the control to fit."""
+      font = args.get('font')
+      if font is not None:
+         self._qFont = _toQFont(font)
+      self._restyle()
+      self._refitToNaturalSize()
+
+   # ── Text ───────────────────────────────────────────────────────────────────
+
+   def _getText(self, args, responseId):
+      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
+
+   def _setText(self, args, responseId):
+      self._widget.setText(args.get('text', ''))
+      self._afterContentChange(args.get('resize', True))
+
+   # ── Colors ─────────────────────────────────────────────────────────────────
+
+   def _applyColors(self):
+      raise NotImplementedError
+
+   def _restyle(self):
+      """Rebuilds the stylesheet from the colors, then sets the control's font again."""
+      self._applyColors()
+      self._widget.setFont(self._qFont)
+
+   def _setColor(self, args, responseId):
+      self._color = args.get('color', self._color)
+      self._restyle()
+
+   def _setTextColor(self, args, responseId):
+      self._textColor = args.get('color', self._textColor)
+      self._restyle()
+
+   # ── Font ───────────────────────────────────────────────────────────────────
+
+   def _getFont(self, args, responseId):
+      self.guiRenderer.sendResponse(responseId, [_fromQFont(self._widget.font())])
+
+   def _setFont(self, args, responseId):
+      self._qFont = _toQFont(args.get('font'))
+      self._widget.setFont(self._qFont)
+      self._afterContentChange(args.get('resize', True))
+
+   # ── Size ───────────────────────────────────────────────────────────────────
+
+   def _naturalSize(self):
+      """The size the control needs for its content, as Qt measures it."""
+      sizeHint = self._widget.sizeHint()
+      return sizeHint.width(), sizeHint.height()
+
+   def _refitToNaturalSize(self):
+      self._width, self._height = self._naturalSize()
+      self._applyExtent()
+
+   def _afterContentChange(self, resize):
+      """
+      Refits the control to its changed text or font, or holds it at its current size
+      (a widget left to itself would resize to its new content).
+      """
+      if resize:
+         self._refitToNaturalSize()
+      else:
+         self._applyExtent()
+
+
 #######################################################################################
 # ButtonMirror  —  mirror of gui.py's Button
 #######################################################################################
 
-class ButtonMirror(_ControlMirror):
+class ButtonMirror(_TextControlMirror):
    """
    Mirror of gui.py's Button.  Backed by a QPushButton.
 
    Constructor args expected in the 'args' dict:
-     text   — string
-     color  — [r, g, b, a]
+     text       — string
+     color      — [r, g, b, a]
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
    """
 
    def __init__(self, objectId, args, guiRenderer):
-      super().__init__(objectId, args, guiRenderer)
-
-      text  = args.get('text', '')
-      color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
+      super().__init__(objectId, args, guiRenderer, [211, 211, 211, 255])   # LIGHT_GRAY default
 
       widget = QtWidgets.QPushButton()
-      widget.setText(text)
-      widget.adjustSize()
-      self._width  = widget.width()
-      self._height = widget.height()
+      widget.setText(args.get('text', ''))
       self._wrapWidget(widget)
-
-      self._applyColor(color)
+      self._setUpText(args)
 
       # wire Qt signal → event forwarding
       self._widget.clicked.connect(lambda: self._forwardEvent('clicked'))
 
-      # add Button-specific command handlers
-      self._commandHandlers.update({
-         'setText':  self._setText,
-         'getText':  self._getText,
-         'setColor': self._setColor,
-      })
-
-   def _applyColor(self, color):
-      r, g, b, a = color
+   def _applyColors(self):
+      r, g, b, a = self._color
       dr = max(0, int(r * 0.9))
       dg = max(0, int(g * 0.9))
       db = max(0, int(b * 0.9))
       self._widget.setStyleSheet(
-         f"QPushButton {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QPushButton {{ background-color: rgba({r},{g},{b},{a}); color: {_asRgba(self._textColor)}; }}"
          f"QPushButton::pressed {{ background-color: rgba({dr},{dg},{db},{a}); }}"
       )
-
-   def _setColor(self, args, responseId):
-      color = args.get('color', [211, 211, 211, 255])
-      self._applyColor(color)
-
-   def _setText(self, args, responseId):
-      text = args.get('text', '')
-      self._widget.setText(text)
-      self._widget.adjustSize()
-      self._width  = self._widget.width()
-      self._height = self._widget.height()
-
-   def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
 
 
 #######################################################################################
 # CheckBoxMirror  —  mirror of gui.py's CheckBox
 #######################################################################################
 
-class CheckBoxMirror(_ControlMirror):
+class CheckBoxMirror(_TextControlMirror):
    """
    Mirror of gui.py's CheckBox.  Backed by a QCheckBox.
 
    Constructor args expected in the 'args' dict:
-     text   — string
-     color  — [r, g, b, a]
+     text       — string
+     color      — [r, g, b, a]
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
    """
 
    def __init__(self, objectId, args, guiRenderer):
-      super().__init__(objectId, args, guiRenderer)
+      super().__init__(objectId, args, guiRenderer, [0, 0, 0, 0])   # CLEAR default
 
-      text  = args.get('text', '')
-      color = args.get('color', [0, 0, 0, 0])   # CLEAR default
-
-      widget = QtWidgets.QCheckBox(text)
-      widget.adjustSize()
-      self._width  = widget.width()
-      self._height = widget.height()
+      widget = _QCheckBox(args.get('text', ''))
       self._wrapWidget(widget)
-
-      self._applyColor(color)
+      self._setUpText(args)
 
       self._widget.stateChanged.connect(
          lambda state: self._forwardEvent('stateChanged', {'checked': state != 0})
       )
 
       self._commandHandlers.update({
-         'setText':    self._setText,
-         'getText':    self._getText,
-         'setColor':   self._setColor,
          'isChecked':  self._isChecked,
          'check':      self._check,
          'uncheck':    self._uncheck,
       })
 
-   def _applyColor(self, color):
-      r, g, b, a = color
+   def _applyColors(self):
+      r, g, b, a = self._color
       self._widget.setStyleSheet(
-         f"QCheckBox {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QCheckBox {{ background-color: rgba({r},{g},{b},{a}); color: {_asRgba(self._textColor)}; }}"
       )
-
-   def _setColor(self, args, responseId):
-      color = args.get('color', [0, 0, 0, 0])
-      self._applyColor(color)
-
-   def _setText(self, args, responseId):
-      text = args.get('text', '')
-      self._widget.setText(text)
-      self._widget.adjustSize()
-      self._width  = self._widget.width()
-      self._height = self._widget.height()
-
-   def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
 
    def _isChecked(self, args, responseId):
       self.guiRenderer.sendResponse(responseId, [self._widget.isChecked()])
@@ -3808,242 +4125,177 @@ class SliderMirror(_ControlMirror):
 # DropDownListMirror  —  mirror of gui.py's DropDownList
 #######################################################################################
 
-class DropDownListMirror(_ControlMirror):
+class DropDownListMirror(_TextControlMirror):
    """
    Mirror of gui.py's DropDownList.  Backed by a QComboBox.
 
    Constructor args expected in the 'args' dict:
-     items  — list of strings
-     color  — [r, g, b, a]
+     items      — list of strings
+     color      — [r, g, b, a]
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
    """
 
    def __init__(self, objectId, args, guiRenderer):
-      super().__init__(objectId, args, guiRenderer)
-
-      items = args.get('items', [])
-      color = args.get('color', [211, 211, 211, 255])   # LIGHT_GRAY default
+      super().__init__(objectId, args, guiRenderer, [211, 211, 211, 255])   # LIGHT_GRAY default
 
       widget = _QComboBox()
-      widget.addItems(items)
-      widget.adjustSize()
-      self._width  = widget.width()
-      self._height = widget.height()
+      widget.addItems(args.get('items', []))
       self._wrapWidget(widget)
 
-      self._applyColor(color)
+      self._setUpText(args)
 
       # wire Qt signal → event forwarding (sends selected index)
       self._widget.activated.connect(
          lambda index: self._forwardEvent('activated', {'index': index})
       )
 
-      self._commandHandlers.update({
-         'setColor': self._setColor,
-      })
-
-   def _applyColor(self, color):
-      r, g, b, a = color
+   def _applyColors(self):
+      r, g, b, a = self._color
+      textColor  = _asRgba(self._textColor)
       self._widget.setStyleSheet(
-         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: black; combobox-popup: 0; }}"
-         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: black;"
+         f"QComboBox {{ background-color: rgba({r},{g},{b},{a}); color: {textColor}; combobox-popup: 0; }}"
+         f"QComboBox QAbstractItemView {{ background-color: rgba({r},{g},{b},{a}); color: {textColor};"
          f" selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};"
          f" selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)}; }}"
       )
 
-   def _setColor(self, args, responseId):
-      color = args.get('color', [211, 211, 211, 255])
-      self._applyColor(color)
+   def _getText(self, args, responseId):
+      self.guiRenderer.sendResponse(responseId, [self._widget.currentText()])
+
+   def _setText(self, args, responseId):
+      """
+      Selects the item showing this text (gui.py checks that it is one of the items),
+      then reports it the way a user's pick is reported, so the list's function runs.
+      """
+      index = self._widget.findText(args.get('text', ''))
+      self._widget.setCurrentIndex(index)
+      self._forwardEvent('activated', {'index': index})
 
 
 #######################################################################################
 # TextFieldMirror  —  mirror of gui.py's TextField
 #######################################################################################
 
-class TextFieldMirror(_ControlMirror):
+class TextFieldMirror(_TextControlMirror):
    """
    Mirror of gui.py's TextField.  Backed by a QLineEdit.
 
+   Its natural size holds 'columns' characters on one line, in its current font.
+
    Constructor args expected in the 'args' dict:
-     text    — string
-     width   — int (pre-computed by gui.py from columns + font metrics)
-     height  — int (pre-computed by gui.py)
-     color   — [r, g, b, a]
-     font    — None or [name, [weight, italic], size]
+     text       — string
+     columns    — int, how many characters wide the field is
+     color      — [r, g, b, a]
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
    """
 
    def __init__(self, objectId, args, guiRenderer):
-      super().__init__(objectId, args, guiRenderer)
+      super().__init__(objectId, args, guiRenderer, [255, 255, 255, 255])   # WHITE default
 
-      text   = args.get('text', '')
-      width  = args.get('width')
-      height = args.get('height')
-      color  = args.get('color', [255, 255, 255, 255])   # WHITE default
-      font   = args.get('font')
+      self._columns = args.get('columns', 8)
 
-      widget = QtWidgets.QLineEdit(str(text))
+      widget = QtWidgets.QLineEdit(str(args.get('text', '')))
       self._wrapWidget(widget)
-
-      if font is not None:
-         self._applyFont(font)
-
-      columns = args.get('columns')
-
-      if width is not None and height is not None:
-         widget.setFixedSize(width, height)
-         self._width  = width
-         self._height = height
-      elif columns is not None:
-         # leave room for the padding and border the control stylesheet draws, so the
-         # field still holds the number of characters it was asked for
-         fm    = QtGui.QFontMetrics(widget.font())
-         charW = fm.horizontalAdvance('M')
-         charH = fm.lineSpacing()
-         w = (charW * columns) + _FIELD_EXTRA_WIDTH
-         h = charH + _FIELD_EXTRA_HEIGHT
-         widget.setFixedSize(w, h)
-         self._width  = w
-         self._height = h
-      else:
-         widget.adjustSize()
-         self._width  = widget.width()
-         self._height = widget.height()
-
-      self._applyColor(color)
+      self._setUpText(args)
 
       # wire Qt signal → event forwarding
       self._widget.returnPressed.connect(
          lambda: self._forwardEvent('returnPressed', {'text': self._widget.text()})
       )
 
-      self._commandHandlers.update({
-         'setText':  self._setText,
-         'getText':  self._getText,
-         'setColor': self._setColor,
-         'setFont':  self._setFont,
-      })
-
-   def _applyColor(self, color):
-      r, g, b, a = color
+   def _applyColors(self):
+      r, g, b, a = self._color
       self._widget.setStyleSheet(
-         f"QLineEdit {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QLineEdit {{ background-color: rgba({r},{g},{b},{a}); color: {_asRgba(self._textColor)}; }}"
       )
 
-   def _setColor(self, args, responseId):
-      color = args.get('color', [255, 255, 255, 255])
-      self._applyColor(color)
+   def _naturalSize(self):
+      # leave room for the padding and border the control stylesheet draws, so the
+      # field still holds the number of characters it was asked for
+      fm = QtGui.QFontMetrics(self._widget.font())
+      w  = (fm.horizontalAdvance('M') * self._columns) + _FIELD_EXTRA_WIDTH
+      h  = fm.lineSpacing() + _FIELD_EXTRA_HEIGHT
+      return w, h
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
       self._widget.setText(text)
-
-   def _getText(self, args, responseId):
-      self.guiRenderer.sendResponse(responseId, [self._widget.text()])
-
-   def _applyFont(self, font):
-      name, style, size = font
-      weight, italic    = style
-      qFont = QtGui.QFont(name, size)
-      qFont.setWeight(QtGui.QFont.Weight(weight))
-      qFont.setItalic(italic)
-      self._widget.setFont(qFont)
-
-   def _setFont(self, args, responseId):
-      font = args.get('font')
-      if font is not None:
-         self._applyFont(font)
+      if args.get('resize', False):
+         # fit the field to this text: its width, plus the space QLineEdit keeps
+         # beside the text and one pixel for the cursor at its end
+         fm = QtGui.QFontMetrics(self._widget.font())
+         self._width  = fm.horizontalAdvance(text) + (2 * _LINE_EDIT_TEXT_MARGIN) + 1 + _FIELD_EXTRA_WIDTH
+         self._height = fm.lineSpacing() + _FIELD_EXTRA_HEIGHT
+      self._applyExtent()
 
 
 #######################################################################################
 # TextAreaMirror  —  mirror of gui.py's TextArea
 #######################################################################################
 
-class TextAreaMirror(_ControlMirror):
+class TextAreaMirror(_TextControlMirror):
    """
    Mirror of gui.py's TextArea.  Backed by a QTextEdit.
 
+   Its natural size holds 'rows' lines of 'columns' characters, in its current font.
+
    Constructor args expected in the 'args' dict:
-     text    — string
-     width   — int (pre-computed by gui.py from columns/rows + font metrics)
-     height  — int (pre-computed by gui.py)
-     color   — [r, g, b, a]
-     font    — None or [name, [weight, italic], size]
+     text       — string
+     columns    — int, how many characters wide the area is
+     rows       — int, how many lines tall the area is
+     color      — [r, g, b, a]
+     textColor  — [r, g, b, a]
+     font       — None or [name, [weight, italic], size]
    """
 
    def __init__(self, objectId, args, guiRenderer):
-      super().__init__(objectId, args, guiRenderer)
+      super().__init__(objectId, args, guiRenderer, [255, 255, 255, 255])   # WHITE default
 
-      text   = args.get('text', '')
-      width  = args.get('width')
-      height = args.get('height')
-      color  = args.get('color', [255, 255, 255, 255])   # WHITE default
-      font   = args.get('font')
+      self._columns = args.get('columns', 8)
+      self._rows    = args.get('rows',    5)
 
-      columns = args.get('columns')
-      rows    = args.get('rows')
-
-      widget = QtWidgets.QTextEdit(str(text))
+      # keep the text plain: given a string, QTextEdit guesses whether it is formatted
+      # (rich) text, which turns each line break into a space, and pasted text would
+      # bring its own formatting, overriding the area's font and text color
+      widget = QtWidgets.QTextEdit()
+      widget.setAcceptRichText(False)
+      widget.setPlainText(str(args.get('text', '')))
       widget.document().setDocumentMargin(_TEXT_AREA_DOC_MARGIN)
       self._wrapWidget(widget)
+      self._setUpText(args)
 
-      if font is not None:
-         self._applyFont(font)
-
-      if width is not None and height is not None:
-         widget.setFixedSize(width, height)
-         self._width  = width
-         self._height = height
-      elif columns is not None or rows is not None:
-         # leave room for the padding, border, and document margin drawn around the
-         # text, so the area still holds the rows and columns it was asked for
-         fm = QtGui.QFontMetrics(widget.font())
-         w  = (fm.horizontalAdvance('M') * (columns or 8)) + _FIELD_EXTRA_WIDTH  + (2 * _TEXT_AREA_DOC_MARGIN)
-         h  = (fm.lineSpacing()          * (rows    or 5)) + _FIELD_EXTRA_HEIGHT + (2 * _TEXT_AREA_DOC_MARGIN)
-         widget.setFixedSize(w, h)
-         self._width  = w
-         self._height = h
-      else:
-         widget.adjustSize()
-         self._width  = widget.width()
-         self._height = widget.height()
-
-      self._applyColor(color)
-
-      self._commandHandlers.update({
-         'setText':  self._setText,
-         'getText':  self._getText,
-         'setColor': self._setColor,
-         'setFont':  self._setFont,
-      })
-
-   def _applyColor(self, color):
-      r, g, b, a = color
+   def _applyColors(self):
+      r, g, b, a = self._color
       self._widget.setStyleSheet(
-         f"QTextEdit {{ background-color: rgba({r},{g},{b},{a}); color: black; }}"
+         f"QTextEdit {{ background-color: rgba({r},{g},{b},{a}); color: {_asRgba(self._textColor)}; }}"
       )
 
-   def _setColor(self, args, responseId):
-      color = args.get('color', [255, 255, 255, 255])
-      self._applyColor(color)
+   def _naturalSize(self):
+      # leave room for the padding, border, and document margin drawn around the
+      # text, so the area still holds the rows and columns it was asked for
+      fm = QtGui.QFontMetrics(self._widget.font())
+      w  = (fm.horizontalAdvance('M') * self._columns) + _FIELD_EXTRA_WIDTH  + (2 * _TEXT_AREA_DOC_MARGIN)
+      h  = (fm.lineSpacing()          * self._rows)    + _FIELD_EXTRA_HEIGHT + (2 * _TEXT_AREA_DOC_MARGIN)
+      return w, h
 
    def _setText(self, args, responseId):
       text = args.get('text', '')
-      self._widget.setText(text)
+      self._widget.setPlainText(text)
+      if args.get('resize', False):
+         # fit the area to this text: its widest line and its number of lines, plus
+         # one pixel for the cursor at the end of a line
+         fm    = QtGui.QFontMetrics(self._widget.font())
+         lines = text.split('\n')
+         widestLine = max(fm.horizontalAdvance(line) for line in lines)
+         self._width  = widestLine + 1 + _FIELD_EXTRA_WIDTH + (2 * _TEXT_AREA_DOC_MARGIN)
+         self._height = (fm.lineSpacing() * len(lines)) + _FIELD_EXTRA_HEIGHT + (2 * _TEXT_AREA_DOC_MARGIN)
+      self._applyExtent()
 
    def _getText(self, args, responseId):
       self.guiRenderer.sendResponse(responseId, [self._widget.toPlainText()])
 
-   def _applyFont(self, font):
-      name, style, size = font
-      weight, italic    = style
-      qFont = QtGui.QFont(name, size)
-      qFont.setWeight(QtGui.QFont.Weight(weight))
-      qFont.setItalic(italic)
-      self._widget.setFont(qFont)
-
-   def _setFont(self, args, responseId):
-      font = args.get('font')
-      if font is not None:
-         self._applyFont(font)
 
 #######################################################################################
 # MenuMirror  —  mirror of gui.py's Menu

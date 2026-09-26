@@ -374,6 +374,8 @@ class PyShell(OutputWindow):
                               "<<copy-with-prompts>>",
                               "rmenu_check_copy"))
     del _idx
+    rmenu_specs.append((None, None))
+    rmenu_specs.append(("Clear", "<<clear-console>>", None))
 
     allow_line_numbers = False
     allow_highlight_current_line = True
@@ -415,6 +417,7 @@ class PyShell(OutputWindow):
         text.bind("<Key-Down>", self.down_arrow_callback)
         text.bind("<<view-restart>>", self.view_restart_mark)
         text.bind("<<restart-shell>>", self.restart_shell)
+        text.bind("<<clear-console>>", self.clear_console)
 
         self.save_stdout = sys.stdout
         self.save_stderr = sys.stderr
@@ -678,15 +681,8 @@ class PyShell(OutputWindow):
             self.close()
             return False
 
-        try:
-            from PythonMusic import __version__ as cp_version
-            self.write("PythonMusic %s\n" % cp_version)
-        except Exception:
-            pass
-            
-        self.write("Python %s on %s\n\n" %
-                   (sys.version, sys.platform))
-        
+        self.write(self.banner_text())
+
         # --- FIX: Ensure the widget still exists before focusing ---
         if self.text is not None and not getattr(self, 'closing', False):
             try:
@@ -1000,6 +996,33 @@ class PyShell(OutputWindow):
         if dirname is None:
             dirname, _ = self.io.defaultfilename()
         self.flist.new(dirname)
+        return "break"
+
+    def banner_text(self):
+        "Return the version lines the Console opens with."
+        try:
+            from PythonMusic import __version__ as cp_version
+            banner = "PythonMusic %s\n" % cp_version
+        except Exception:
+            banner = ""
+        return banner + "Python %s on %s\n\n" % (sys.version, sys.platform)
+
+    def clear_console(self, event=None):
+        "Clear right-click item: erase the transcript back to the opening banner."
+        # Keep the line at iomark (a half-typed command, or a running
+        # program's input() prompt) and replace everything above it.  Edits
+        # go to the bottom of the percolator because the undo delegator
+        # refuses changes before iomark.
+        self.per.bottom.delete("1.0", "iomark linestart")
+        self.text.mark_gravity("iomark", "right")   # banner lands before the input mark
+        self.per.bottom.insert("1.0", self.banner_text())
+        self.text.mark_gravity("iomark", "left")
+        if not self.executing:
+            # The sidebar draws ">>>" after a newline tagged "console".
+            self.text.tag_add("console", "iomark linestart -1c")
+        self.shell_sidebar.update_sidebar()
+        self.io.reset_undo()
+        self.text.see("insert")
         return "break"
 
     def restart_shell(self, event=None):

@@ -47,6 +47,8 @@
 #         - Added get/set size/width/height functions
 #         - Added get/set center functions
 #         - Added getEndpoints and getBoundingBox
+#         - Position and size functions describe the box before rotation; added
+#           getBounding* functions for the upright box around the rotated object
 #         - Added get/set length to Line
 #         - Added Polyline class
 #         - Added alpha channel to Icon get/set pixel functions
@@ -769,14 +771,16 @@ Color.CLEAR      = Color(  0,   0,   0,   0)
 class Font:
    """Represent a text font: a name, a style, and a size.
 
-   Use a Font to set how text looks on a Label, Button, TextField, TextArea, or a
-   drawn label, for example Font("Serif", Font.ITALIC, 16). The style is one of the
-   constants Font.PLAIN, Font.BOLD, Font.ITALIC, or Font.BOLDITALIC.
+   Use a Font to set how text looks on a Label, Button, CheckBox, DropDownList,
+   TextField, TextArea, or a drawn label, for example Font("Serif", Font.ITALIC, 16).
+   The style is one of the constants Font.PLAIN, Font.BOLD, Font.ITALIC, or
+   Font.BOLDITALIC. The size is in pixels, so a given size looks the same on every kind
+   of object and on every computer. Text you do not give a font to uses Arial at size 13.
 
    Args:
        name (str): The font name, for example "Serif", "Dialog", or "TimesRoman".
        style (tuple, optional): The text style, one of Font.PLAIN, Font.BOLD, Font.ITALIC, or Font.BOLDITALIC.
-       size (int, optional): The point size. If left as the default, the standard size is used.
+       size (int, optional): The size, in pixels. If left as the default, size 13 is used.
    """
    PLAIN      = (400, False)  # (Weight, Italic)
    BOLD       = (700, False)  # Weight values are from QtGui.QFont.Weight
@@ -790,7 +794,7 @@ class Font:
       self.size  = size
 
    def __str__(self):
-      return f'Font(name = "{self.getName()}", style = {self.getStyle()}, size = {self.getSize()}")'
+      return f'Font(name = "{self.getName()}", style = {self.getStyle()}, size = {self.getSize()})'
 
    def __repr__(self):
       return str(self)
@@ -830,19 +834,19 @@ class Font:
       self.style = style
 
    def getSize(self):
-      """Return the font's point size.
+      """Return the font's size.
 
       Returns:
-          size (int): The point size.
+          size (int): The size, in pixels.
       """
       size = self.size
       return size
 
    def setSize(self, size):
-      """Set the font's point size.
+      """Set the font's size.
 
       Args:
-          size (int): The new point size.
+          size (int): The new size, in pixels.
       """
       self.size = size
 
@@ -970,9 +974,10 @@ class Display(Interactable):
        x (int or float, optional): The horizontal position of the window's top-left corner on the screen, in pixels.
        y (int or float, optional): The vertical position of the window's top-left corner on the screen, in pixels.
        color (Color, optional): The background color.
+       antialias (bool, optional): Whether to smooth the edges of shapes and text drawn on the display. Images and drawPoint() always keep crisp pixels.
    """
 
-   def __init__(self, title='', width=600, height=400, x=0, y=50, color=Color.WHITE):
+   def __init__(self, title='', width=600, height=400, x=0, y=50, color=Color.WHITE, antialias=True):
       """"""
       Interactable.__init__(self)
 
@@ -987,13 +992,14 @@ class Display(Interactable):
 
       # create display in the renderer child process
       _handler().sendCommand('create', self._objectId, {
-         'type':   'Display',
-         'title':  title,
-         'width':  width,
-         'height': height,
-         'x':      x,
-         'y':      y,
-         'color':  color.getRGBA(),
+         'type':      'Display',
+         'title':     title,
+         'width':     width,
+         'height':    height,
+         'x':         x,
+         'y':         y,
+         'color':     color.getRGBA(),
+         'antialias': antialias,
       })
 
    def __str__(self):
@@ -2165,6 +2171,27 @@ class Drawable(Interactable):
       yPoints = placedCorners[1]
       return xPoints, yPoints
 
+   def _sceneBox(self):
+      """"""
+      # the object's own box before rotation: centered on its center, scaled as it appears
+      centerX, centerY, _, scaleX, scaleY = _decomposeAffine(self._getSceneMatrix())
+      baseWidth, baseHeight = self._baseExtent()
+      width  = baseWidth  * abs(scaleX)
+      height = baseHeight * abs(scaleY)
+      left   = centerX - width  / 2.0
+      top    = centerY - height / 2.0
+      return left, top, width, height
+
+   def _sceneBoundingBox(self):
+      """"""
+      # the upright box around the rotated object
+      xPoints, yPoints = self._sceneEndpoints()
+      left   = xPoints.min()
+      top    = yPoints.min()
+      width  = xPoints.max() - left
+      height = yPoints.max() - top
+      return left, top, width, height
+
    def _visibleUnrotatedOutline(self):
       """"""
       # the object's outline (its corners, or its actual points for point-defined shapes)
@@ -2204,14 +2231,117 @@ class Drawable(Interactable):
           xPoints (list[int or float]): The horizontal positions of the box's four corners, in pixels.
           yPoints (list[int or float]): The vertical positions of the box's four corners, in pixels.
       """
-      xPoints, yPoints = self._sceneEndpoints()
-      leftX   = self._asNumber(xPoints.min())
-      rightX  = self._asNumber(xPoints.max())
-      topY    = self._asNumber(yPoints.min())
-      bottomY = self._asNumber(yPoints.max())
+      left, top, width, height = self._sceneBoundingBox()
+      leftX   = self._asNumber(left)
+      rightX  = self._asNumber(left + width)
+      topY    = self._asNumber(top)
+      bottomY = self._asNumber(top + height)
       xPoints = [leftX, leftX, rightX, rightX]
       yPoints = [topY, bottomY, bottomY, topY]
       return xPoints, yPoints
+
+   def getBoundingPosition(self):
+      """Return the top-left corner of the object's bounding box.
+
+      The bounding box is the smallest upright box that surrounds the object, so it moves
+      as the object rotates. For the object's own position before rotation, use
+      getPosition().
+
+      Returns:
+          x (int or float): The horizontal position of the bounding box's top-left corner, in pixels.
+          y (int or float): The vertical position of the bounding box's top-left corner, in pixels.
+      """
+      left, top, _, _ = self._sceneBoundingBox()
+      x = self._asNumber(left)
+      y = self._asNumber(top)
+      return x, y
+
+   def getBoundingX(self):
+      """Return the horizontal position of the object's bounding box.
+
+      Returns:
+          x (int or float): The horizontal position of the bounding box's top-left corner, in pixels.
+      """
+      # updates to getBoundingPosition() automatically update how this method works
+      x, _ = self.getBoundingPosition()
+      return x
+
+   def getBoundingY(self):
+      """Return the vertical position of the object's bounding box.
+
+      Returns:
+          y (int or float): The vertical position of the bounding box's top-left corner, in pixels.
+      """
+      # updates to getBoundingPosition() automatically update how this method works
+      _, y = self.getBoundingPosition()
+      return y
+
+   def getBoundingSize(self):
+      """Return the width and height of the object's bounding box.
+
+      The bounding box is the smallest upright box that surrounds the object, so it grows
+      as the object rotates. For the object's own size before rotation, use getSize().
+
+      Returns:
+          width (int or float): The bounding box's width, in pixels.
+          height (int or float): The bounding box's height, in pixels.
+      """
+      _, _, width, height = self._sceneBoundingBox()
+      width  = self._asNumber(width)
+      height = self._asNumber(height)
+      return width, height
+
+   def getBoundingWidth(self):
+      """Return the width of the object's bounding box.
+
+      Returns:
+          width (int or float): The bounding box's width, in pixels.
+      """
+      # updates to getBoundingSize() automatically update how this method works
+      width, _ = self.getBoundingSize()
+      return width
+
+   def getBoundingHeight(self):
+      """Return the height of the object's bounding box.
+
+      Returns:
+          height (int or float): The bounding box's height, in pixels.
+      """
+      # updates to getBoundingSize() automatically update how this method works
+      _, height = self.getBoundingSize()
+      return height
+
+   def getBoundingCenter(self):
+      """Return the center point of the object's bounding box.
+
+      Returns:
+          centerX (int or float): The horizontal position of the bounding box's center, in pixels.
+          centerY (int or float): The vertical position of the bounding box's center, in pixels.
+      """
+      left, top, width, height = self._sceneBoundingBox()
+      centerX = self._asNumber(left + width / 2.0)
+      centerY = self._asNumber(top + height / 2.0)
+      return centerX, centerY
+
+   def getBoundingCenterX(self):
+      """Return the horizontal center of the object's bounding box.
+
+      Returns:
+          x (int or float): The horizontal center of the bounding box, in pixels.
+      """
+      # updates to getBoundingCenter() automatically update how this method works
+      x, _ = self.getBoundingCenter()
+      return x
+
+   def getBoundingCenterY(self):
+      """Return the vertical center of the object's bounding box.
+
+      Returns:
+          y (int or float): The vertical center of the bounding box, in pixels.
+      """
+      # updates to getBoundingCenter() automatically update how this method works
+      _, y = self.getBoundingCenter()
+      return y
 
    def getGroup(self):
       """Return the Group this object belongs to.
@@ -2277,31 +2407,31 @@ class Drawable(Interactable):
       self._pushTransform()
 
    def getPosition(self):
-      """Return the object's position, the top-left corner of its bounding box.
+      """Return the object's position, the top-left corner of its box before rotation.
+
+      The object rotates about its center, so this is where its top-left corner would be
+      if it were not rotated. For the upright box around the rotated object, use
+      getBoundingPosition().
 
       Returns:
           x (int or float): The horizontal position of the top-left corner, in pixels.
           y (int or float): The vertical position of the top-left corner, in pixels.
       """
-      coordinates = self._sceneEndpoints()
-      x = self._asNumber(coordinates[0].min())
-      y = self._asNumber(coordinates[1].min())
+      left, top, _, _ = self._sceneBox()
+      x = self._asNumber(left)
+      y = self._asNumber(top)
       return x, y
 
    def setPosition(self, x, y):
-      """Move the object so the top-left corner of its bounding box sits at the given point.
+      """Move the object so the top-left corner of its box before rotation sits at the given point.
 
       Args:
           x (int or float): The new horizontal position, in pixels.
           y (int or float): The new vertical position, in pixels.
       """
-      # shift the center by however far the bounding-box corner needs to move; exact
-      # values are used here so repeated moves do not slowly drift
-      xPoints, yPoints = self._sceneEndpoints()
-      currentLeft = xPoints.min()
-      currentTop  = yPoints.min()
-      centerX, centerY = self._sceneCenter()
-      self.setCenter(centerX + (x - currentLeft), centerY + (y - currentTop))
+      # exact values are used here so repeated moves do not slowly drift
+      _, _, width, height = self._sceneBox()
+      self.setCenter(x + width / 2.0, y + height / 2.0)
 
    def getX(self):
       """Return the object's horizontal position.
@@ -2441,15 +2571,17 @@ class Drawable(Interactable):
    def getSize(self):
       """Return the object's width and height.
 
-      These are the size of its upright bounding box, so they grow as the object rotates.
+      These are the object's own size before rotation, so they stay the same as it
+      rotates. For the size of the upright box around the rotated object, use
+      getBoundingSize().
 
       Returns:
           width (int or float): The width, in pixels.
           height (int or float): The height, in pixels.
       """
-      xPoints, yPoints = self._sceneEndpoints()
-      width  = self._asNumber(xPoints.max() - xPoints.min())
-      height = self._asNumber(yPoints.max() - yPoints.min())
+      _, _, width, height = self._sceneBox()
+      width  = self._asNumber(width)
+      height = self._asNumber(height)
       return width, height
 
    def setSize(self, width, height):
@@ -2461,9 +2593,7 @@ class Drawable(Interactable):
       """
       # measure the current size from exact values, then hand the target and current
       # sizes to _resize so each kind of shape can fit itself to the target
-      xPoints, yPoints = self._sceneEndpoints()
-      currentWidth  = xPoints.max() - xPoints.min()
-      currentHeight = yPoints.max() - yPoints.min()
+      _, _, currentWidth, currentHeight = self._sceneBox()
 
       targetWidth  = width  if width  is not None else currentWidth
       targetHeight = height if height is not None else currentHeight
@@ -2576,6 +2706,34 @@ class Drawable(Interactable):
       """
       currentRotation = self.getRotation()
       self.setRotation(currentRotation + angle)
+
+   def _rotatePoint(self, x, y):
+      """"""
+      # a point in this object's box before rotation, turned about its center onto the
+      # display, where the object actually appears
+      centerX, centerY = self._sceneCenter()
+      radians = np.radians(-_matrixRotation(self._getSceneMatrix()))   # negated for our CCW, y-down angles
+      cosine  = np.cos(radians)
+      sine    = np.sin(radians)
+      offsetX = x - centerX
+      offsetY = y - centerY
+      rotatedX = float(centerX + (cosine * offsetX - sine * offsetY))
+      rotatedY = float(centerY + (sine * offsetX + cosine * offsetY))
+      return rotatedX, rotatedY
+
+   def _unrotatePoint(self, x, y):
+      """"""
+      # the reverse of _rotatePoint: a display point, turned back about this object's
+      # center so it lines up with getPosition() and getSize()
+      centerX, centerY = self._sceneCenter()
+      radians = np.radians(_matrixRotation(self._getSceneMatrix()))
+      cosine  = np.cos(radians)
+      sine    = np.sin(radians)
+      offsetX = x - centerX
+      offsetY = y - centerY
+      unrotatedX = float(centerX + (cosine * offsetX - sine * offsetY))
+      unrotatedY = float(centerY + (sine * offsetX + cosine * offsetY))
+      return unrotatedX, unrotatedY
 
    # ── Hit Testing ────────────────────────────────────────────────────────────
 
@@ -2802,13 +2960,12 @@ class Rectangle(Graphics):
       })
 
    def __str__(self):
-      # describe the rectangle the way it was created: the two corners of its upright
-      # (unrotated) shape, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the rectangle the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Rectangle(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2857,13 +3014,12 @@ class Oval(Graphics):
       })
 
    def __str__(self):
-      # describe the oval the way it was created: the two corners of its upright
-      # (unrotated) box, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the oval the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Oval(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'color = {self.getColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, '
@@ -2909,10 +3065,7 @@ class Circle(Oval):
 
    def __str__(self):
       x, y      = self.getCenter()
-      # radius from the un-rotated outline, so it stays the circle's true radius even if
-      # the circle has been scaled or turned
-      xPoints   = self._visibleUnrotatedOutline()[0]
-      radius    = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
+      radius    = self.getRadius()
       color     = self.getColor()
       fill      = self.getFill()
       thickness = self.getThickness()
@@ -3093,13 +3246,12 @@ class Arc(Graphics):
       })
 
    def __str__(self):
-      # describe the arc the way it was created: the two corners of its upright
-      # (unrotated) box, at the size and place it now appears
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      x1 = int(round(min(xPoints)))
-      y1 = int(round(min(yPoints)))
-      x2 = int(round(max(xPoints)))
-      y2 = int(round(max(yPoints)))
+      # describe the arc the way it was created: the two corners of its box
+      # before rotation
+      x1, y1        = self.getPosition()
+      width, height = self.getSize()
+      x2 = x1 + width
+      y2 = y1 + height
       return (f'Arc(x1 = {x1}, y1 = {y1}, x2 = {x2}, y2 = {y2}, '
               f'startAngle = {self._startAngle}, endAngle = {self._endAngle}, '
               f'style = {self._style}, color = {self.getColor()}, fill = {self.getFill()}, '
@@ -3192,10 +3344,7 @@ class ArcCircle(Arc):
 
    def __str__(self):
       x, y       = self.getCenter()
-      # radius from the un-rotated outline, so it stays the circle's true radius even if
-      # the arc has been scaled or turned
-      xPoints    = self._visibleUnrotatedOutline()[0]
-      radius     = self._asNumber((max(xPoints) - min(xPoints)) / 2.0)
+      radius     = self.getRadius()
       startAngle = self._startAngle
       endAngle   = self._endAngle
       style      = self._style
@@ -3603,11 +3752,7 @@ class Icon(Graphics):
       self._pushTransform()
 
    def __str__(self):
-      # report the visible (scaled) size with rotation taken out, since that is what the
-      # constructor takes
-      xPoints, yPoints = self._visibleUnrotatedOutline()
-      width  = self._asNumber(max(xPoints) - min(xPoints))
-      height = self._asNumber(max(yPoints) - min(yPoints))
+      width, height = self.getSize()
       return (f'Icon(filename = "{self._filename}", width = {width}, height = {height}, '
               f'backgroundColor = {self.getBackgroundColor()}, fill = {self.getFill()}, '
               f'thickness = {self.getThickness()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})')
@@ -3831,6 +3976,11 @@ class Icon(Graphics):
 class Label(Graphics):
    """Create a label that shows a line of text.
 
+   A label starts out just big enough for its text. If you give it another size (with
+   setSize(), or with resize=False in setText() or setFont()), the text lines up inside
+   it by the label's alignment, centered top to bottom, and any text that does not fit
+   is cut off.
+
    Args:
        text (str): The text to show.
        alignment (int, optional): How the text lines up, one of LEFT, CENTER, or RIGHT.
@@ -3841,36 +3991,30 @@ class Label(Graphics):
    """
    def __init__(self, text, alignment=LEFT, textColor=Color.BLACK, backgroundColor=Color.CLEAR, font=None, visibility=100):
       """"""
-      Graphics.__init__(self, textColor, False, 1)
+      # a label's color is its background, like a control's; its text has its own color
+      Graphics.__init__(self, backgroundColor, False, 1)
 
-      self._text            = str(text)
-      self._backgroundColor = backgroundColor.getRGBA()
-      self._alignment       = alignment
-      self._font            = None
-      self._rotation        = 0.0
-      self._visibility      = max(0, min(100, int(visibility)))
+      self._text       = str(text)
+      self._textColor  = textColor.getRGBA()
+      self._alignment  = alignment
+      self._rotation   = 0.0
+      self._visibility = max(0, min(100, int(visibility)))
 
-      # extract Font information
       fontData = None
-      if isinstance(font, Font):
-         name  = font.getName()
-         style = font.getStyle()
-         size  = font.getSize()
-         self._font = [name, style, size]
-         fontData   = [name, style, size]
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':            'Label',
-         'text':            self._text,
-         'alignment':       alignment,
-         'textColor':       self._color,
-         'backgroundColor': self._backgroundColor,
-         'font':            fontData,
-         'color':           self._color,
-         'rotation':        self._rotation,
-         'sx':              self._scaleX,
-         'sy':              self._scaleY,
-         'visibility':      self._visibility,
+         'type':       'Label',
+         'text':       self._text,
+         'alignment':  alignment,
+         'color':      self._color,
+         'textColor':  self._textColor,
+         'font':       fontData,
+         'rotation':   self._rotation,
+         'sx':         self._scaleX,
+         'sy':         self._scaleY,
+         'visibility': self._visibility,
       })
 
       # the renderer measures the text, so ask it for the resolved size, then place the
@@ -3886,9 +4030,17 @@ class Label(Graphics):
       text            = self.getText()
       alignment       = self.getAlignment()
       textColor       = self.getTextColor()
-      backgroundColor = self.getBackgroundColor()
+      backgroundColor = self.getColor()
       font            = self.getFont()
       return f'Label(text = "{text}", alignment = {alignment}, textColor = {textColor}, backgroundColor = {backgroundColor}, font = {font}, visibility = {self.getVisibility()})'
+
+   def _refit(self):
+      """"""
+      currentLeft, currentTop = self.getPosition()
+      result = _handler().sendQuery('getSize', self._objectId)
+      self._baseWidth  = result[0]
+      self._baseHeight = result[1]
+      self.setPosition(currentLeft, currentTop)
 
    # ── Text ────────────────────────────────────────────────────────────────
 
@@ -3901,21 +4053,39 @@ class Label(Graphics):
       text = self._text
       return text
 
-   def setText(self, text):
+   def setText(self, text, resize=True):
       """Set the label's text.
 
       Args:
-          text (str): The new text. If it is longer than the label can fit, it is truncated.
+          text (str): The new text.
+          resize (bool, optional): True to resize the label to fit the new text, or False to keep its current size (text that does not fit is cut off).
       """
-      currentLeft, currentTop = self.getPosition()
       self._text = str(text)
-      _handler().sendCommand('setText', self._objectId, {'text': self._text})
-      result = _handler().sendQuery('getSize', self._objectId)
-      self._baseWidth  = result[0]
-      self._baseHeight = result[1]
-      self.setPosition(currentLeft, currentTop)
+      _handler().sendCommand('setText', self._objectId, {'text': self._text, 'resize': resize})
+      if resize:
+         self._refit()
 
    # ── Color ────────────────────────────────────────────────────────────────
+
+   def getColor(self):
+      """Return the label's color.
+
+      Returns:
+          color (Color): The color behind the text.
+      """
+      color = Color(*self._color)
+      return color
+
+   def setColor(self, color=None):
+      """Set the label's color.
+
+      Colors the area behind the text. To change the color of the text itself, use
+      setTextColor().
+
+      Args:
+          color (Color, optional): The new color behind the text. If omitted, a color-selection dialog opens.
+      """
+      Graphics.setColor(self, color)
 
    def getTextColor(self):
       """Return the label's text color.
@@ -3923,7 +4093,7 @@ class Label(Graphics):
       Returns:
           color (Color): The text color.
       """
-      color = self.getColor()
+      color = Color(*self._textColor)
       return color
 
    def setTextColor(self, color=None):
@@ -3932,33 +4102,13 @@ class Label(Graphics):
       Args:
           color (Color, optional): The new text color. If omitted, a color-selection dialog opens.
       """
-      self.setColor(color)
-
-   def getBackgroundColor(self):
-      """Return the label's background color.
-
-      Returns:
-          color (Color): The color behind the text.
-      """
-      color = Color(*self._backgroundColor)
-      return color
-
-   def setBackgroundColor(self, color=None):
-      """Set the label's background color.
-
-      Args:
-          color (Color, optional): The new background color. If omitted, a color-selection dialog opens.
-      """
       if color is None:
-         color = Color()
-
-      if isinstance(color, Color):
-         r, g, b, a = color.getRGBA()
-      else:
-         raise TypeError(f'{type(self).__name__}.setBackgroundColor(): color should be a Color object (it was {type(color).__name__})')
-
-      self._backgroundColor = [r, g, b, a]
-      _handler().sendCommand('setBackgroundColor', self._objectId, {'color': [r, g, b, a]})
+         color = Color()  # default color brings up color select dialog
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.setTextColor(): color should be a Color object (it was {type(color).__name__})')
+      r, g, b, a      = color.getRGBA()
+      self._textColor = [r, g, b, a]
+      _handler().sendCommand('setTextColor', self._objectId, {'color': self._textColor})
 
    # ── Alignment ────────────────────────────────────────────────────────────────
 
@@ -3986,32 +4136,49 @@ class Label(Graphics):
       """Return the label's font.
 
       Returns:
-          font (Font): The label's font, or None if it uses the default font.
+          font (Font): The font of the label's text.
       """
-      font = None
-
-      if self._font is not None:
-         name, style, size = self._font
-         font = Font(name, style, size)
-
+      fontData          = _handler().sendQuery('getFont', self._objectId)[0]
+      name, style, size = fontData
+      font              = Font(name, tuple(style), size)
       return font
 
-   def setFont(self, font):
+   def setFont(self, font, resize=True):
       """Set the label's font.
 
       Args:
           font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
+          resize (bool, optional): True to resize the label to fit its text in the new font, or False to keep its current size (text that does not fit is cut off).
       """
-      currentLeft, currentTop = self.getPosition()
-      name  = font.getName()
-      style = font.getStyle()
-      size  = font.getSize()
-      self._font = [name, style, size]
-      _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
-      result = _handler().sendQuery('getSize', self._objectId)
-      self._baseWidth  = result[0]
-      self._baseHeight = result[1]
-      self.setPosition(currentLeft, currentTop)
+      if not isinstance(font, Font):
+         raise TypeError(f'{type(self).__name__}.setFont(): font should be a Font object (it was {type(font).__name__})')
+      fontData = [font.getName(), font.getStyle(), font.getSize()]
+      _handler().sendCommand('setFont', self._objectId, {'font': fontData, 'resize': resize})
+      if resize:
+         self._refit()
+
+   # ── Compatibility Aliases ─────────────────────────────────────────────────────────
+
+   def getBackgroundColor(self):
+      """Return the label's background color.
+
+      Same as getColor().
+
+      Returns:
+          color (Color): The color behind the text.
+      """
+      color = self.getColor()
+      return color
+
+   def setBackgroundColor(self, color=None):
+      """Set the label's background color.
+
+      Same as setColor().
+
+      Args:
+          color (Color, optional): The new color behind the text. If omitted, a color-selection dialog opens.
+      """
+      self.setColor(color)
 
 
 #######################################################################################
@@ -4073,6 +4240,32 @@ class Group(Drawable):
       self._invalidateSceneMatrix()
       self._markParentExtentDirty()
       self._pushTransform()
+
+   def setCenter(self, x, y):
+      """Move the group so its center sits at the given point.
+
+      Args:
+          x (int or float): The new horizontal position of the center, in pixels.
+          y (int or float): The new vertical position of the center, in pixels.
+      """
+      # re-center the group on its items first, so it moves from its true center
+      self._calculateSize()
+      Drawable.setCenter(self, x, y)
+
+   def setRotation(self, rotation, anchorX=None, anchorY=None):
+      """Turn the group to a given angle.
+
+      By default the group turns about its own center. Give an anchor point to turn it
+      about that point instead.
+
+      Args:
+          rotation (int or float): The angle to turn to, in degrees, counter-clockwise.
+          anchorX (int or float, optional): The horizontal position of the point to turn about, in pixels. Defaults to the group's center.
+          anchorY (int or float, optional): The vertical position of the point to turn about, in pixels. Defaults to the group's center.
+      """
+      # re-center the group on its items first, so it turns about its true center
+      self._calculateSize()
+      Drawable.setRotation(self, rotation, anchorX, anchorY)
 
    # ──────────────────────────────────────────────────────────────────────────────
    # TECHNICAL NOTE - keeping a Group centered on its children
@@ -4327,7 +4520,7 @@ class MusicControl(Group):
          self._value = newValue
          self._updateAppearance()
          if (self._action is not None) and callable(self._action):
-            self._action(self._value)  # call user function
+            self._action(self.getValue())  # call user function
 
 
    # ── Color ────────────────────────────────────────────────────────────────
@@ -4554,6 +4747,7 @@ class HFader(MusicControl):
    def _defaultAction(self, ex, ey):
       """"""
       # update fader value based on mouse position on the fader
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       fx = self._backgroundShape.getX()  # visual fader position
       x  = ex - fx                       # local event position
 
@@ -4576,10 +4770,10 @@ class HFader(MusicControl):
       fy      = y + padding               # ...
       fWidth  = fWidth * valueRatio       # scale to value
 
-      # size first, then position: in the new model resizing pins the center, so we
-      # set the size and then move the top-left to where the bar should start
+      # find the bar's center in the unrotated fader, then turn it to match the fader
+      centerX, centerY = self._backgroundShape._rotatePoint(fx + fWidth / 2, fy + fHeight / 2)
       self._foregroundShape.setSize(fWidth, fHeight)
-      self._foregroundShape.setPosition(fx, fy)
+      self._foregroundShape.setCenter(centerX, centerY)
 
    def setValue(self, newValue):
       """Set the fader's value.
@@ -4637,6 +4831,7 @@ class VFader(HFader):
    def _defaultAction(self, ex, ey):
       """"""
       # update fader value based on mouse position on the fader
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       fy = self._backgroundShape.getY()  # visual fader position
       y  = ey - fy                       # local event position
 
@@ -4663,10 +4858,10 @@ class VFader(HFader):
       fy      = fy + (fHeight * (1 - valueRatio))
       fHeight = fHeight * valueRatio
 
-      # size first, then position: in the new model resizing pins the center, so we
-      # set the size and then move the top-left to where the bar should start
+      # find the bar's center in the unrotated fader, then turn it to match the fader
+      centerX, centerY = self._backgroundShape._rotatePoint(fx + fWidth / 2, fy + fHeight / 2)
       self._foregroundShape.setSize(fWidth, fHeight)
-      self._foregroundShape.setPosition(fx, fy)
+      self._foregroundShape.setCenter(centerX, centerY)
 
    def setValue(self, newValue):
       """Set the fader's value.
@@ -4782,6 +4977,7 @@ class Rotary(MusicControl):
    def _defaultAction(self, ex, ey):
       """"""
       # update rotary value based on mouse position
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       rx, ry = self._backgroundShape.getPosition()  # visual rotary position
       x = ex - rx                                   # local event position
       y = ey - ry                                   # ...
@@ -4998,7 +5194,7 @@ class XYPad(MusicControl):
        y1 (int or float): The vertical position of the top-left corner, in pixels.
        x2 (int or float): The horizontal position of the bottom-right corner, in pixels.
        y2 (int or float): The vertical position of the bottom-right corner, in pixels.
-       action (Callable, optional): The function to call when the bubble moves; it receives the new [x, y] value.
+       action (Callable, optional): The function to call when the bubble moves; it receives the new x and y as two separate values.
        foregroundColor (Color, optional): The color of the bubble.
        backgroundColor (Color, optional): The color behind the bubble.
        outlineColor (Color, optional): The outline color.
@@ -5008,7 +5204,7 @@ class XYPad(MusicControl):
        rotation (int or float, optional): How far to turn the pad, in degrees, counter-clockwise.
        visibility (int, optional): How visible the pad is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, x1, y1, x2, y2, action=None, foregroundColor=Color.RED, backgroundColor=Color.BLACK, outlineColor=Color.CLEAR, outlineThickness=2, trackerRadius=10, crosshairThickness=None, rotation=0, visibility=100):
+   def __init__(self, x1, y1, x2, y2, action=None, foregroundColor=Color.RED, backgroundColor=Color.BLACK, outlineColor=Color.RED, outlineThickness=2, trackerRadius=10, crosshairThickness=None, rotation=0, visibility=100):
       """"""
       MusicControl.__init__(self, action)
 
@@ -5095,6 +5291,7 @@ class XYPad(MusicControl):
 
    def _defaultAction(self, ex, ey):
       """"""
+      ex, ey = self._backgroundShape._unrotatePoint(ex, ey)  # line the event up with the unrotated shape
       mx, my = self._backgroundShape.getPosition()  # visual XYPad position
       x = ex - mx                                   # local event position
       y = ey - my                                   # ...
@@ -5104,19 +5301,24 @@ class XYPad(MusicControl):
       """"""
       vx, vy = self._value                          # local value position
       mx, my = self._backgroundShape.getPosition()  # visual XYPad position
+      cx, cy = self._backgroundShape.getCenter()    # visual XYPad center
       x = mx + vx                                   # visual value position
       y = my + vy                                   # ...
 
-      self._trackerXLine.setX(x)
-      self._trackerYLine.setY(y)
-      self._foregroundShape.setCenter(x, y)
+      # find each center in the unrotated pad, then turn it to match the pad
+      xLineX, xLineY     = self._backgroundShape._rotatePoint(x, cy)
+      yLineX, yLineY     = self._backgroundShape._rotatePoint(cx, y)
+      trackerX, trackerY = self._backgroundShape._rotatePoint(x, y)
+      self._trackerXLine.setCenter(xLineX, xLineY)
+      self._trackerYLine.setCenter(yLineX, yLineY)
+      self._foregroundShape.setCenter(trackerX, trackerY)
 
    def getValue(self):
       """Return the bubble's position within the pad.
 
       Returns:
-          x (int or float): The horizontal position of the bubble within the pad, in pixels.
-          y (int or float): The vertical position of the bubble within the pad, in pixels.
+          x (int): The horizontal position of the bubble within the pad, in pixels.
+          y (int): The vertical position of the bubble within the pad, in pixels.
       """
       x, y = self._value
       return x, y
@@ -5124,17 +5326,23 @@ class XYPad(MusicControl):
    def setValue(self, x, y):
       """Set the bubble's position within the pad.
 
-      Positions outside the pad are clamped to its edges. Moves the bubble and calls the
-      update function.
+      Positions outside the pad are clamped to its edges and rounded to whole pixels. Moves
+      the bubble and calls the update function.
 
       Args:
           x (int or float): The new horizontal position within the pad, in pixels.
           y (int or float): The new vertical position within the pad, in pixels.
       """
       width, height = self._backgroundShape.getSize()
-      x = max(0, min(x, width))            # clamp values
-      y = max(0, min(y, height))           # ...
-      MusicControl.setValue(self, [x, y])  # update value and call user function
+      x = int(round(max(0, min(x, width))))    # clamp values to whole pixels
+      y = int(round(max(0, min(y, height))))   # ...
+
+      # the pad's value is a pair, so the user function receives x and y separately
+      if [x, y] != self._value:  # only update if value has changed
+         self._value = [x, y]
+         self._updateAppearance()
+         if (self._action is not None) and callable(self._action):
+            self._action(x, y)  # call user function
 
 
 #######################################################################################
@@ -5166,27 +5374,128 @@ class Control(Drawable):
       self.setPosition(currentLeft, currentTop)
 
 #######################################################################################
-class Button(Control):
+class TextControl(Control):
+   """Provide the shared text behavior of the controls that show text.
+
+   TextControl is a base class. You do not create one yourself. Button, CheckBox,
+   DropDownList, TextField, and TextArea inherit from it, along with its text color and
+   font methods.
+
+   A text control's color is its background; its text has a separate text color. When
+   the font changes, the control can refit to its text in the new font, or keep the size
+   it has. Refitting makes a Button, CheckBox, or DropDownList just big enough for its
+   text (for a DropDownList, its longest item), and makes a TextField or TextArea big
+   enough for its columns and rows of text in the new font.
+   """
+   def __init__(self):
+      Control.__init__(self)
+      self._textColor = Color.BLACK.getRGBA()   # the color of the control's text
+
+   # ── Text ─────────────────────────────────────────────────────────────────
+
+   def getText(self):
+      """Return the control's text.
+
+      Returns:
+          text (str): The text the control shows.
+      """
+      text = _handler().sendQuery('getText', self._objectId)[0]
+      return text
+
+   def setText(self, text, resize=True):
+      """Set the control's text.
+
+      Args:
+          text (str): The new text.
+          resize (bool, optional): True to resize the control to fit the new text, or False to keep its current size.
+      """
+      _handler().sendCommand('setText', self._objectId, {'text': str(text), 'resize': resize})
+      if resize:
+         self._refit()
+
+   # ── Text color ───────────────────────────────────────────────────────────
+
+   def getTextColor(self):
+      """Return the control's text color.
+
+      Returns:
+          color (Color): The text color.
+      """
+      color = Color(*self._textColor)
+      return color
+
+   def setTextColor(self, color=None):
+      """Set the control's text color.
+
+      Args:
+          color (Color, optional): The new text color. If omitted, a color-selection dialog opens.
+      """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.setTextColor(): color should be a Color object (it was {type(color).__name__})')
+      r, g, b, a      = color.getRGBA()
+      self._textColor = [r, g, b, a]
+      _handler().sendCommand('setTextColor', self._objectId, {'color': self._textColor})
+
+   # ── Font ─────────────────────────────────────────────────────────────────
+
+   def getFont(self):
+      """Return the control's font.
+
+      Returns:
+          font (Font): The font of the control's text.
+      """
+      fontData          = _handler().sendQuery('getFont', self._objectId)[0]
+      name, style, size = fontData
+      font              = Font(name, tuple(style), size)
+      return font
+
+   def setFont(self, font, resize=True):
+      """Set the control's font.
+
+      Args:
+          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
+          resize (bool, optional): True to refit the control to its text in the new font, or False to keep its current size.
+      """
+      if not isinstance(font, Font):
+         raise TypeError(f'{type(self).__name__}.setFont(): font should be a Font object (it was {type(font).__name__})')
+      fontData = [font.getName(), font.getStyle(), font.getSize()]
+      _handler().sendCommand('setFont', self._objectId, {'font': fontData, 'resize': resize})
+      if resize:
+         self._refit()
+
+#######################################################################################
+class Button(TextControl):
    """Create a clickable button.
 
    Args:
        text (str, optional): The text shown on the button.
        action (Callable, optional): The function to call each time the button is pressed; it receives no parameters.
        color (Color, optional): The button color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the button, in degrees, counter-clockwise.
        visibility (int, optional): How visible the button is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.WHITE, rotation=0, visibility=100):
+   def __init__(self, text='', action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._color  = color.getRGBA()
+      self._action    = action
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'Button',
-         'text':  str(text),
-         'color': self._color,
+         'type':      'Button',
+         'text':      str(text),
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5201,25 +5510,7 @@ class Button(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'Button(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
-
-   def getText(self):
-      """Return the button's text.
-
-      Returns:
-          text (str): The text shown on the button.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
-      """Set the button's text.
-
-      Args:
-          text (str): The new text to show on the button.
-      """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
-      self._refit()
+      return f'Button(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the button's color.
@@ -5233,7 +5524,7 @@ class Button(Control):
    def setColor(self, color=None):
       """Set the button's color.
 
-      Colors the button's background; its text stays black so it remains easy to read.
+      Colors the button's background. To change the color of its text, use setTextColor().
 
       Args:
           color (Color, optional): The new button background color. If omitted, a color-selection dialog opens.
@@ -5247,27 +5538,36 @@ class Button(Control):
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
 
-class CheckBox(Control):
+class CheckBox(TextControl):
    """Create a checkbox the user can check and uncheck.
 
    Args:
        text (str, optional): The text shown beside the checkbox.
        action (Callable, optional): The function to call when the checkbox changes; it receives one parameter, True if it was just checked or False if it was just unchecked.
        color (Color, optional): The checkbox color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the checkbox, in degrees, counter-clockwise.
        visibility (int, optional): How visible the checkbox is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.CLEAR, rotation=0, visibility=100):
+   def __init__(self, text='', action=None, color=Color.CLEAR, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._color  = color.getRGBA()
+      self._action    = action
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'CheckBox',
-         'text':  str(text),
-         'color': self._color,
+         'type':      'CheckBox',
+         'text':      str(text),
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5282,25 +5582,7 @@ class CheckBox(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'CheckBox(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
-
-   def getText(self):
-      """Return the checkbox's text.
-
-      Returns:
-          text (str): The text shown beside the checkbox.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
-      """Set the checkbox's text.
-
-      Args:
-          text (str): The new text to show beside the checkbox.
-      """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
-      self._refit()
+      return f'CheckBox(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the checkbox's color.
@@ -5314,8 +5596,8 @@ class CheckBox(Control):
    def setColor(self, color=None):
       """Set the checkbox's color.
 
-      Colors the area behind the box and its label; the label text stays black so it
-      remains easy to read.
+      Colors the area behind the box and its label. To change the color of the label text,
+      use setTextColor().
 
       Args:
           color (Color, optional): The new checkbox color. If omitted, a color-selection dialog opens.
@@ -5449,28 +5731,37 @@ class Slider(Control):
       _handler().sendCommand('setValue', self._objectId, {'value': int(value)})
 
 
-class DropDownList(Control):
+class DropDownList(TextControl):
    """Create a drop-down list the user can pick one item from.
 
    Args:
        items (list[str], optional): The items to show, for example ["item1", "item2", "item3"].
        action (Callable, optional): The function to call when an item is picked; it receives one parameter, the selected item as a string.
        color (Color, optional): The list color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the list, in degrees, counter-clockwise.
        visibility (int, optional): How visible the list is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, items=[], action=None, color=Color.WHITE, rotation=0, visibility=100):
+   def __init__(self, items=[], action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._items    = list(items)
-      self._color    = color.getRGBA()
+      self._action    = action
+      self._items     = list(items)
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'DropDownList',
-         'items': self._items,
-         'color': self._color,
+         'type':      'DropDownList',
+         'items':     self._items,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5485,7 +5776,7 @@ class DropDownList(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'DropDownList(items = {self._items}, action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'DropDownList(items = {self._items}, action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the drop-down list's color.
@@ -5499,7 +5790,7 @@ class DropDownList(Control):
    def setColor(self, color=None):
       """Set the drop-down list's color.
 
-      Colors the list's background; its text stays black so it remains easy to read.
+      Colors the list's background. To change the color of its text, use setTextColor().
 
       Args:
           color (Color, optional): The new list color. If omitted, a color-selection dialog opens.
@@ -5512,8 +5803,22 @@ class DropDownList(Control):
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
+   def setText(self, text):
+      """Select the item with the given text.
 
-class TextField(Control):
+      Works just like the user picking the item: it becomes the selected item and the
+      list's function is called with it. To find out which item is selected, use
+      getText().
+
+      Args:
+          text (str): The item to select. It must be one of the list's items.
+      """
+      if str(text) not in self._items:
+         raise ValueError(f'{type(self).__name__}.setText(): "{text}" is not one of the items {self._items}')
+      _handler().sendCommand('setText', self._objectId, {'text': str(text), 'resize': False})
+
+
+class TextField(TextControl):
    """Create a single-line text field the user can type into.
 
    Args:
@@ -5521,31 +5826,34 @@ class TextField(Control):
        columns (int, optional): The width of the field, in characters.
        action (Callable, optional): The function to call when the user presses Enter in the field; it receives one parameter, the field's contents as a string.
        color (Color, optional): The field color.
+       textColor (Color, optional): The text color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the field, in degrees, counter-clockwise.
        visibility (int, optional): How visible the field is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, font=None, rotation=0, visibility=100):
+   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._columns  = columns
-      self._font     = None
-      self._color    = color.getRGBA()
+      self._action    = action
+      self._columns   = columns
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':    'TextField',
-         'text':    str(text),
-         'columns': columns,
-         'color':   self._color,
-         'font':    None,
+         'type':      'TextField',
+         'text':      str(text),
+         'columns':   columns,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
-
-      if font is not None:
-         self.setFont(font)
 
       # register action callback
       def _onReturnPressed(text):
@@ -5557,24 +5865,17 @@ class TextField(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
-   def getText(self):
-      """Return the text in the field.
-
-      Returns:
-          text (str): The field's contents.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
+   def setText(self, text, resize=False):
       """Set the text in the field.
 
       Args:
           text (str): The new contents of the field.
+          resize (bool, optional): True to resize the field to fit the new text, or False to keep its current size.
       """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
+      # a field keeps its size by default, since its text often changes while in use
+      TextControl.setText(self, text, resize)
 
    def getColor(self):
       """Return the field's color.
@@ -5588,8 +5889,7 @@ class TextField(Control):
    def setColor(self, color=None):
       """Set the field's color.
 
-      Colors the field's background; the text you type stays black so it remains easy to
-      read.
+      Colors the field's background. To change the color of the text, use setTextColor().
 
       Args:
           color (Color, optional): The new field color. If omitted, a color-selection dialog opens.
@@ -5602,29 +5902,8 @@ class TextField(Control):
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
-   def getFont(self):
-      """Return the field's font.
 
-      Returns:
-          font (Font): The field's font, or None if it uses the default font.
-      """
-      font = font = Font(*self._font) if self._font is not None else None
-      return font
-
-   def setFont(self, font):
-      """Set the field's font.
-
-      Args:
-          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
-      """
-      name       = font.getName()
-      style      = font.getStyle()
-      size       = font.getSize()
-      self._font = [name, style, size]
-      _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
-
-
-class TextArea(Control):
+class TextArea(TextControl):
    """Create a multi-line text area the user can type into.
 
    If the text is taller than the area, a scroll bar appears on the right.
@@ -5634,55 +5913,51 @@ class TextArea(Control):
        columns (int, optional): The width of the area, in characters.
        rows (int, optional): The height of the area, in lines.
        color (Color, optional): The area color.
+       textColor (Color, optional): The text color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the area, in degrees, counter-clockwise.
        visibility (int, optional): How visible the area is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, font=None, rotation=0, visibility=100):
+   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._columns = columns
-      self._rows    = rows
-      self._font    = None
-      self._color   = color.getRGBA()
+      self._columns   = columns
+      self._rows      = rows
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':    'TextArea',
-         'text':    str(text),
-         'columns': columns,
-         'rows':    rows,
-         'color':   self._color,
-         'font':    None,
+         'type':      'TextArea',
+         'text':      str(text),
+         'columns':   columns,
+         'rows':      rows,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
-
-      if font is not None:
-         self.setFont(font)
 
       self.setRotation(rotation)
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
-   def getText(self):
-      """Return the text in the area.
-
-      Returns:
-          text (str): The area's contents.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
+   def setText(self, text, resize=False):
       """Set the text in the area.
 
       Args:
           text (str): The new contents of the area.
+          resize (bool, optional): True to resize the area to fit the new text, or False to keep its current size.
       """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
+      # an area keeps its size by default, since its text often changes while in use
+      TextControl.setText(self, text, resize)
 
    def getColor(self):
       """Return the area's color.
@@ -5696,8 +5971,7 @@ class TextArea(Control):
    def setColor(self, color=None):
       """Set the area's color.
 
-      Colors the area's background; the text you type stays black so it remains easy to
-      read.
+      Colors the area's background. To change the color of the text, use setTextColor().
 
       Args:
           color (Color, optional): The new area color. If omitted, a color-selection dialog opens.
@@ -5709,28 +5983,6 @@ class TextArea(Control):
       r, g, b, a  = color.getRGBA()
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
-
-   def getFont(self):
-      """Return the area's font.
-
-      Returns:
-          font (Font): The area's font, or None if it uses the default font.
-      """
-      font = font = Font(*self._font) if self._font is not None else None
-      return font
-
-   def setFont(self, font):
-      """Set the area's font.
-
-      Args:
-          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
-      """
-      if font is not None:
-         name       = font.getName()
-         style      = font.getStyle()
-         size       = font.getSize()
-         self._font = [name, style, size]
-         _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
 
 
 class Menu():
