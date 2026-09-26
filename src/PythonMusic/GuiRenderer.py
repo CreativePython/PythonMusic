@@ -110,6 +110,10 @@ _DROP_DOWN_WIDTH        = 20   # px, the arrow area at the right of a drop-down 
 _ARROW_WIDTH            = 9    # px, across the triangle drawn in that area
 _ARROW_HEIGHT           = 5    # px, from the triangle's flat top to its point
 _LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
+_CHECK_BOX_SIZE         = 14   # px, across the box a checkbox draws beside its text
+_CHECK_BOX_RADIUS       = 3    # px, how far that box's corners are rounded
+_CHECK_BOX_SPACING      = 5    # px, between that box and the checkbox's text
+_CHECK_MARK_THICKNESS   = 1.8  # px, the line width of the check mark
 
 # A list draws each row's text a few pixels in from the row's edge on its own (one past
 # the style's focus-frame margin), so the padding below makes up the rest of the distance
@@ -195,6 +199,15 @@ QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
 }}
 QComboBox QAbstractItemView QScrollBar::add-page:vertical,
 QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+   background: transparent;
+}}
+QCheckBox {{
+   spacing: {_CHECK_BOX_SPACING}px;
+}}
+QCheckBox::indicator {{
+   width: {_CHECK_BOX_SIZE}px;
+   height: {_CHECK_BOX_SIZE}px;
+   border: none;
    background: transparent;
 }}
 QLineEdit {{
@@ -1079,6 +1092,66 @@ class _QComboBox(QtWidgets.QComboBox):
          # ignoring the next click; closing it here resets that
          QtWidgets.QComboBox.hidePopup(self)
       return False
+
+
+class _QCheckBox(QtWidgets.QCheckBox):
+   """
+   QCheckBox that draws its own box and check mark.
+
+   Inside a QGraphicsProxyWidget, macOS's native checkbox never draws its check mark (it
+   only flashes while unchecking), even though the checked state itself is right.  The
+   control stylesheet empties the native box, keeping its size, and we paint one here:
+   white with a gray outline when unchecked, and highlight blue with a white check mark
+   when checked, matching the drop-down list's arrow.  It looks the same on every system.
+   """
+
+   # ── Painting ───────────────────────────────────────────────────────────────
+
+   def paintEvent(self, event):
+      """Draws the checkbox (its background and text), then its box on top."""
+      QtWidgets.QCheckBox.paintEvent(self, event)
+
+      option = QtWidgets.QStyleOptionButton()
+      self.initStyleOption(option)
+      boxArea = QtCore.QRectF(self.style().subElementRect(
+         QtWidgets.QStyle.SubElement.SE_CheckBoxIndicator, option, self))
+
+      painter = QtGui.QPainter(self)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+
+      # the outline's pen straddles its path, so trace half a border width inside the
+      # box's edge to keep the whole line inside it
+      halfBorder = _CONTROL_BORDER_WIDTH / 2.0
+      boxShape   = boxArea.adjusted(halfBorder, halfBorder, -halfBorder, -halfBorder)
+
+      if self.isChecked():
+         fillColor = QtGui.QColor(*_HIGHLIGHT_COLOR)
+         painter.setPen(QtCore.Qt.PenStyle.NoPen)
+      else:
+         fillColor = QtGui.QColor(255, 255, 255, 255)
+         painter.setPen(QtGui.QPen(QtGui.QColor(150, 150, 150, 255), _CONTROL_BORDER_WIDTH))   # the control outline's gray
+      if self.isDown():
+         fillColor = fillColor.darker(115)   # a little darker while the mouse is pressed on it
+      painter.setBrush(fillColor)
+      painter.drawRoundedRect(boxShape, _CHECK_BOX_RADIUS, _CHECK_BOX_RADIUS)
+
+      if self.isChecked():
+         # a check mark: down to the lower left third, then up to the upper right
+         left   = boxArea.left()
+         top    = boxArea.top()
+         width  = boxArea.width()
+         height = boxArea.height()
+         checkMark = QtGui.QPolygonF([
+            QtCore.QPointF(left + width * 0.25, top + height * 0.52),
+            QtCore.QPointF(left + width * 0.43, top + height * 0.70),
+            QtCore.QPointF(left + width * 0.76, top + height * 0.32),
+         ])
+         checkPen = QtGui.QPen(QtGui.QColor(*_HIGHLIGHT_TEXT_COLOR), _CHECK_MARK_THICKNESS)
+         checkPen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
+         checkPen.setJoinStyle(QtCore.Qt.PenJoinStyle.RoundJoin)
+         painter.setPen(checkPen)
+         painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+         painter.drawPolyline(checkMark)
 
 
 class _QProxyWidget(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsProxyWidget):
@@ -3904,7 +3977,7 @@ class CheckBoxMirror(_TextControlMirror):
    def __init__(self, objectId, args, guiRenderer):
       super().__init__(objectId, args, guiRenderer, [0, 0, 0, 0])   # CLEAR default
 
-      widget = QtWidgets.QCheckBox(args.get('text', ''))
+      widget = _QCheckBox(args.get('text', ''))
       self._wrapWidget(widget)
       self._setUpText(args)
 
