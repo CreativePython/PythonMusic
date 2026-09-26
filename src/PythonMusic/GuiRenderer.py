@@ -109,7 +109,7 @@ _COMBO_PADDING_SIDE     = 12   # px, between a drop-down list's text and its lef
 _DROP_DOWN_WIDTH        = 20   # px, the arrow area at the right of a drop-down list
 _ARROW_WIDTH            = 9    # px, across the triangle drawn in that area
 _ARROW_HEIGHT           = 5    # px, from the triangle's flat top to its point
-_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list
+_LIST_SCROLLBAR_WIDTH   = 10   # px, the scrollbar down the side of an open list or text area
 _CHECK_BOX_SIZE         = 14   # px, across the box a checkbox draws beside its text
 _CHECK_BOX_RADIUS       = 3    # px, how far that box's corners are rounded
 _CHECK_BOX_SPACING      = 5    # px, between that box and the checkbox's text
@@ -121,9 +121,10 @@ _CHECK_MARK_THICKNESS   = 1.8  # px, the line width of the check mark
 _LIST_ITEM_TEXT_MARGIN = 5
 _LIST_TEXT_INDENT      = _COMBO_PADDING_SIDE + _CONTROL_BORDER_WIDTH - _LIST_ITEM_TEXT_MARGIN
 
-# macOS's own highlight blue, used for a drop-down list's arrow area and for the
-# highlighted row in its list.  Qt would otherwise use the palette's highlight, which is
-# blue while the Display is the active window and grey while it is not.
+# macOS's own highlight blue, used for a drop-down list's arrow area and highlighted
+# row, a checked checkbox, and selected text in a text field or text area.  Qt would
+# otherwise use the palette's highlight, which differs from system to system, and on
+# macOS is blue while the Display is the active window and grey while it is not.
 _HIGHLIGHT_COLOR      = (0, 122, 255, 255)
 _HIGHLIGHT_TEXT_COLOR = (255, 255, 255, 255)
 
@@ -134,28 +135,38 @@ def _asRgba(color):
 
 def _toQFont(font):
    """
-   Builds a QFont from gui.py's [name, [weight, italic], size].  A size of zero or less
-   means the default size, which is the application font's size (the size every label
-   and control starts with), not QFont's own smaller default.
+   Builds a QFont from gui.py's [name, [weight, italic], size].  gui.py's font sizes are
+   pixels, not points: a point's size in pixels depends on the system (macOS draws 72 to
+   the inch, Windows 96), so sizing in pixels makes text the same size everywhere.  A
+   size of zero or less means the default size, the one every label and control starts
+   with.
    """
    name, style, size = font
    weight, italic    = style
    qFont = QtGui.QFont(name)
    if size > 0:
-      qFont.setPointSizeF(size)
+      qFont.setPixelSize(max(1, round(size)))
    else:
-      qFont.setPointSizeF(QtWidgets.QApplication.font().pointSizeF())
+      qFont.setPixelSize(_DEFAULT_FONT_SIZE)
    qFont.setWeight(QtGui.QFont.Weight(weight))
    qFont.setItalic(italic)
    return qFont
 
 def _fromQFont(qFont):
-   """Describes a QFont as gui.py's [name, [weight, italic], size]."""
-   size = qFont.pointSizeF()
-   if size == int(size):
-      size = int(size)
+   """Describes a QFont as gui.py's [name, [weight, italic], size], with its size in pixels."""
+   size = QtGui.QFontInfo(qFont).pixelSize()
    return [qFont.family(), [int(qFont.weight()), qFont.italic()], size]
+
+def _defaultQFont():
+   """The font every label and control starts with."""
+   return _toQFont([_DEFAULT_FONT_FAMILY, [int(QtGui.QFont.Weight.Normal), False], _DEFAULT_FONT_SIZE])
 _PROXY_MAXIMUM_SIZE     = 16777215   # Qt's QWIDGETSIZE_MAX, i.e. no limit
+
+# The font every label and control starts with, on every system.  macOS and Windows
+# both include Arial, and Linux usually maps it to Liberation Sans, which has the same
+# letter widths.
+_DEFAULT_FONT_FAMILY = 'Arial'
+_DEFAULT_FONT_SIZE   = 13   # pixels
 
 # how much wider and taller a field is than the text it holds
 _FIELD_EXTRA_WIDTH  = 2 * (_FIELD_PADDING_SIDE + _CONTROL_BORDER_WIDTH)
@@ -183,22 +194,28 @@ QComboBox QAbstractItemView {{
 QComboBox QAbstractItemView::item {{
    padding-left: {_LIST_TEXT_INDENT}px;
 }}
-QComboBox QAbstractItemView QScrollBar:vertical {{
+QComboBox QAbstractItemView QScrollBar:vertical,
+QTextEdit QScrollBar:vertical {{
    width: {_LIST_SCROLLBAR_WIDTH}px;
    margin: 0px;
-   background: transparent;
+   background: rgba(225, 225, 225, 255);
 }}
-QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+QComboBox QAbstractItemView QScrollBar::handle:vertical,
+QTextEdit QScrollBar::handle:vertical {{
    min-height: 20px;
    border-radius: {_LIST_SCROLLBAR_WIDTH // 2}px;
    background: rgba(150, 150, 150, 255);
 }}
 QComboBox QAbstractItemView QScrollBar::add-line:vertical,
-QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
+QComboBox QAbstractItemView QScrollBar::sub-line:vertical,
+QTextEdit QScrollBar::add-line:vertical,
+QTextEdit QScrollBar::sub-line:vertical {{
    height: 0px;
 }}
 QComboBox QAbstractItemView QScrollBar::add-page:vertical,
-QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+QComboBox QAbstractItemView QScrollBar::sub-page:vertical,
+QTextEdit QScrollBar::add-page:vertical,
+QTextEdit QScrollBar::sub-page:vertical {{
    background: transparent;
 }}
 QCheckBox {{
@@ -214,11 +231,15 @@ QLineEdit {{
    padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
    border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
    border-radius: {_CONTROL_CORNER_RADIUS}px;
+   selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};
+   selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)};
 }}
 QTextEdit {{
    padding: {_FIELD_PADDING_TOP}px {_FIELD_PADDING_SIDE}px;
    border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
    border-radius: {_CONTROL_CORNER_RADIUS}px;
+   selection-background-color: {_asRgba(_HIGHLIGHT_COLOR)};
+   selection-color: {_asRgba(_HIGHLIGHT_TEXT_COLOR)};
 }}
 """
 
@@ -261,6 +282,9 @@ class GuiRenderer:
 
       # QApplication must be created first; it owns the Qt event loop.
       self.qApplication = QtWidgets.QApplication([])
+
+      # the same default font on every system, rather than each system's own UI font
+      self.qApplication.setFont(_defaultQFont())
 
       # padding, border, and corner rounding for every control.  Each control mirror
       # sets its own colors on top of this; the two stylesheets combine.
@@ -1000,6 +1024,10 @@ class _QComboBox(QtWidgets.QComboBox):
       # let Qt size the popup from scratch each time it opens; a height limit left over
       # from the last time would otherwise stick
       self.view().window().setMaximumHeight(_PROXY_MAXIMUM_SIZE)
+
+      # show the items in the box's font; the list otherwise keeps its own, which is
+      # smaller on some systems (macOS)
+      self.view().setFont(self.font())
 
       QtWidgets.QComboBox.showPopup(self)
       comboProxy = self.graphicsProxyWidget()
@@ -3827,18 +3855,20 @@ class _TextControlMirror(_ControlMirror):
    Base class for the controls that show text: Button, CheckBox, DropDownList, TextField,
    and TextArea.
 
-   Keeps each control's two colors (its background, and its text) and rebuilds its
-   stylesheet from both whenever either changes.  Also answers getText / setText and
-   getFont / setFont, where a change of text or font either refits the control to its
-   natural size or keeps the size it has.
+   Keeps each control's two colors (its background, and its text) and its font.  The
+   stylesheet is rebuilt from both colors whenever either changes, and the font is set
+   again after it, because a stylesheet change can put back the font some systems give
+   that kind of widget (macOS does for buttons and checkboxes).  Also answers getText /
+   setText and getFont / setFont, where a change of text or font either refits the
+   control to its natural size or keeps the size it has.
 
    Concrete classes must:
      1. Pass their default background color to __init__.
      2. Build their QWidget, pass it to self._wrapWidget(widget), then call
-        self._setUpText(args) to apply the starting font and colors and size the control.
+        self._setUpText(args) to apply the starting colors and font and size the control.
      3. Implement _applyColors() to build the stylesheet from _color and _textColor.
-   They may override _naturalSize() (the size the control fits to), _applyFont(), and
-   _getText() / _setText() for widgets whose text is not a plain text() / setText().
+   They may override _naturalSize() (the size the control fits to), and _getText() /
+   _setText() for widgets whose text is not a plain text() / setText().
    """
 
    def __init__(self, objectId, args, guiRenderer, defaultColor):
@@ -3846,6 +3876,7 @@ class _TextControlMirror(_ControlMirror):
 
       self._color     = args.get('color',     defaultColor)
       self._textColor = args.get('textColor', [0, 0, 0, 255])   # BLACK default
+      self._qFont     = _defaultQFont()
 
       self._commandHandlers.update({
          'getText':      self._getText,
@@ -3858,12 +3889,10 @@ class _TextControlMirror(_ControlMirror):
 
    def _setUpText(self, args):
       """Applies the starting colors and font, then sizes the control to fit."""
-      # a widget's first stylesheet resets its font, so the colors (which set the
-      # stylesheet) go first
-      self._applyColors()
       font = args.get('font')
       if font is not None:
-         self._applyFont(font)
+         self._qFont = _toQFont(font)
+      self._restyle()
       self._refitToNaturalSize()
 
    # ── Text ───────────────────────────────────────────────────────────────────
@@ -3880,24 +3909,27 @@ class _TextControlMirror(_ControlMirror):
    def _applyColors(self):
       raise NotImplementedError
 
+   def _restyle(self):
+      """Rebuilds the stylesheet from the colors, then sets the control's font again."""
+      self._applyColors()
+      self._widget.setFont(self._qFont)
+
    def _setColor(self, args, responseId):
       self._color = args.get('color', self._color)
-      self._applyColors()
+      self._restyle()
 
    def _setTextColor(self, args, responseId):
       self._textColor = args.get('color', self._textColor)
-      self._applyColors()
+      self._restyle()
 
    # ── Font ───────────────────────────────────────────────────────────────────
-
-   def _applyFont(self, font):
-      self._widget.setFont(_toQFont(font))
 
    def _getFont(self, args, responseId):
       self.guiRenderer.sendResponse(responseId, [_fromQFont(self._widget.font())])
 
    def _setFont(self, args, responseId):
-      self._applyFont(args.get('font'))
+      self._qFont = _toQFont(args.get('font'))
+      self._widget.setFont(self._qFont)
       self._afterContentChange(args.get('resize', True))
 
    # ── Size ───────────────────────────────────────────────────────────────────
@@ -4111,9 +4143,6 @@ class DropDownListMirror(_TextControlMirror):
       widget.addItems(args.get('items', []))
       self._wrapWidget(widget)
 
-      # the open list starts in a smaller font than the box on some systems (macOS),
-      # so give it the box's font from the start
-      widget.view().setFont(widget.font())
       self._setUpText(args)
 
       # wire Qt signal → event forwarding (sends selected index)
@@ -4142,12 +4171,6 @@ class DropDownListMirror(_TextControlMirror):
       index = self._widget.findText(args.get('text', ''))
       self._widget.setCurrentIndex(index)
       self._forwardEvent('activated', {'index': index})
-
-   def _applyFont(self, font):
-      # the open list shows the items in the same font as the box
-      qFont = _toQFont(font)
-      self._widget.setFont(qFont)
-      self._widget.view().setFont(qFont)
 
 
 #######################################################################################

@@ -774,12 +774,13 @@ class Font:
    Use a Font to set how text looks on a Label, Button, CheckBox, DropDownList,
    TextField, TextArea, or a drawn label, for example Font("Serif", Font.ITALIC, 16).
    The style is one of the constants Font.PLAIN, Font.BOLD, Font.ITALIC, or
-   Font.BOLDITALIC. A given size looks the same on every kind of object.
+   Font.BOLDITALIC. The size is in pixels, so a given size looks the same on every kind
+   of object and on every computer. Text you do not give a font to uses Arial at size 13.
 
    Args:
        name (str): The font name, for example "Serif", "Dialog", or "TimesRoman".
        style (tuple, optional): The text style, one of Font.PLAIN, Font.BOLD, Font.ITALIC, or Font.BOLDITALIC.
-       size (int, optional): The point size. If left as the default, the standard size is used.
+       size (int, optional): The size, in pixels. If left as the default, size 13 is used.
    """
    PLAIN      = (400, False)  # (Weight, Italic)
    BOLD       = (700, False)  # Weight values are from QtGui.QFont.Weight
@@ -833,19 +834,19 @@ class Font:
       self.style = style
 
    def getSize(self):
-      """Return the font's point size.
+      """Return the font's size.
 
       Returns:
-          size (int): The point size.
+          size (int): The size, in pixels.
       """
       size = self.size
       return size
 
    def setSize(self, size):
-      """Set the font's point size.
+      """Set the font's size.
 
       Args:
-          size (int): The new point size.
+          size (int): The new size, in pixels.
       """
       self.size = size
 
