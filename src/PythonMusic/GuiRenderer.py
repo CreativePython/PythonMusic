@@ -828,6 +828,12 @@ class _QPolygonItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsPolygonItem):
    pass
 
 class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
+   def __init__(self):
+      QtWidgets.QGraphicsItemGroup.__init__(self)
+      # a group draws nothing itself (its children draw themselves), so Qt can skip
+      # painting it; its area still receives mouse events
+      self.setFlag(QtWidgets.QGraphicsItem.GraphicsItemFlag.ItemHasNoContents, True)
+
    def boundingRect(self):
       # measure the children as they are now; QGraphicsItemGroup only measures them
       # when they are added, so its area goes stale once they move or resize
@@ -1275,6 +1281,9 @@ class DisplayMirror:
       self._view.setRenderHint(antiAlias,     self._antialias)
       self._view.setRenderHint(smoothPixmap,  self._antialias)
       self._view.setRenderHint(textAntiAlias, self._antialias)
+      # without antialiasing, nothing draws past its bounding box, so repaints can skip
+      # the extra margin Qt adds around each changed area
+      self._view.setOptimizationFlag(QtWidgets.QGraphicsView.OptimizationFlag.DontAdjustForAntialiasing, not self._antialias)
 
       # Integer GUI coordinates name pixels, but in Qt scene space an integer N is the
       # boundary between pixels N-1 and N, not the center of a pixel.  Shift the view by
