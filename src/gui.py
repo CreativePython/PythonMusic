@@ -972,9 +972,10 @@ class Display(Interactable):
        x (int or float, optional): The horizontal position of the window's top-left corner on the screen, in pixels.
        y (int or float, optional): The vertical position of the window's top-left corner on the screen, in pixels.
        color (Color, optional): The background color.
+       antialias (bool, optional): Whether to smooth the edges of shapes and text drawn on the display. Images and drawPoint() always keep crisp pixels.
    """
 
-   def __init__(self, title='', width=600, height=400, x=0, y=50, color=Color.WHITE):
+   def __init__(self, title='', width=600, height=400, x=0, y=50, color=Color.WHITE, antialias=True):
       """"""
       Interactable.__init__(self)
 
@@ -989,13 +990,14 @@ class Display(Interactable):
 
       # create display in the renderer child process
       _handler().sendCommand('create', self._objectId, {
-         'type':   'Display',
-         'title':  title,
-         'width':  width,
-         'height': height,
-         'x':      x,
-         'y':      y,
-         'color':  color.getRGBA(),
+         'type':      'Display',
+         'title':     title,
+         'width':     width,
+         'height':    height,
+         'x':         x,
+         'y':         y,
+         'color':     color.getRGBA(),
+         'antialias': antialias,
       })
 
    def __str__(self):

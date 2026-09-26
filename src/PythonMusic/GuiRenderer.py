@@ -1224,6 +1224,7 @@ class DisplayMirror:
       self.toolTipQLabel   = None   # shared QLabel for tooltips
       self._overlayOffset  = 14     # px offset from cursor tip to overlay label
       self._toolTipTimer   = None   # QTimer for off-display coordinate polling
+      self._antialias      = args.get('antialias', True)   # smooth edges of shapes and text?
 
       title  = args.get('title',  '')
       width  = args.get('width',  600)
@@ -1271,9 +1272,9 @@ class DisplayMirror:
       self._view.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop)
       self._view.setHorizontalScrollBarPolicy(scrollOff)
       self._view.setVerticalScrollBarPolicy(scrollOff)
-      self._view.setRenderHint(antiAlias,     True)
-      self._view.setRenderHint(smoothPixmap,  True)
-      self._view.setRenderHint(textAntiAlias, True)
+      self._view.setRenderHint(antiAlias,     self._antialias)
+      self._view.setRenderHint(smoothPixmap,  self._antialias)
+      self._view.setRenderHint(textAntiAlias, self._antialias)
 
       # Integer GUI coordinates name pixels, but in Qt scene space an integer N is the
       # boundary between pixels N-1 and N, not the center of a pixel.  Shift the view by
@@ -1712,6 +1713,9 @@ class DisplayMirror:
                   self._closeDrawPainter(painter)
                painter           = self._openDrawPainter(visibility)
                currentVisibility = visibility
+               # antialiasing can't change a pixel-aligned fill, only slow it down; the
+               # painter's own setting comes back when this state is closed
+               painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
             r, g, b, a = row[colorIndex]
             painter.fillRect(int(row[xIndex]), int(row[yIndex]), 1, 1, QtGui.QColor(r, g, b, a))
          if painter is not None:
@@ -1744,7 +1748,7 @@ class DisplayMirror:
 
    def _openDrawPainter(self, visibility=100):
       """
-      Returns the draw layer's shared antialiased QPainter, opening it on the first draw
+      Returns the draw layer's shared QPainter, opening it on the first draw
       of the tick and marking this display dirty for the end-of-tick flush.  Saves the
       painter's state so the shape's pen, brush, font, and transform are undone by
       _closeDrawPainter().  Opacity is set from visibility (0 = invisible, 100 = fully
@@ -1752,8 +1756,8 @@ class DisplayMirror:
       """
       if self._drawPainter is None:
          self._drawPainter = QtGui.QPainter(self._drawPixmap)
-         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing,          self._antialias)
+         self._drawPainter.setRenderHint(QtGui.QPainter.RenderHint.SmoothPixmapTransform, self._antialias)
          self.guiRenderer._dirtyDisplays.add(self)
       painter = self._drawPainter
       painter.save()
@@ -2924,8 +2928,10 @@ class IconMirror(_GraphicsMirror):
       self._sx       = args.get('sx',       1.0)
       self._sy       = args.get('sy',       1.0)
 
-      # the image itself; its pixels keep their own colors
+      # the image itself; its pixels keep their own colors and stay crisp when turned or
+      # scaled, whatever the Display's antialias setting
       self._qPixmapObject = QtWidgets.QGraphicsPixmapItem()
+      self._qPixmapObject.setTransformationMode(QtCore.Qt.TransformationMode.FastTransformation)
 
       # a rectangle glued behind the image that color/fill/thickness style, just like
       # any other shape (a QGraphicsPixmapItem has no pen or brush of its own)
