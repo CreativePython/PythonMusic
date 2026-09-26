@@ -148,6 +148,9 @@ QComboBox::drop-down {{
    border: none;
    background: transparent;
 }}
+QComboBox QAbstractItemView {{
+   border: {_CONTROL_BORDER_WIDTH}px solid rgba(150, 150, 150, 255);
+}}
 QComboBox QAbstractItemView::item {{
    padding-left: {_LIST_TEXT_INDENT}px;
 }}
@@ -840,6 +843,54 @@ class _QGroupItem(_QtGraphicsItemEventMixin, QtWidgets.QGraphicsItemGroup):
       return self.childrenBoundingRect()
 
 
+class _RoundedCornersEffect(QtWidgets.QGraphicsEffect):
+   """
+   Graphics effect that rounds all four corners of an item and outlines it in the
+   controls' gray.
+
+   Clipping an item to a rounded shape leaves stair-stepped edges wherever its content
+   fills a corner (a highlighted row, a scrollbar), because Qt does not smooth a clip.
+   Instead, this paints the item into an image, trims the image's corners with a
+   smoothed (antialiased) mask, and draws the outline over the result.
+   """
+
+   def draw(self, painter):
+      offset = QtCore.QPoint()   # filled in with where the image's top-left goes
+      pixmap = self.sourcePixmap(QtCore.Qt.CoordinateSystem.LogicalCoordinates, offset,
+                                 QtWidgets.QGraphicsEffect.PixmapPadMode.NoPad)
+      itemArea = QtCore.QRectF(self.sourceBoundingRect())
+
+      # erase the image's corners: the area between its square edge and the rounded shape
+      # (filling a square and a rounded rectangle with the odd-even rule covers only the
+      # area where they differ)
+      image      = pixmap.toImage().convertToFormat(QtGui.QImage.Format.Format_ARGB32_Premultiplied)
+      imageArea  = itemArea.translated(-offset.x(), -offset.y())
+      cornerArea = QtGui.QPainterPath()
+      cornerArea.setFillRule(QtCore.Qt.FillRule.OddEvenFill)
+      cornerArea.addRect(imageArea)
+      cornerArea.addRoundedRect(imageArea, _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      imagePainter = QtGui.QPainter(image)
+      imagePainter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+      imagePainter.setCompositionMode(QtGui.QPainter.CompositionMode.CompositionMode_DestinationOut)
+      imagePainter.fillPath(cornerArea, QtGui.QColor(0, 0, 0, 255))
+      imagePainter.end()
+
+      painter.save()
+      painter.drawImage(offset, image)
+
+      # the outline's pen straddles its path, so tracing half a border width inside the
+      # item's edge keeps the whole line on the item
+      halfBorder = _CONTROL_BORDER_WIDTH / 2.0
+      outline    = QtGui.QPainterPath()
+      outline.addRoundedRect(itemArea.adjusted(halfBorder, halfBorder, -halfBorder, -halfBorder),
+                             _CONTROL_CORNER_RADIUS, _CONTROL_CORNER_RADIUS)
+      painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+      painter.setPen(QtGui.QPen(QtGui.QColor(150, 150, 150, 255), _CONTROL_BORDER_WIDTH))   # the control outline's gray
+      painter.setBrush(QtCore.Qt.BrushStyle.NoBrush)
+      painter.drawPath(outline)
+      painter.restore()
+
+
 class _QComboBox(QtWidgets.QComboBox):
    """
    QComboBox whose popup list draws above every other item in the scene.
@@ -850,10 +901,11 @@ class _QComboBox(QtWidgets.QComboBox):
    combo's on-screen placement) and put it back under the combo once it hides.
 
    Qt also places the popup slightly left of the combo and narrower than it, so we line
-   it up under the combo ourselves.
+   it up under the combo ourselves, and round its corners to match the combo's.
    """
 
-   _POPUP_Z_VALUE = 1e9   # above any z-value a Display or Group assigns
+   _POPUP_Z_VALUE     = 1e9   # above any z-value a Display or Group assigns
+   _FEWEST_ROWS_BELOW = 2     # a list with room for only this many rows below may open above
 
    def __init__(self):
       QtWidgets.QComboBox.__init__(self)
@@ -907,6 +959,10 @@ class _QComboBox(QtWidgets.QComboBox):
       # show fades in and out with the mouse; ask for one that stays while it is needed
       self.view().setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+      # let Qt size the popup from scratch each time it opens; a height limit left over
+      # from the last time would otherwise stick
+      self.view().window().setMaximumHeight(_PROXY_MAXIMUM_SIZE)
+
       QtWidgets.QComboBox.showPopup(self)
       comboProxy = self.graphicsProxyWidget()
       children   = comboProxy.childItems() if comboProxy is not None else []
@@ -918,6 +974,9 @@ class _QComboBox(QtWidgets.QComboBox):
             self.view().window().installEventFilter(self)
             self._watchingPopup = True
 
+         if popupItem.graphicsEffect() is None:
+            popupItem.setGraphicsEffect(_RoundedCornersEffect())
+
          # match the combo's width, then read back where Qt put the popup: a popup that
          # would run off the bottom of the screen is placed above the combo instead, and
          # we keep whichever side that is
@@ -926,7 +985,10 @@ class _QComboBox(QtWidgets.QComboBox):
          if popupSitsAbove:
             popupTop = -popupItem.boundingRect().height()
          else:
-            popupTop = self.height()
+            # keep the list inside the Display, opening it above the combo if there is
+            # too little room below.  Resizing the popup moves its item, so this happens
+            # before the item's position is read below.
+            popupTop = self._fitPopupInsideDisplay(comboProxy)
 
          # line the popup up under (or over) the combo, and carry the combo's own
          # placement, since the popup no longer hangs off it
@@ -936,6 +998,48 @@ class _QComboBox(QtWidgets.QComboBox):
          popupItem.setTransform(popupOffset.inverted()[0] * placement)
          popupItem.setZValue(self._POPUP_Z_VALUE)
          self._liftedPopup = popupItem
+
+   def _fitPopupInsideDisplay(self, comboProxy):
+      """
+      Sizes the popup to fit inside the Display, and returns where its top goes,
+      measured down from the combo's top.
+
+      A list that would run past the bottom of the Display stops at that edge, and its
+      scrollbar reaches the items that no longer fit.  If that leaves room for only a
+      few rows, and there is more room above the combo, the list opens above it instead
+      and stops at the Display's top edge.
+      """
+      popupWindow = self.view().window()
+      popupTop    = self.height()   # just under the combo
+      views       = comboProxy.scene().views()
+      if views:
+         view = views[0]
+
+         # the part of the scene the Display shows right now (which follows a scrolled
+         # Display), in the combo's own coordinates, where the popup is laid out
+         visibleArea = view.mapToScene(view.viewport().rect()).boundingRect()
+         visibleArea = comboProxy.sceneTransform().inverted()[0].mapRect(visibleArea)
+         roomBelow   = int(visibleArea.bottom() - self.height())
+         roomAbove   = int(-visibleArea.top())
+
+         listFitsBelow    = popupWindow.height() <= roomBelow
+         rowsFittingBelow = roomBelow // max(self.view().sizeHintForRow(0), 1)
+         opensAbove       = (not listFitsBelow and rowsFittingBelow <= self._FEWEST_ROWS_BELOW
+                             and roomAbove > roomBelow)
+         if opensAbove:
+            room = roomAbove
+         else:
+            room = roomBelow
+
+         # keep at least one row showing, even when the combo sits at the very edge
+         room = max(room, self.height())
+         if popupWindow.height() > room:
+            popupWindow.setMaximumHeight(room)
+            self.view().scrollTo(self.view().currentIndex())   # keep the selected item in sight
+
+         if opensAbove:
+            popupTop = -popupWindow.height()
+      return popupTop
 
    def eventFilter(self, watched, event):
       if event.type() == QtCore.QEvent.Type.Hide and self._liftedPopup is not None:
