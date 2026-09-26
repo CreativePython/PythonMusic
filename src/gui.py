@@ -771,9 +771,10 @@ Color.CLEAR      = Color(  0,   0,   0,   0)
 class Font:
    """Represent a text font: a name, a style, and a size.
 
-   Use a Font to set how text looks on a Label, Button, TextField, TextArea, or a
-   drawn label, for example Font("Serif", Font.ITALIC, 16). The style is one of the
-   constants Font.PLAIN, Font.BOLD, Font.ITALIC, or Font.BOLDITALIC.
+   Use a Font to set how text looks on a Label, Button, CheckBox, DropDownList,
+   TextField, TextArea, or a drawn label, for example Font("Serif", Font.ITALIC, 16).
+   The style is one of the constants Font.PLAIN, Font.BOLD, Font.ITALIC, or
+   Font.BOLDITALIC. A given size looks the same on every kind of object.
 
    Args:
        name (str): The font name, for example "Serif", "Dialog", or "TimesRoman".
@@ -792,7 +793,7 @@ class Font:
       self.size  = size
 
    def __str__(self):
-      return f'Font(name = "{self.getName()}", style = {self.getStyle()}, size = {self.getSize()}")'
+      return f'Font(name = "{self.getName()}", style = {self.getStyle()}, size = {self.getSize()})'
 
    def __repr__(self):
       return str(self)
@@ -3974,6 +3975,11 @@ class Icon(Graphics):
 class Label(Graphics):
    """Create a label that shows a line of text.
 
+   A label starts out just big enough for its text. If you give it another size (with
+   setSize(), or with resize=False in setText() or setFont()), the text lines up inside
+   it by the label's alignment, centered top to bottom, and any text that does not fit
+   is cut off.
+
    Args:
        text (str): The text to show.
        alignment (int, optional): How the text lines up, one of LEFT, CENTER, or RIGHT.
@@ -3984,36 +3990,30 @@ class Label(Graphics):
    """
    def __init__(self, text, alignment=LEFT, textColor=Color.BLACK, backgroundColor=Color.CLEAR, font=None, visibility=100):
       """"""
-      Graphics.__init__(self, textColor, False, 1)
+      # a label's color is its background, like a control's; its text has its own color
+      Graphics.__init__(self, backgroundColor, False, 1)
 
-      self._text            = str(text)
-      self._backgroundColor = backgroundColor.getRGBA()
-      self._alignment       = alignment
-      self._font            = None
-      self._rotation        = 0.0
-      self._visibility      = max(0, min(100, int(visibility)))
+      self._text       = str(text)
+      self._textColor  = textColor.getRGBA()
+      self._alignment  = alignment
+      self._rotation   = 0.0
+      self._visibility = max(0, min(100, int(visibility)))
 
-      # extract Font information
       fontData = None
-      if isinstance(font, Font):
-         name  = font.getName()
-         style = font.getStyle()
-         size  = font.getSize()
-         self._font = [name, style, size]
-         fontData   = [name, style, size]
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':            'Label',
-         'text':            self._text,
-         'alignment':       alignment,
-         'textColor':       self._color,
-         'backgroundColor': self._backgroundColor,
-         'font':            fontData,
-         'color':           self._color,
-         'rotation':        self._rotation,
-         'sx':              self._scaleX,
-         'sy':              self._scaleY,
-         'visibility':      self._visibility,
+         'type':       'Label',
+         'text':       self._text,
+         'alignment':  alignment,
+         'color':      self._color,
+         'textColor':  self._textColor,
+         'font':       fontData,
+         'rotation':   self._rotation,
+         'sx':         self._scaleX,
+         'sy':         self._scaleY,
+         'visibility': self._visibility,
       })
 
       # the renderer measures the text, so ask it for the resolved size, then place the
@@ -4029,9 +4029,17 @@ class Label(Graphics):
       text            = self.getText()
       alignment       = self.getAlignment()
       textColor       = self.getTextColor()
-      backgroundColor = self.getBackgroundColor()
+      backgroundColor = self.getColor()
       font            = self.getFont()
       return f'Label(text = "{text}", alignment = {alignment}, textColor = {textColor}, backgroundColor = {backgroundColor}, font = {font}, visibility = {self.getVisibility()})'
+
+   def _refit(self):
+      """"""
+      currentLeft, currentTop = self.getPosition()
+      result = _handler().sendQuery('getSize', self._objectId)
+      self._baseWidth  = result[0]
+      self._baseHeight = result[1]
+      self.setPosition(currentLeft, currentTop)
 
    # ── Text ────────────────────────────────────────────────────────────────
 
@@ -4044,21 +4052,39 @@ class Label(Graphics):
       text = self._text
       return text
 
-   def setText(self, text):
+   def setText(self, text, resize=True):
       """Set the label's text.
 
       Args:
-          text (str): The new text. If it is longer than the label can fit, it is truncated.
+          text (str): The new text.
+          resize (bool, optional): True to resize the label to fit the new text, or False to keep its current size (text that does not fit is cut off).
       """
-      currentLeft, currentTop = self.getPosition()
       self._text = str(text)
-      _handler().sendCommand('setText', self._objectId, {'text': self._text})
-      result = _handler().sendQuery('getSize', self._objectId)
-      self._baseWidth  = result[0]
-      self._baseHeight = result[1]
-      self.setPosition(currentLeft, currentTop)
+      _handler().sendCommand('setText', self._objectId, {'text': self._text, 'resize': resize})
+      if resize:
+         self._refit()
 
    # ── Color ────────────────────────────────────────────────────────────────
+
+   def getColor(self):
+      """Return the label's color.
+
+      Returns:
+          color (Color): The color behind the text.
+      """
+      color = Color(*self._color)
+      return color
+
+   def setColor(self, color=None):
+      """Set the label's color.
+
+      Colors the area behind the text. To change the color of the text itself, use
+      setTextColor().
+
+      Args:
+          color (Color, optional): The new color behind the text. If omitted, a color-selection dialog opens.
+      """
+      Graphics.setColor(self, color)
 
    def getTextColor(self):
       """Return the label's text color.
@@ -4066,7 +4092,7 @@ class Label(Graphics):
       Returns:
           color (Color): The text color.
       """
-      color = self.getColor()
+      color = Color(*self._textColor)
       return color
 
    def setTextColor(self, color=None):
@@ -4075,33 +4101,13 @@ class Label(Graphics):
       Args:
           color (Color, optional): The new text color. If omitted, a color-selection dialog opens.
       """
-      self.setColor(color)
-
-   def getBackgroundColor(self):
-      """Return the label's background color.
-
-      Returns:
-          color (Color): The color behind the text.
-      """
-      color = Color(*self._backgroundColor)
-      return color
-
-   def setBackgroundColor(self, color=None):
-      """Set the label's background color.
-
-      Args:
-          color (Color, optional): The new background color. If omitted, a color-selection dialog opens.
-      """
       if color is None:
-         color = Color()
-
-      if isinstance(color, Color):
-         r, g, b, a = color.getRGBA()
-      else:
-         raise TypeError(f'{type(self).__name__}.setBackgroundColor(): color should be a Color object (it was {type(color).__name__})')
-
-      self._backgroundColor = [r, g, b, a]
-      _handler().sendCommand('setBackgroundColor', self._objectId, {'color': [r, g, b, a]})
+         color = Color()  # default color brings up color select dialog
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.setTextColor(): color should be a Color object (it was {type(color).__name__})')
+      r, g, b, a      = color.getRGBA()
+      self._textColor = [r, g, b, a]
+      _handler().sendCommand('setTextColor', self._objectId, {'color': self._textColor})
 
    # ── Alignment ────────────────────────────────────────────────────────────────
 
@@ -4129,32 +4135,49 @@ class Label(Graphics):
       """Return the label's font.
 
       Returns:
-          font (Font): The label's font, or None if it uses the default font.
+          font (Font): The font of the label's text.
       """
-      font = None
-
-      if self._font is not None:
-         name, style, size = self._font
-         font = Font(name, style, size)
-
+      fontData          = _handler().sendQuery('getFont', self._objectId)[0]
+      name, style, size = fontData
+      font              = Font(name, tuple(style), size)
       return font
 
-   def setFont(self, font):
+   def setFont(self, font, resize=True):
       """Set the label's font.
 
       Args:
           font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
+          resize (bool, optional): True to resize the label to fit its text in the new font, or False to keep its current size (text that does not fit is cut off).
       """
-      currentLeft, currentTop = self.getPosition()
-      name  = font.getName()
-      style = font.getStyle()
-      size  = font.getSize()
-      self._font = [name, style, size]
-      _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
-      result = _handler().sendQuery('getSize', self._objectId)
-      self._baseWidth  = result[0]
-      self._baseHeight = result[1]
-      self.setPosition(currentLeft, currentTop)
+      if not isinstance(font, Font):
+         raise TypeError(f'{type(self).__name__}.setFont(): font should be a Font object (it was {type(font).__name__})')
+      fontData = [font.getName(), font.getStyle(), font.getSize()]
+      _handler().sendCommand('setFont', self._objectId, {'font': fontData, 'resize': resize})
+      if resize:
+         self._refit()
+
+   # ── Compatibility Aliases ─────────────────────────────────────────────────────────
+
+   def getBackgroundColor(self):
+      """Return the label's background color.
+
+      Same as getColor().
+
+      Returns:
+          color (Color): The color behind the text.
+      """
+      color = self.getColor()
+      return color
+
+   def setBackgroundColor(self, color=None):
+      """Set the label's background color.
+
+      Same as setColor().
+
+      Args:
+          color (Color, optional): The new color behind the text. If omitted, a color-selection dialog opens.
+      """
+      self.setColor(color)
 
 
 #######################################################################################
@@ -5350,27 +5373,128 @@ class Control(Drawable):
       self.setPosition(currentLeft, currentTop)
 
 #######################################################################################
-class Button(Control):
+class TextControl(Control):
+   """Provide the shared text behavior of the controls that show text.
+
+   TextControl is a base class. You do not create one yourself. Button, CheckBox,
+   DropDownList, TextField, and TextArea inherit from it, along with its text color and
+   font methods.
+
+   A text control's color is its background; its text has a separate text color. When
+   the font changes, the control can refit to its text in the new font, or keep the size
+   it has. Refitting makes a Button, CheckBox, or DropDownList just big enough for its
+   text (for a DropDownList, its longest item), and makes a TextField or TextArea big
+   enough for its columns and rows of text in the new font.
+   """
+   def __init__(self):
+      Control.__init__(self)
+      self._textColor = Color.BLACK.getRGBA()   # the color of the control's text
+
+   # ── Text ─────────────────────────────────────────────────────────────────
+
+   def getText(self):
+      """Return the control's text.
+
+      Returns:
+          text (str): The text the control shows.
+      """
+      text = _handler().sendQuery('getText', self._objectId)[0]
+      return text
+
+   def setText(self, text, resize=True):
+      """Set the control's text.
+
+      Args:
+          text (str): The new text.
+          resize (bool, optional): True to resize the control to fit the new text, or False to keep its current size.
+      """
+      _handler().sendCommand('setText', self._objectId, {'text': str(text), 'resize': resize})
+      if resize:
+         self._refit()
+
+   # ── Text color ───────────────────────────────────────────────────────────
+
+   def getTextColor(self):
+      """Return the control's text color.
+
+      Returns:
+          color (Color): The text color.
+      """
+      color = Color(*self._textColor)
+      return color
+
+   def setTextColor(self, color=None):
+      """Set the control's text color.
+
+      Args:
+          color (Color, optional): The new text color. If omitted, a color-selection dialog opens.
+      """
+      if color is None:
+         color = Color()  # default color brings up color select dialog
+      if not isinstance(color, Color):
+         raise TypeError(f'{type(self).__name__}.setTextColor(): color should be a Color object (it was {type(color).__name__})')
+      r, g, b, a      = color.getRGBA()
+      self._textColor = [r, g, b, a]
+      _handler().sendCommand('setTextColor', self._objectId, {'color': self._textColor})
+
+   # ── Font ─────────────────────────────────────────────────────────────────
+
+   def getFont(self):
+      """Return the control's font.
+
+      Returns:
+          font (Font): The font of the control's text.
+      """
+      fontData          = _handler().sendQuery('getFont', self._objectId)[0]
+      name, style, size = fontData
+      font              = Font(name, tuple(style), size)
+      return font
+
+   def setFont(self, font, resize=True):
+      """Set the control's font.
+
+      Args:
+          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
+          resize (bool, optional): True to refit the control to its text in the new font, or False to keep its current size.
+      """
+      if not isinstance(font, Font):
+         raise TypeError(f'{type(self).__name__}.setFont(): font should be a Font object (it was {type(font).__name__})')
+      fontData = [font.getName(), font.getStyle(), font.getSize()]
+      _handler().sendCommand('setFont', self._objectId, {'font': fontData, 'resize': resize})
+      if resize:
+         self._refit()
+
+#######################################################################################
+class Button(TextControl):
    """Create a clickable button.
 
    Args:
        text (str, optional): The text shown on the button.
        action (Callable, optional): The function to call each time the button is pressed; it receives no parameters.
        color (Color, optional): The button color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the button, in degrees, counter-clockwise.
        visibility (int, optional): How visible the button is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.WHITE, rotation=0, visibility=100):
+   def __init__(self, text='', action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._color  = color.getRGBA()
+      self._action    = action
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'Button',
-         'text':  str(text),
-         'color': self._color,
+         'type':      'Button',
+         'text':      str(text),
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5385,25 +5509,7 @@ class Button(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'Button(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
-
-   def getText(self):
-      """Return the button's text.
-
-      Returns:
-          text (str): The text shown on the button.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
-      """Set the button's text.
-
-      Args:
-          text (str): The new text to show on the button.
-      """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
-      self._refit()
+      return f'Button(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the button's color.
@@ -5417,7 +5523,7 @@ class Button(Control):
    def setColor(self, color=None):
       """Set the button's color.
 
-      Colors the button's background; its text stays black so it remains easy to read.
+      Colors the button's background. To change the color of its text, use setTextColor().
 
       Args:
           color (Color, optional): The new button background color. If omitted, a color-selection dialog opens.
@@ -5431,27 +5537,36 @@ class Button(Control):
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
 
-class CheckBox(Control):
+class CheckBox(TextControl):
    """Create a checkbox the user can check and uncheck.
 
    Args:
        text (str, optional): The text shown beside the checkbox.
        action (Callable, optional): The function to call when the checkbox changes; it receives one parameter, True if it was just checked or False if it was just unchecked.
        color (Color, optional): The checkbox color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the checkbox, in degrees, counter-clockwise.
        visibility (int, optional): How visible the checkbox is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', action=None, color=Color.CLEAR, rotation=0, visibility=100):
+   def __init__(self, text='', action=None, color=Color.CLEAR, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._color  = color.getRGBA()
+      self._action    = action
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'CheckBox',
-         'text':  str(text),
-         'color': self._color,
+         'type':      'CheckBox',
+         'text':      str(text),
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5466,25 +5581,7 @@ class CheckBox(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'CheckBox(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
-
-   def getText(self):
-      """Return the checkbox's text.
-
-      Returns:
-          text (str): The text shown beside the checkbox.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
-      """Set the checkbox's text.
-
-      Args:
-          text (str): The new text to show beside the checkbox.
-      """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
-      self._refit()
+      return f'CheckBox(text = "{self.getText()}", action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the checkbox's color.
@@ -5498,8 +5595,8 @@ class CheckBox(Control):
    def setColor(self, color=None):
       """Set the checkbox's color.
 
-      Colors the area behind the box and its label; the label text stays black so it
-      remains easy to read.
+      Colors the area behind the box and its label. To change the color of the label text,
+      use setTextColor().
 
       Args:
           color (Color, optional): The new checkbox color. If omitted, a color-selection dialog opens.
@@ -5633,28 +5730,37 @@ class Slider(Control):
       _handler().sendCommand('setValue', self._objectId, {'value': int(value)})
 
 
-class DropDownList(Control):
+class DropDownList(TextControl):
    """Create a drop-down list the user can pick one item from.
 
    Args:
        items (list[str], optional): The items to show, for example ["item1", "item2", "item3"].
        action (Callable, optional): The function to call when an item is picked; it receives one parameter, the selected item as a string.
        color (Color, optional): The list color.
+       textColor (Color, optional): The text color.
+       font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the list, in degrees, counter-clockwise.
        visibility (int, optional): How visible the list is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, items=[], action=None, color=Color.WHITE, rotation=0, visibility=100):
+   def __init__(self, items=[], action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._items    = list(items)
-      self._color    = color.getRGBA()
+      self._action    = action
+      self._items     = list(items)
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':  'DropDownList',
-         'items': self._items,
-         'color': self._color,
+         'type':      'DropDownList',
+         'items':     self._items,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
@@ -5669,7 +5775,7 @@ class DropDownList(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'DropDownList(items = {self._items}, action = {self._action}, color = {self.getColor()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'DropDownList(items = {self._items}, action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
    def getColor(self):
       """Return the drop-down list's color.
@@ -5683,7 +5789,7 @@ class DropDownList(Control):
    def setColor(self, color=None):
       """Set the drop-down list's color.
 
-      Colors the list's background; its text stays black so it remains easy to read.
+      Colors the list's background. To change the color of its text, use setTextColor().
 
       Args:
           color (Color, optional): The new list color. If omitted, a color-selection dialog opens.
@@ -5696,8 +5802,22 @@ class DropDownList(Control):
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
+   def setText(self, text):
+      """Select the item with the given text.
 
-class TextField(Control):
+      Works just like the user picking the item: it becomes the selected item and the
+      list's function is called with it. To find out which item is selected, use
+      getText().
+
+      Args:
+          text (str): The item to select. It must be one of the list's items.
+      """
+      if str(text) not in self._items:
+         raise ValueError(f'{type(self).__name__}.setText(): "{text}" is not one of the items {self._items}')
+      _handler().sendCommand('setText', self._objectId, {'text': str(text), 'resize': False})
+
+
+class TextField(TextControl):
    """Create a single-line text field the user can type into.
 
    Args:
@@ -5705,31 +5825,34 @@ class TextField(Control):
        columns (int, optional): The width of the field, in characters.
        action (Callable, optional): The function to call when the user presses Enter in the field; it receives one parameter, the field's contents as a string.
        color (Color, optional): The field color.
+       textColor (Color, optional): The text color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the field, in degrees, counter-clockwise.
        visibility (int, optional): How visible the field is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, font=None, rotation=0, visibility=100):
+   def __init__(self, text='', columns=8, action=None, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._action = action
-      self._columns  = columns
-      self._font     = None
-      self._color    = color.getRGBA()
+      self._action    = action
+      self._columns   = columns
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':    'TextField',
-         'text':    str(text),
-         'columns': columns,
-         'color':   self._color,
-         'font':    None,
+         'type':      'TextField',
+         'text':      str(text),
+         'columns':   columns,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
-
-      if font is not None:
-         self.setFont(font)
 
       # register action callback
       def _onReturnPressed(text):
@@ -5741,24 +5864,17 @@ class TextField(Control):
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'TextField(text = "{self.getText()}", columns = {self._columns}, action = {self._action}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
-   def getText(self):
-      """Return the text in the field.
-
-      Returns:
-          text (str): The field's contents.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
+   def setText(self, text, resize=False):
       """Set the text in the field.
 
       Args:
           text (str): The new contents of the field.
+          resize (bool, optional): True to resize the field to fit the new text, or False to keep its current size.
       """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
+      # a field keeps its size by default, since its text often changes while in use
+      TextControl.setText(self, text, resize)
 
    def getColor(self):
       """Return the field's color.
@@ -5772,8 +5888,7 @@ class TextField(Control):
    def setColor(self, color=None):
       """Set the field's color.
 
-      Colors the field's background; the text you type stays black so it remains easy to
-      read.
+      Colors the field's background. To change the color of the text, use setTextColor().
 
       Args:
           color (Color, optional): The new field color. If omitted, a color-selection dialog opens.
@@ -5786,29 +5901,8 @@ class TextField(Control):
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
 
-   def getFont(self):
-      """Return the field's font.
 
-      Returns:
-          font (Font): The field's font, or None if it uses the default font.
-      """
-      font = font = Font(*self._font) if self._font is not None else None
-      return font
-
-   def setFont(self, font):
-      """Set the field's font.
-
-      Args:
-          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
-      """
-      name       = font.getName()
-      style      = font.getStyle()
-      size       = font.getSize()
-      self._font = [name, style, size]
-      _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
-
-
-class TextArea(Control):
+class TextArea(TextControl):
    """Create a multi-line text area the user can type into.
 
    If the text is taller than the area, a scroll bar appears on the right.
@@ -5818,55 +5912,51 @@ class TextArea(Control):
        columns (int, optional): The width of the area, in characters.
        rows (int, optional): The height of the area, in lines.
        color (Color, optional): The area color.
+       textColor (Color, optional): The text color.
        font (Font, optional): The font, for example Font("Serif", Font.ITALIC, 16). If omitted, the default font is used.
        rotation (int or float, optional): How far to turn the area, in degrees, counter-clockwise.
        visibility (int, optional): How visible the area is, from 0 (invisible) to 100 (fully visible).
    """
-   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, font=None, rotation=0, visibility=100):
+   def __init__(self, text='', columns=8, rows=5, color=Color.WHITE, textColor=Color.BLACK, font=None, rotation=0, visibility=100):
       """"""
-      Control.__init__(self)
+      TextControl.__init__(self)
 
-      self._columns = columns
-      self._rows    = rows
-      self._font    = None
-      self._color   = color.getRGBA()
+      self._columns   = columns
+      self._rows      = rows
+      self._color     = color.getRGBA()
+      self._textColor = textColor.getRGBA()
+
+      fontData = None
+      if font is not None:
+         fontData = [font.getName(), font.getStyle(), font.getSize()]
 
       _handler().sendCommand('create', self._objectId, {
-         'type':    'TextArea',
-         'text':    str(text),
-         'columns': columns,
-         'rows':    rows,
-         'color':   self._color,
-         'font':    None,
+         'type':      'TextArea',
+         'text':      str(text),
+         'columns':   columns,
+         'rows':      rows,
+         'color':     self._color,
+         'textColor': self._textColor,
+         'font':      fontData,
       })
 
       self._refit()
-
-      if font is not None:
-         self.setFont(font)
 
       self.setRotation(rotation)
       self.setVisibility(visibility)
 
    def __str__(self):
-      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows}, color = {self.getColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
+      return f'TextArea(text = "{self.getText()}", columns = {self._columns}, rows = {self._rows}, color = {self.getColor()}, textColor = {self.getTextColor()}, font = {self.getFont()}, rotation = {self.getRotation()}, visibility = {self.getVisibility()})'
 
-   def getText(self):
-      """Return the text in the area.
-
-      Returns:
-          text (str): The area's contents.
-      """
-      text = _handler().sendQuery('getText', self._objectId)[0]
-      return text
-
-   def setText(self, text):
+   def setText(self, text, resize=False):
       """Set the text in the area.
 
       Args:
           text (str): The new contents of the area.
+          resize (bool, optional): True to resize the area to fit the new text, or False to keep its current size.
       """
-      _handler().sendCommand('setText', self._objectId, {'text': str(text)})
+      # an area keeps its size by default, since its text often changes while in use
+      TextControl.setText(self, text, resize)
 
    def getColor(self):
       """Return the area's color.
@@ -5880,8 +5970,7 @@ class TextArea(Control):
    def setColor(self, color=None):
       """Set the area's color.
 
-      Colors the area's background; the text you type stays black so it remains easy to
-      read.
+      Colors the area's background. To change the color of the text, use setTextColor().
 
       Args:
           color (Color, optional): The new area color. If omitted, a color-selection dialog opens.
@@ -5893,28 +5982,6 @@ class TextArea(Control):
       r, g, b, a  = color.getRGBA()
       self._color  = [r, g, b, a]
       _handler().sendCommand('setColor', self._objectId, {'color': self._color})
-
-   def getFont(self):
-      """Return the area's font.
-
-      Returns:
-          font (Font): The area's font, or None if it uses the default font.
-      """
-      font = font = Font(*self._font) if self._font is not None else None
-      return font
-
-   def setFont(self, font):
-      """Set the area's font.
-
-      Args:
-          font (Font): The new font, for example Font("Serif", Font.ITALIC, 16).
-      """
-      if font is not None:
-         name       = font.getName()
-         style      = font.getStyle()
-         size       = font.getSize()
-         self._font = [name, style, size]
-         _handler().sendCommand('setFont', self._objectId, {'font': [name, style, size]})
 
 
 class Menu():
