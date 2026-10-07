@@ -1913,15 +1913,13 @@ class DisplayMirror:
       label.adjustSize()
       lx = globalPos.x() + offset
       ly = globalPos.y() + offset
-      # the label follows the mouse past the display's edges; only running out of
-      # screen moves it to the other side of the cursor
+      # the label follows the mouse past the display's edges; at an edge of the screen
+      # it stops, and stays flush with that edge while the mouse carries on
       screen = QtGui.QGuiApplication.screenAt(globalPos)
       if screen is not None:
          area = screen.availableGeometry()
-         if lx + label.width()  > area.right():
-            lx = globalPos.x() - label.width()  - offset
-         if ly + label.height() > area.bottom():
-            ly = globalPos.y() - label.height() - offset
+         lx   = min(lx, area.right()  - label.width()  + 1)
+         ly   = min(ly, area.bottom() - label.height() + 1)
       label.move(lx, ly)
       label.show()
 
