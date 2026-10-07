@@ -294,6 +294,10 @@ class GuiRenderer:
       # until the parent closes the admin pipe, triggering _receiveAdminMessage.
       self.qApplication.setQuitOnLastWindowClosed(False)
 
+      # Tooltips float above every window on screen, including other programs', so
+      # they come down whenever this program stops being the one in front.
+      self.qApplication.applicationStateChanged.connect(self._onApplicationStateChanged)
+
       # flat queue of individual commands waiting to be processed by Qt
       self._commandBuffer = []
       self._renderRate    = _RENDER_RATE
@@ -315,6 +319,13 @@ class GuiRenderer:
       # rebuilt.  Populated by IconMirror's pixel setters; flushed by _flushDirtyIcons()
       # so a burst of setPixel calls costs one rebuild per tick rather than one per pixel.
       self._dirtyIcons = set()
+
+   def _onApplicationStateChanged(self, state):
+      """Hides every Display's tooltip once this program is no longer the one in front."""
+      if state != QtCore.Qt.ApplicationState.ApplicationActive:
+         for mirror in self._objectRegistry.values():
+            if isinstance(mirror, DisplayMirror):
+               mirror._hideOverlayLabel()
 
    def run(self):
       """
@@ -742,14 +753,10 @@ class QtDisplay(QtWidgets.QMainWindow):
       Event called by Qt when the Display goes in or out of focus.
       """
       super().changeEvent(event)
-      timer = self._owner._toolTipTimer
-      if timer is None:
-         return
-      if event.type() == QtCore.QEvent.Type.WindowActivate:
-         if self._owner._showCoords:
-            timer.start()
-      elif event.type() == QtCore.QEvent.Type.WindowDeactivate:
-         timer.stop()
+      # the tooltip floats above every window on screen, so take it down
+      # as soon as another window takes over from this Display
+      if event.type() == QtCore.QEvent.Type.ActivationChange and not self.isActiveWindow():
+         self._owner._hideOverlayLabel()
 
    def closeEvent(self, event):
       """
@@ -1355,12 +1362,7 @@ class QtView(QtWidgets.QGraphicsView):
       super().mouseMoveEvent(event)    # → hover events on items (button up)
       
       # decide whether to show tooltip, and what to show
-      if self._display.toolTipQLabel is not None:
-         vpos = self.viewport().mapFromGlobal(event.globalPosition().toPoint())
-         if self._display._showCoords:
-            self._display._placeOverlayLabel(vpos.x(), vpos.y(), f'({int(x)}, {int(y)})')
-         else:
-            self._display._updateNonCoordLabel(vpos)
+      self._display._updateOverlayLabel(event.globalPosition().toPoint())
 
       # is this a mouse move or mouse drag?
       if event.buttons() == QtCore.Qt.MouseButton.NoButton:
@@ -1379,17 +1381,16 @@ class QtView(QtWidgets.QGraphicsView):
       super().enterEvent(event)
       self._sendDisplay('mouseEnter', [0, 0])
       self._display._mouseOnDisplay = True
-      if not self._display._showCoords:
-         self._display._createOverlayLabel()
-         vpos = self.viewport().mapFromGlobal(QtGui.QCursor.pos())
-         self._display._updateNonCoordLabel(vpos)
+      # The tooltip itself waits for the mouse to move (see mouseMoveEvent).  Qt also sends
+      # an enter when a window that sat above this one goes away -- including the tooltip
+      # hiding -- and showing the tooltip on that would bring it back the moment it hides.
+      self._display._createOverlayLabel()
 
    def leaveEvent(self, event):
       super().leaveEvent(event)
       self._sendDisplay('mouseExit', [0, 0])
       self._display._mouseOnDisplay = False
-      if not self._display._showCoords and self._display.toolTipQLabel is not None:
-         self._display.toolTipQLabel.hide()
+      self._display._fadeOverlayLabel()
 
    # ── Keyboard ───────────────────────────────────────────────────────────────
 
@@ -1457,9 +1458,12 @@ class DisplayMirror:
       self._toolTipText    = None   # this display's tool tip text (None = disabled)
       self._showCoords     = False  # should our tooltip show mouse coordinates?
       self._mouseOnDisplay = False  # is the mouse currently over the display?
-      self.toolTipQLabel   = None   # shared QLabel for tooltips
+      self.toolTipQLabel   = None   # shared QLabel for tooltips (its own window, floating above the display)
       self._overlayOffset  = 14     # px offset from cursor tip to overlay label
-      self._toolTipTimer   = None   # QTimer for off-display coordinate polling
+      self._overlayLinger  = 750    # ms the overlay label stays up once the mouse has left the display
+      self._overlayFade    = 250    # ms the overlay label then takes to fade out
+      self._lingerTimer    = None   # QTimer that waits out the linger, then starts the fade
+      self._fadeAnimation  = None   # QPropertyAnimation that fades the overlay label out
       self._antialias      = args.get('antialias', True)   # smooth edges of shapes and text?
 
       title  = args.get('title',  '')
@@ -1792,54 +1796,78 @@ class DisplayMirror:
       text              = args.get('text')
       self._toolTipText = text
       self._view.setToolTip(None)   # always disabled; overlay label manages display
-      if not self._showCoords and self.toolTipQLabel is not None:
-         if text and self._mouseOnDisplay:
-            self.toolTipQLabel.setText(text)
-            self.toolTipQLabel.adjustSize()
-            self.toolTipQLabel.show()
-            self.toolTipQLabel.raise_()
-         else:
-            self.toolTipQLabel.hide()
+      if not self._showCoords and self._mouseOnDisplay:
+         self._updateOverlayLabel(QtGui.QCursor.pos())
 
    def _createOverlayLabel(self):
-      """Creates and styles the shared overlay label as a viewport child, if not already created."""
+      """
+      Creates and styles the shared overlay label, if not already created.
+      The label is a borderless window of its own, owned by the display's window, so it
+      floats above the display and can hang over the display's edges.
+      """
       if self.toolTipQLabel is not None:
          return
-      label = QtWidgets.QLabel(self._view.viewport())
-      tt_pal = QtWidgets.QToolTip.palette()
-      bg = tt_pal.color(QtGui.QPalette.ColorRole.ToolTipBase).name()
-      fg = tt_pal.color(QtGui.QPalette.ColorRole.ToolTipText).name()
+      # a tooltip-type window never takes focus away from the display, and mouse input
+      # passes straight through it, so it cannot cause mouseExit by sitting under the cursor
+      flags = (QtCore.Qt.WindowType.ToolTip
+               | QtCore.Qt.WindowType.FramelessWindowHint
+               | QtCore.Qt.WindowType.WindowTransparentForInput
+               | QtCore.Qt.WindowType.WindowDoesNotAcceptFocus)
+      label = QtWidgets.QLabel(self._window, flags)
       label.setStyleSheet(
-         f'QLabel {{ background-color: {bg}; color: {fg};'
-         f' border: 1px solid {fg}; padding: 2px 4px; }}'
+         'QLabel { background-color: #ffffcd; color: #000000;'
+         ' border: 1px solid #b8b8b8; padding: 2px 4px; }'
       )
       label.setFont(QtWidgets.QToolTip.font())
+      label.setAttribute(QtCore.Qt.WidgetAttribute.WA_ShowWithoutActivating)
       label.setAttribute(QtCore.Qt.WidgetAttribute.WA_TransparentForMouseEvents)
       label.hide()
       self.toolTipQLabel = label
+
+      # once the mouse leaves the display, the label lingers, then fades out and hides
+      fade = QtCore.QPropertyAnimation(label, b'windowOpacity', label)
+      fade.setDuration(self._overlayFade)
+      fade.setStartValue(1.0)
+      fade.setEndValue(0.0)
+      fade.finished.connect(label.hide)
+      self._fadeAnimation = fade
+
+      timer = QtCore.QTimer(label)
+      timer.setSingleShot(True)
+      timer.setInterval(self._overlayLinger)
+      timer.timeout.connect(fade.start)
+      self._lingerTimer = timer
 
    def _showMouseCoordinates(self, args, responseId):
       self._showCoords = True
       self._view.setToolTip(None)
       self._createOverlayLabel()
-      self.toolTipQLabel.show()
-      self.toolTipQLabel.raise_()
-      if self._toolTipTimer is None:
-         timer = QtCore.QTimer()
-         timer.setInterval(50)
-         timer.timeout.connect(self._updateCoordLabel)
-         self._toolTipTimer = timer
-      self._toolTipTimer.start()
+      if self._mouseOnDisplay:
+         self._updateOverlayLabel(QtGui.QCursor.pos())
 
-   def _updateCoordLabel(self):
-      """Polls cursor position for off-display coordinate tracking."""
-      vp   = self._view.viewport()
-      vpos = vp.mapFromGlobal(QtGui.QCursor.pos())
-      cvx  = max(0, min(vpos.x(), vp.width()  - 1))
-      cvy  = max(0, min(vpos.y(), vp.height() - 1))
-      spos = self._view.mapToScene(QtCore.QPoint(cvx, cvy))
+   def _updateOverlayLabel(self, globalPos):
+      """
+      Shows whichever tooltip applies at globalPos (a QPoint in screen coordinates):
+      the mouse coordinates if those are switched on, otherwise the item or display text.
+      """
+      if self.toolTipQLabel is None:
+         return
+      # once another program is in front, nothing reports the mouse leaving this display,
+      # so a tooltip shown then would be left stranded on top of that program's windows
+      if QtGui.QGuiApplication.applicationState() != QtCore.Qt.ApplicationState.ApplicationActive:
+         self._hideOverlayLabel()
+         return
+      if self._showCoords:
+         self._updateCoordLabel(globalPos)
+      else:
+         self._updateNonCoordLabel(globalPos)
+
+   def _updateCoordLabel(self, globalPos):
+      """Shows the mouse coordinates at globalPos (a QPoint in screen coordinates)."""
+      vpos   = self._view.viewport().mapFromGlobal(globalPos)
+      spos   = self._view.mapToScene(vpos)
       sx, sy = _sceneToCoord(spos)
-      self._placeOverlayLabel(cvx, cvy, f'({int(sx)}, {int(sy)})')
+      self._placeOverlayLabel(globalPos, f'({int(sx)}, {int(sy)})')
 
    def _tooltipTextAt(self, vpos):
       """
@@ -1859,42 +1887,63 @@ class DisplayMirror:
       # 2. Display tooltip
       return self._toolTipText
 
-   def _updateNonCoordLabel(self, vpos):
-      """Shows the correct tooltip (item or display) at vpos, or hides if none."""
-      if self.toolTipQLabel is None:
-         return
+   def _updateNonCoordLabel(self, globalPos):
+      """
+      Shows the correct tooltip (item or display) at globalPos (a QPoint in screen
+      coordinates), or hides if none.
+      """
+      vpos = self._view.viewport().mapFromGlobal(globalPos)
       text = self._tooltipTextAt(vpos)
       if text:
-         self._placeOverlayLabel(vpos.x(), vpos.y(), text)
-         self.toolTipQLabel.show()
+         self._placeOverlayLabel(globalPos, text)
       else:
-         self.toolTipQLabel.hide()
+         self._hideOverlayLabel()
 
-   def _placeOverlayLabel(self, vx, vy, text):
-      """Sets the overlay label text and positions it near (vx, vy) in viewport coords."""
+   def _placeOverlayLabel(self, globalPos, text):
+      """
+      Sets the overlay label text and shows it at full strength just below and to the
+      right of globalPos (a QPoint in screen coordinates).
+      """
       label  = self.toolTipQLabel
       offset = self._overlayOffset
+      self._lingerTimer.stop()
+      self._fadeAnimation.stop()
+      label.setWindowOpacity(1.0)
       label.setText(text)
       label.adjustSize()
-      vp = self._view.viewport()
-      lx = vx + offset
-      ly = vy + offset
-      if lx + label.width()  > vp.width()  - 2:
-         lx = vx - label.width()  - offset
-      if ly + label.height() > vp.height() - 2:
-         ly = vy - label.height() - offset
-      label.move(max(0, lx), max(0, ly))
-      label.raise_()
+      lx = globalPos.x() + offset
+      ly = globalPos.y() + offset
+      # the label follows the mouse past the display's edges; at an edge of the screen
+      # it stops, and stays flush with that edge while the mouse carries on
+      screen = QtGui.QGuiApplication.screenAt(globalPos)
+      if screen is not None:
+         area = screen.availableGeometry()
+         lx   = min(lx, area.right()  - label.width()  + 1)
+         ly   = min(ly, area.bottom() - label.height() + 1)
+      label.move(lx, ly)
+      label.show()
+
+   def _fadeOverlayLabel(self):
+      """Leaves the overlay label up for a moment so it can still be read, then fades it out."""
+      if self.toolTipQLabel is None or not self.toolTipQLabel.isVisible():
+         return
+      if self._fadeAnimation.state() != QtCore.QAbstractAnimation.State.Running:
+         self._lingerTimer.start()
+
+   def _hideOverlayLabel(self):
+      """Hides the overlay label immediately."""
+      if self.toolTipQLabel is None:
+         return
+      self._lingerTimer.stop()
+      self._fadeAnimation.stop()
+      self.toolTipQLabel.hide()
 
    def _hideMouseCoordinates(self, args, responseId):
       self._showCoords = False
-      if self._toolTipTimer is not None:
-         self._toolTipTimer.stop()
-      if self.toolTipQLabel is not None and self._mouseOnDisplay:
-         vpos = self._view.viewport().mapFromGlobal(QtGui.QCursor.pos())
-         self._updateNonCoordLabel(vpos)
-      elif self.toolTipQLabel is not None:
-         self.toolTipQLabel.hide()
+      if self._mouseOnDisplay:
+         self._updateOverlayLabel(QtGui.QCursor.pos())
+      else:
+         self._hideOverlayLabel()
 
    # ── Menu ───────────────────────────────────────────────────────────────────
 
