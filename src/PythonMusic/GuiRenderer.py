@@ -2158,7 +2158,7 @@ class DisplayMirror:
       rotation   = args.get('rotation',   0)
       visibility = args.get('visibility', 100)
 
-      arcWidth = -(endAngle - startAngle)   # Qt sweeps CW for positive span
+      arcWidth = endAngle - startAngle   # positive sweeps CCW, same as Qt
 
       path = QtGui.QPainterPath()
       path.arcMoveTo(0, 0, width, height, startAngle)
@@ -2835,7 +2835,7 @@ class ArcMirror(_GraphicsMirror):
       self._startAngle = args.get('startAngle', 180)
       self._endAngle   = args.get('endAngle',   360)
       self._style      = args.get('style',      _OPEN)
-      self._arcWidth   = -(self._endAngle - self._startAngle)  # Qt angles are opposite
+      self._arcWidth   = self._endAngle - self._startAngle  # positive sweeps CCW, same as Qt
 
       self._commandHandlers.update({
          'setArcWidth': self._setArcWidth,
@@ -2873,7 +2873,8 @@ class ArcMirror(_GraphicsMirror):
    def _setArcWidth(self, args, responseId):
       """
       Changes the arc's sweep angle and rebuilds the path.
-      'arcWidth' uses Qt's sign convention: negative values sweep clockwise.
+      'arcWidth' is in degrees: positive values sweep counter-clockwise, negative
+      values clockwise.
       """
       self._arcWidth = args.get('arcWidth', self._arcWidth)
       self.qObject.prepareGeometryChange()

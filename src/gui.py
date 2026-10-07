@@ -3266,8 +3266,7 @@ class Arc(Graphics):
       halfWidth    = self._baseWidth / 2.0
       halfHeight   = self._baseHeight / 2.0
       startRadians = np.radians(self._startAngle)
-      # the renderer sweeps the opposite way from our angle convention, so match it
-      sweepRadians = np.radians(-(self._endAngle - self._startAngle))
+      sweepRadians = np.radians(self._endAngle - self._startAngle)
 
       xRow = []
       yRow = []
@@ -3308,9 +3307,11 @@ class Arc(Graphics):
    def _setArcWidth(self, arcWidth):
       """
       Rotaries need this to update their arcWidth.
+      A positive arcWidth sweeps counter-clockwise from the start angle, a negative
+      one clockwise.
       NOTE: Should we consider making this a public part of the API?
       """
-      _handler().sendCommand('setArcWidth', self._objectId, {'arcWidth': -arcWidth})
+      _handler().sendCommand('setArcWidth', self._objectId, {'arcWidth': arcWidth})
 
 
 class ArcCircle(Arc):
@@ -4908,8 +4909,8 @@ class Rotary(MusicControl):
       localY     = min(y1, y2)
       width      = abs(x1 - x2)
       height     = abs(y1 - y2)
-      startAngle = 90 + arcWidth//2
-      endAngle   = startAngle + arcWidth
+      startAngle = 90 + arcWidth/2         # lowest value, at the lower left
+      endAngle   = startAngle - arcWidth   # highest value, clockwise from the start
 
       # initialize internal shapes
       self._backgroundShape = Arc(
@@ -5002,7 +5003,7 @@ class Rotary(MusicControl):
       """"""
       valueRatio = (self._value - self._minValue) / (self._maxValue - self._minValue)  # 0.0 to 1.0
       arcWidth   = self._arcWidth * valueRatio                                          # scale to value
-      self._foregroundShape._setArcWidth(arcWidth)
+      self._foregroundShape._setArcWidth(-arcWidth)                                     # negative fills clockwise
 
    def setValue(self, newValue):
       """Set the knob's value.
