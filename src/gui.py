@@ -872,7 +872,23 @@ class Interactable:
       alreadyRegistered = eventType in self._actionList
       self._actionList[eventType] = action
       if not alreadyRegistered:
-         _handler().registerEvent(self._objectId, eventType, action)
+         isMouseEvent = eventType.startswith('mouse')
+
+         # The system is given this one function to call for the event.  It looks up
+         # the action each time the event happens, so that calling an on…() method
+         # again swaps in the new action.
+         def callCurrentAction(*eventValues):
+            currentAction = self._actionList[eventType]
+            if callable(currentAction):
+               if isMouseEvent:
+                  # mouse positions arrive as decimal numbers, but they name whole pixels
+                  x = int(round(eventValues[0]))
+                  y = int(round(eventValues[1]))
+                  currentAction(x, y)
+               else:
+                  currentAction(*eventValues)
+
+         _handler().registerEvent(self._objectId, eventType, callCurrentAction)
 
    def onMouseClick(self, action):
       """Set up a function to call when the mouse is clicked on this object.
@@ -1024,13 +1040,8 @@ class Display(Interactable):
    def close(self):
       """Close the display.
 
-      Before closing, calls the function set with onClose(), if any.
+      Once the display has closed, the function set with onClose(), if any, is called.
       """
-      if 'onClose' in self._actionList:
-         action = self._actionList['onClose']
-         if callable(action):
-            action()
-
       _handler().sendCommand('close', self._objectId)
       self.removeAll()
 
@@ -1430,7 +1441,7 @@ class Display(Interactable):
          print(f'{type(self).__name__}.save(): failed to save to "{resolvedPath}"')
 
    def onClose(self, action):
-      """Set up a function to call right before the display closes.
+      """Set up a function to call when the display closes.
 
       Called whether the display is closed with the mouse, the keyboard, or close(). Use
       it to clean up, play a sound, update other displays, and so on.
@@ -1438,7 +1449,7 @@ class Display(Interactable):
       Args:
           action (Callable): The function to call; it receives no parameters.
       """
-      self._actionList['displayClose'] = action
+      self._registerCallback('displayClose', action)
 
    # ── Draw Methods ────────────────────────────────────────────────────────────────
    # These methods draw a shape directly to the canvas without returning an object.
