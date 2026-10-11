@@ -1495,8 +1495,8 @@ class DisplayMirror:
 
       self._window = QtDisplay(self)
       self._window.setWindowTitle(title)
-      self._window.setGeometry(x, y, width, height)
       self._window.setFixedSize(width, height)
+      self._window.move(x, y)   # x, y place the window's own corner (title bar included)
       contextPolicy = QtCore.Qt.ContextMenuPolicy.CustomContextMenu
       self._window.setContextMenuPolicy(contextPolicy)
       self._window.show()
@@ -1804,11 +1804,9 @@ class DisplayMirror:
       self.guiRenderer.sendResponse(responseId, [x, y])
 
    def _setPosition(self, args, responseId):
-      x      = int(args.get('x', 0))
-      y      = int(args.get('y', 0))
-      width  = int(self._scene.width())
-      height = int(self._scene.height())
-      self._window.setGeometry(x, y, width, height)
+      x = int(args.get('x', 0))
+      y = int(args.get('y', 0))
+      self._window.move(x, y)
 
    # ── Tooltip ────────────────────────────────────────────────────────────────
 

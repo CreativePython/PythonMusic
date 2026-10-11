@@ -1011,7 +1011,7 @@ class Display(Interactable):
        antialias (bool, optional): Whether to smooth the edges of shapes and text drawn on the display. Images and drawPoint() always keep crisp pixels.
    """
 
-   def __init__(self, title='', width=600, height=400, x=0, y=50, color=Color.WHITE, antialias=True):
+   def __init__(self, title='', width=600, height=400, x=0, y=0, color=Color.WHITE, antialias=True):
       """"""
       Interactable.__init__(self)
 
