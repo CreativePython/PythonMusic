@@ -559,22 +559,31 @@ class GuiRenderer:
          self.commandConnection.send(response)
 
       elif action == 'getScreenSize':
-         # The largest content area a Display can have and still fit on the main
-         # screen: the area the system leaves for windows, less the frame (title bar
-         # and borders) that the window manager wraps around each Display.
-         area = self.qApplication.primaryScreen().availableGeometry()
+         screen = self.qApplication.primaryScreen()
 
-         # Measure the frame on a stand-in window built like a Display's.  Creating
-         # its native window (winId) is enough for the frame to be known, so the
-         # stand-in is never shown.
-         probe = QtWidgets.QMainWindow()
-         probe.setFixedSize(area.width(), area.height())
-         probe.winId()
-         frame = probe.windowHandle().frameMargins()
-         probe.deleteLater()
+         if args.get('fullScreen', False):
+            # the complete main screen
+            size   = screen.size()
+            width  = size.width()
+            height = size.height()
 
-         width    = area.width()  - frame.left() - frame.right()
-         height   = area.height() - frame.top()  - frame.bottom()
+         else:
+            # The largest content area a Display can have and still fit on the main
+            # screen, accounting for the window title, frame, menu, and system dock.
+            area = screen.availableGeometry()
+
+            # Measure the frame on a stand-in window built like a Display's.  Creating
+            # its native window (winId) is enough for the frame to be known, so the
+            # stand-in is never shown.
+            probe = QtWidgets.QMainWindow()
+            probe.setFixedSize(area.width(), area.height())
+            probe.winId()
+            frame = probe.windowHandle().frameMargins()
+            probe.deleteLater()
+
+            width  = area.width()  - frame.left() - frame.right()
+            height = area.height() - frame.top()  - frame.bottom()
+
          response = _createResponse(responseId, [width, height])
          self.commandConnection.send(response)
 
