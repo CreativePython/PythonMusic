@@ -558,6 +558,35 @@ class GuiRenderer:
          response = _createResponse(responseId, result)
          self.commandConnection.send(response)
 
+      elif action == 'getScreenSize':
+         screen = self.qApplication.primaryScreen()
+
+         if args.get('includeReserved', True):
+            # the complete main screen
+            size   = screen.size()
+            width  = size.width()
+            height = size.height()
+
+         else:
+            # The largest content area a Display can have and still fit on the main
+            # screen, accounting for the window title, frame, menu, and system dock.
+            area = screen.availableGeometry()
+
+            # Measure the frame on a stand-in window built like a Display's.  Creating
+            # its native window (winId) is enough for the frame to be known, so the
+            # stand-in is never shown.
+            probe = QtWidgets.QMainWindow()
+            probe.setFixedSize(area.width(), area.height())
+            probe.winId()
+            frame = probe.windowHandle().frameMargins()
+            probe.deleteLater()
+
+            width  = area.width()  - frame.left() - frame.right()
+            height = area.height() - frame.top()  - frame.bottom()
+
+         response = _createResponse(responseId, [width, height])
+         self.commandConnection.send(response)
+
       # ── Object Creation ───────────────────────────────────────────────────
       elif action == 'create':
          objectType = args.get('type')
@@ -1475,8 +1504,8 @@ class DisplayMirror:
 
       self._window = QtDisplay(self)
       self._window.setWindowTitle(title)
-      self._window.setGeometry(x, y, width, height)
       self._window.setFixedSize(width, height)
+      self._window.move(x, y)   # x, y place the window's own corner (title bar included)
       contextPolicy = QtCore.Qt.ContextMenuPolicy.CustomContextMenu
       self._window.setContextMenuPolicy(contextPolicy)
       self._window.show()
@@ -1784,11 +1813,9 @@ class DisplayMirror:
       self.guiRenderer.sendResponse(responseId, [x, y])
 
    def _setPosition(self, args, responseId):
-      x      = int(args.get('x', 0))
-      y      = int(args.get('y', 0))
-      width  = int(self._scene.width())
-      height = int(self._scene.height())
-      self._window.setGeometry(x, y, width, height)
+      x = int(args.get('x', 0))
+      y = int(args.get('y', 0))
+      self._window.move(x, y)
 
    # ── Tooltip ────────────────────────────────────────────────────────────────
 
