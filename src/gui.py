@@ -975,6 +975,24 @@ class Interactable:
       self._registerCallback('keyUp', action)
 
 #######################################################################################
+# Screen - the monitor that Displays appear on
+#######################################################################################
+def getScreenSize():
+   """Return the width and height of the largest Display that fits on the screen.
+
+   The size leaves room for the display's title bar, and for the parts of the screen
+   the system keeps for itself, such as a menu bar, dock, or taskbar. With more than
+   one screen, the size describes the main screen.
+
+   Returns:
+       width (int): The width, in pixels.
+       height (int): The height, in pixels.
+   """
+   result = _handler().sendQuery('getScreenSize', None)
+   width, height = result
+   return width, height
+
+#######################################################################################
 class Display(Interactable):
    """Create a window to hold widgets and drawings.
 
