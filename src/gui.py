@@ -977,22 +977,22 @@ class Interactable:
 #######################################################################################
 # Screen - the monitor that Displays appear on
 #######################################################################################
-def getScreenSize(fullScreen=False):
-   """Return the width and height of the largest Display that fits on the primary screen.
+def getScreenSize(includeReserved=False):
+   """Return the width and height of the largest Display that fits on the screen.
 
    The size leaves room for the display's title bar, and for the parts of the screen
-   the system keeps for itself, such as a menu bar, dock, or taskbar.
+   the system reserves, such as a menu bar, dock, or taskbar.
 
-   Set fullScreen to get the true size of the entire screen instead.
+   Set includeReserved to get the true size of the entire screen instead.
 
    Args:
-       fullScreen (bool, optional): Whether to return the size of the entire screen (True) or of the largest Display that fits on the screen (False).
+       includeReserved (bool, optional): Whether to return the size of the entire screen (True) or of the largest Display that fits on the screen (False).
 
    Returns:
        width (int): The width, in pixels.
        height (int): The height, in pixels.
    """
-   result = _handler().sendQuery('getScreenSize', None, {'fullScreen': fullScreen})
+   result = _handler().sendQuery('getScreenSize', None, {'includeReserved': includeReserved})
    width, height = result
    return width, height
 

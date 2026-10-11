@@ -561,7 +561,7 @@ class GuiRenderer:
       elif action == 'getScreenSize':
          screen = self.qApplication.primaryScreen()
 
-         if args.get('fullScreen', False):
+         if args.get('includeReserved', True):
             # the complete main screen
             size   = screen.size()
             width  = size.width()
