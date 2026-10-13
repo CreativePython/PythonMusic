@@ -93,6 +93,9 @@ _PIE   = 0
 _OPEN  = 1
 _CHORD = 2
 
+# Display size constant — must match gui.py's FULL value.
+_FULL = -1
+
 _RENDER_RATE = 60   # default timer ticks per second
 
 # Control styling — Qt's own styling leaves controls taller and squarer than JEM's.
@@ -1431,6 +1434,31 @@ def _detachItem(item):
 
 
 #######################################################################################
+# _usableScreenSize  —  the size a FULL Display takes, shared by DisplayMirror's
+#                       constructor and its _setSize
+#######################################################################################
+
+def _usableScreenSize():
+   """Returns the (width, height) of the largest content area a Display can have and
+   still fit on the main screen, accounting for the window title, frame, menu, and
+   system dock."""
+   area = QtGui.QGuiApplication.primaryScreen().availableGeometry()
+
+   # Measure the frame on a stand-in window built like a Display's.  Creating
+   # its native window (winId) is enough for the frame to be known, so the
+   # stand-in is never shown.
+   probe = QtWidgets.QMainWindow()
+   probe.setFixedSize(area.width(), area.height())
+   probe.winId()
+   frame = probe.windowHandle().frameMargins()
+   probe.deleteLater()
+
+   width  = area.width()  - frame.left() - frame.right()
+   height = area.height() - frame.top()  - frame.bottom()
+   return width, height
+
+
+#######################################################################################
 # DisplayMirror  —  mirror of gui.py's Display
 #######################################################################################
 
@@ -1472,6 +1500,13 @@ class DisplayMirror:
       x      = args.get('x',     0)
       y      = args.get('y',     50)
       color  = args.get('color', [255, 255, 255, 255])
+
+      if width == _FULL or height == _FULL:
+         usableWidth, usableHeight = _usableScreenSize()
+         if width == _FULL:
+            width = usableWidth
+         if height == _FULL:
+            height = usableHeight
 
       self._window = QtDisplay(self)
       self._window.setWindowTitle(title)
@@ -1749,6 +1784,14 @@ class DisplayMirror:
    def _setSize(self, args, responseId):
       width  = args.get('width',  600)
       height = args.get('height', 400)
+
+      if width == _FULL or height == _FULL:
+         usableWidth, usableHeight = _usableScreenSize()
+         if width == _FULL:
+            width = usableWidth
+         if height == _FULL:
+            height = usableHeight
+
       if width > 0 and height > 0:
          pos = self._window.pos()
          self._scene.setSceneRect(0, 0, width, height)
