@@ -93,6 +93,9 @@ _PIE   = 0
 _OPEN  = 1
 _CHORD = 2
 
+# Display size constant — must match gui.py's FULL value.
+_FULL = -1
+
 _RENDER_RATE = 60   # default timer ticks per second
 
 # Control styling — Qt's own styling leaves controls taller and squarer than JEM's.
@@ -556,35 +559,6 @@ class GuiRenderer:
             else:
                result = [r, g, b]   # user cancelled
          response = _createResponse(responseId, result)
-         self.commandConnection.send(response)
-
-      elif action == 'getScreenSize':
-         screen = self.qApplication.primaryScreen()
-
-         if args.get('includeReserved', True):
-            # the complete main screen
-            size   = screen.size()
-            width  = size.width()
-            height = size.height()
-
-         else:
-            # The largest content area a Display can have and still fit on the main
-            # screen, accounting for the window title, frame, menu, and system dock.
-            area = screen.availableGeometry()
-
-            # Measure the frame on a stand-in window built like a Display's.  Creating
-            # its native window (winId) is enough for the frame to be known, so the
-            # stand-in is never shown.
-            probe = QtWidgets.QMainWindow()
-            probe.setFixedSize(area.width(), area.height())
-            probe.winId()
-            frame = probe.windowHandle().frameMargins()
-            probe.deleteLater()
-
-            width  = area.width()  - frame.left() - frame.right()
-            height = area.height() - frame.top()  - frame.bottom()
-
-         response = _createResponse(responseId, [width, height])
          self.commandConnection.send(response)
 
       # ── Object Creation ───────────────────────────────────────────────────
@@ -1460,6 +1434,31 @@ def _detachItem(item):
 
 
 #######################################################################################
+# _usableScreenSize  —  the size a FULL Display takes, shared by DisplayMirror's
+#                       constructor and its _setSize
+#######################################################################################
+
+def _usableScreenSize():
+   """Returns the (width, height) of the largest content area a Display can have and
+   still fit on the main screen, accounting for the window title, frame, menu, and
+   system dock."""
+   area = QtGui.QGuiApplication.primaryScreen().availableGeometry()
+
+   # Measure the frame on a stand-in window built like a Display's.  Creating
+   # its native window (winId) is enough for the frame to be known, so the
+   # stand-in is never shown.
+   probe = QtWidgets.QMainWindow()
+   probe.setFixedSize(area.width(), area.height())
+   probe.winId()
+   frame = probe.windowHandle().frameMargins()
+   probe.deleteLater()
+
+   width  = area.width()  - frame.left() - frame.right()
+   height = area.height() - frame.top()  - frame.bottom()
+   return width, height
+
+
+#######################################################################################
 # DisplayMirror  —  mirror of gui.py's Display
 #######################################################################################
 
@@ -1499,8 +1498,15 @@ class DisplayMirror:
       width  = args.get('width',  600)
       height = args.get('height', 400)
       x      = args.get('x',     0)
-      y      = args.get('y',     50)
+      y      = args.get('y',     0)
       color  = args.get('color', [255, 255, 255, 255])
+
+      if width == _FULL or height == _FULL:
+         usableWidth, usableHeight = _usableScreenSize()
+         if width == _FULL:
+            width = usableWidth
+         if height == _FULL:
+            height = usableHeight
 
       self._window = QtDisplay(self)
       self._window.setWindowTitle(title)
@@ -1508,9 +1514,7 @@ class DisplayMirror:
       self._window.move(x, y)   # x, y place the window's own corner (title bar included)
       contextPolicy = QtCore.Qt.ContextMenuPolicy.CustomContextMenu
       self._window.setContextMenuPolicy(contextPolicy)
-      self._window.show()
-      self._window.raise_()
-      self._window.activateWindow()
+      self._show(args, None)
 
       # Qt 6's default software rasterizer (raster engine) is sufficient for
       # 2D educational graphics and works consistently across all platforms.
@@ -1640,7 +1644,13 @@ class DisplayMirror:
    # ── Window visibility ──────────────────────────────────────────────────────
 
    def _show(self, args, responseId):
+      # A window that would hang off the screen is pulled back onto it as it appears,
+      # so note where it was asked to be and put it back there once it is showing.
+      position = self._window.pos()
       self._window.show()
+      self._window.move(position)
+      self._window.raise_()           # in front of the program's other windows
+      self._window.activateWindow()   # and the one that keyboard input goes to
 
    def _hide(self, args, responseId):
       self._window.hide()
@@ -1778,6 +1788,14 @@ class DisplayMirror:
    def _setSize(self, args, responseId):
       width  = args.get('width',  600)
       height = args.get('height', 400)
+
+      if width == _FULL or height == _FULL:
+         usableWidth, usableHeight = _usableScreenSize()
+         if width == _FULL:
+            width = usableWidth
+         if height == _FULL:
+            height = usableHeight
+
       if width > 0 and height > 0:
          pos = self._window.pos()
          self._scene.setSceneRect(0, 0, width, height)
@@ -1810,6 +1828,20 @@ class DisplayMirror:
    def _getPosition(self, args, responseId):
       x = int(self._window.x())
       y = int(self._window.y())
+
+      if sys.platform == 'darwin':
+         # macOS keeps a window's title bar below the menu bar, moving the window down
+         # when it has to, and Qt does not always hear about it.  Ask macOS itself
+         # where the window is.
+         import objc, AppKit
+         nsView   = objc.objc_object(c_void_p=int(self._window.winId()))
+         nsWindow = nsView.window()
+         frame    = nsWindow.frame()
+         # macOS measures upward from the bottom-left corner of the main screen
+         mainScreenHeight = AppKit.NSScreen.screens()[0].frame().size.height
+         x = int(frame.origin.x)
+         y = int(mainScreenHeight - frame.origin.y - frame.size.height)
+
       self.guiRenderer.sendResponse(responseId, [x, y])
 
    def _setPosition(self, args, responseId):

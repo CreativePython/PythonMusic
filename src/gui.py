@@ -195,6 +195,9 @@ VK_CLOSE_BRACKET = 93
 VK_QUOTE         = 39
 VK_BACK_QUOTE    = 96
 
+# Display Constants
+FULL = -1
+
 # Arc Constants (in degrees)
 PI      = 180
 HALF_PI = 90
@@ -974,27 +977,6 @@ class Interactable:
       """
       self._registerCallback('keyUp', action)
 
-#######################################################################################
-# Screen - the monitor that Displays appear on
-#######################################################################################
-def getScreenSize(includeReserved=False):
-   """Return the width and height of the largest Display that fits on the screen.
-
-   The size leaves room for the display's title bar, and for the parts of the screen
-   the system reserves, such as a menu bar, dock, or taskbar.
-
-   Set includeReserved to get the true size of the entire screen instead.
-
-   Args:
-       includeReserved (bool, optional): Whether to return the size of the entire screen (True) or of the largest Display that fits on the screen (False).
-
-   Returns:
-       width (int): The width, in pixels.
-       height (int): The height, in pixels.
-   """
-   result = _handler().sendQuery('getScreenSize', None, {'includeReserved': includeReserved})
-   width, height = result
-   return width, height
 
 #######################################################################################
 class Display(Interactable):
@@ -1007,8 +989,8 @@ class Display(Interactable):
 
    Args:
        title (str, optional): The window title.
-       width (int or float, optional): The window width, in pixels.
-       height (int or float, optional): The window height, in pixels.
+       width (int or float, optional): The window width, in pixels.  Set to FULL to fill the screen's width.
+       height (int or float, optional): The window height, in pixels.  Set to FULL to fill the screen's height.
        x (int or float, optional): The horizontal position of the window's top-left corner on the screen, in pixels.
        y (int or float, optional): The vertical position of the window's top-left corner on the screen, in pixels.
        color (Color, optional): The background color.
@@ -1042,14 +1024,11 @@ class Display(Interactable):
 
    def __str__(self):
       r, g, b, a = self._color
-      return f'Display(title = "{self._title}", width = {self._width}, height = {self._height}, color = Color({r}, {g}, {b}, {a}))'
+      width, height = self.getSize()
+      return f'Display(title = "{self._title}", width = {width}, height = {height}, color = Color({r}, {g}, {b}, {a}))'
 
    def show(self):
-      """Show the display.
-
-      This happens automatically when a display is created, so you only need it after
-      hide().
-      """
+      """Show the display and bring it to the front."""
       _handler().sendCommand('show', self._objectId)
 
    def hide(self):
@@ -1269,7 +1248,7 @@ class Display(Interactable):
       """Set the display's width.
 
       Args:
-          width (int or float): The new width, in pixels.
+          width (int or float): The new width, in pixels.  Set to FULL to fill the screen's width.
       """
       self.setSize(width, self.getHeight())
 
@@ -1286,7 +1265,7 @@ class Display(Interactable):
       """Set the display's height.
 
       Args:
-          height (int or float): The new height, in pixels.
+          height (int or float): The new height, in pixels.  Set to FULL to fill the screen's height.
       """
       self.setSize(self.getWidth(), height)
 
@@ -1297,20 +1276,32 @@ class Display(Interactable):
           width (int or float): The width, in pixels.
           height (int or float): The height, in pixels.
       """
+      if self._width == FULL or self._height == FULL:
+         # display size was calculated by the renderer,
+         # so we ask the renderer and cache the results
+         result = _handler().sendQuery('getSize', self._objectId)
+         self._width  = result[0]
+         self._height = result[1]
+
       width  = self._width
       height = self._height
+
       return width, height
 
    def setSize(self, width, height):
       """Set the display's width and height.
 
       Args:
-          width (int or float): The new width, in pixels.
-          height (int or float): The new height, in pixels.
+          width (int or float): The new width, in pixels.  Set to FULL to fill the screen's width.
+          height (int or float): The new height, in pixels.  Set to FULL to fill the screen's height.
       """
-      if (width <= 0) or (height <= 0):
-         print(f"{type(self).__name__}.setSize(): width and height should be positive, non-zero integers (they were {width} and {height}).")
+      widthIsValid  = (width  > 0) or (width  == FULL)
+      heightIsValid = (height > 0) or (height == FULL)
+
+      if not (widthIsValid and heightIsValid):
+         print(f"{type(self).__name__}.setSize(): width and height should be positive, non-zero integers, or FULL (they were {width} and {height}).")
       else:
+         # a FULL size is worked out by the renderer; getSize() asks for it when needed
          self._width  = width
          self._height = height
          _handler().sendCommand('setSize', self._objectId, {'width': width, 'height': height})
