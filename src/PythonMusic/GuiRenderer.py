@@ -1498,7 +1498,7 @@ class DisplayMirror:
       width  = args.get('width',  600)
       height = args.get('height', 400)
       x      = args.get('x',     0)
-      y      = args.get('y',     50)
+      y      = args.get('y',     0)
       color  = args.get('color', [255, 255, 255, 255])
 
       if width == _FULL or height == _FULL:
@@ -1514,9 +1514,7 @@ class DisplayMirror:
       self._window.move(x, y)   # x, y place the window's own corner (title bar included)
       contextPolicy = QtCore.Qt.ContextMenuPolicy.CustomContextMenu
       self._window.setContextMenuPolicy(contextPolicy)
-      self._window.show()
-      self._window.raise_()
-      self._window.activateWindow()
+      self._show(args, None)
 
       # Qt 6's default software rasterizer (raster engine) is sufficient for
       # 2D educational graphics and works consistently across all platforms.
@@ -1646,7 +1644,13 @@ class DisplayMirror:
    # ── Window visibility ──────────────────────────────────────────────────────
 
    def _show(self, args, responseId):
+      # A window that would hang off the screen is pulled back onto it as it appears,
+      # so note where it was asked to be and put it back there once it is showing.
+      position = self._window.pos()
       self._window.show()
+      self._window.move(position)
+      self._window.raise_()           # in front of the program's other windows
+      self._window.activateWindow()   # and the one that keyboard input goes to
 
    def _hide(self, args, responseId):
       self._window.hide()
@@ -1824,6 +1828,20 @@ class DisplayMirror:
    def _getPosition(self, args, responseId):
       x = int(self._window.x())
       y = int(self._window.y())
+
+      if sys.platform == 'darwin':
+         # macOS keeps a window's title bar below the menu bar, moving the window down
+         # when it has to, and Qt does not always hear about it.  Ask macOS itself
+         # where the window is.
+         import objc, AppKit
+         nsView   = objc.objc_object(c_void_p=int(self._window.winId()))
+         nsWindow = nsView.window()
+         frame    = nsWindow.frame()
+         # macOS measures upward from the bottom-left corner of the main screen
+         mainScreenHeight = AppKit.NSScreen.screens()[0].frame().size.height
+         x = int(frame.origin.x)
+         y = int(mainScreenHeight - frame.origin.y - frame.size.height)
+
       self.guiRenderer.sendResponse(responseId, [x, y])
 
    def _setPosition(self, args, responseId):

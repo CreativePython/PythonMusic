@@ -1028,11 +1028,7 @@ class Display(Interactable):
       return f'Display(title = "{self._title}", width = {width}, height = {height}, color = Color({r}, {g}, {b}, {a}))'
 
    def show(self):
-      """Show the display.
-
-      This happens automatically when a display is created, so you only need it after
-      hide().
-      """
+      """Show the display and bring it to the front."""
       _handler().sendCommand('show', self._objectId)
 
    def hide(self):
