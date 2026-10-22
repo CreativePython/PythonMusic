@@ -231,10 +231,7 @@ class Interpreter(InteractiveInterpreter):
         self.rpcclt.register("linecache", linecache)
         self.rpcclt.register("interp", self)
         self.transfer_path(with_cwd=True)
-        # Apply the desired initial working directory in the subprocess
-        target_cwd = self.console.flist.interp_cwd
-        if target_cwd and os.path.isdir(target_cwd):
-            self.runcommand(f"import os as _os; _os.chdir({target_cwd!r}); del _os\n")
+        self.restore_cwd()
         self.poll_subprocess()
         # Start warming a spare so the first Run doesn't pay spawn+connect.
         self._start_spare_build()
@@ -277,16 +274,14 @@ class Interpreter(InteractiveInterpreter):
             clt.register("flist", self.console.flist)
             clt.register("linecache", linecache)
             clt.register("interp", self)
-            # Pre-transfer sys.path (with cwd, like start_subprocess) and the
-            # current interpreter cwd, fire-and-forget: RPC requests are handled
-            # in order, so this lands before any later runcode on this connection.
+            # Pre-transfer sys.path (with cwd, like start_subprocess),
+            # fire-and-forget: RPC requests are handled in order, so this lands
+            # before any later runcode on this connection.  The working
+            # directory is set at promotion instead (restart_subprocess), since
+            # it may change while the spare waits.
             path = [''] + list(sys.path)
             clt.asyncqueue("exec", "runcode",
                 ("if 1:\n    import sys as _sys\n    _sys.path = %r\n    del _sys\n" % (path,),), {})
-            target_cwd = getattr(self.console.flist, 'interp_cwd', None)
-            if target_cwd and os.path.isdir(target_cwd):
-                clt.asyncqueue("exec", "runcode",
-                    ("import os as _os; _os.chdir(%r); del _os\n" % (target_cwd,),), {})
             if self._closing:
                 raise RuntimeError("PEM closing")
             self._spare = _Spare(clt, proc)
@@ -354,15 +349,6 @@ class Interpreter(InteractiveInterpreter):
             # (the killpg/taskkill is the slow part on Windows).
             threading.Thread(target=_terminate_conn, args=(old_clt, old_proc),
                              name='PemTerminator', daemon=True).start()
-            if with_cwd:
-                # Manual restart (Ctrl-F6 / Stop): cwd resets to the process cwd.
-                cwd = os.getcwd()
-                self.console.flist.interp_cwd = cwd
-                try:
-                    self.rpcclt.asyncqueue("exec", "runcode",
-                        ("import os as _os; _os.chdir(%r); del _os\n" % (cwd,),), {})
-                except Exception:
-                    pass
             perflog.mark("restart_subprocess: spare promoted")
         else:
             # Slow path: no spare ready -> kill old + spawn + connect (synchronous).
@@ -382,8 +368,10 @@ class Interpreter(InteractiveInterpreter):
                 return None
             perflog.mark("restart_subprocess: new subprocess connected back")
             self.transfer_path(with_cwd=with_cwd)
-            if with_cwd:
-                self.console.flist.interp_cwd = os.getcwd()
+
+        # The new subprocess picks up where its predecessor left off.  A script
+        # Run then moves it to the script's folder (see runscript.py).
+        self.restore_cwd()
 
         console.stop_readline()
         # annotate restart in shell window and mark it
@@ -462,6 +450,31 @@ class Interpreter(InteractiveInterpreter):
             self.restart_subprocess(with_cwd=True)
         except Exception:
             pass
+
+    def remember_cwd(self, path):
+        """Record the subprocess's new working directory.
+
+        Called by the subprocess (over RPC) each time it changes directory, so
+        the GUI always knows the last folder without having to ask for it.
+        """
+        self.console.flist.interp_cwd = path
+
+    def restore_cwd(self):
+        """Move the active subprocess into the remembered working directory.
+
+        Falls back to the session's starting folder if the remembered one has
+        since been deleted.
+        """
+        flist = self.console.flist
+        if not (flist.interp_cwd and os.path.isdir(flist.interp_cwd)):
+            flist.interp_cwd = flist.default_cwd
+        target_cwd = flist.interp_cwd
+        if target_cwd and os.path.isdir(target_cwd):
+            try:
+                self.rpcclt.asyncqueue("exec", "runcode",
+                    ("import os as _os; _os.chdir(%r); del _os\n" % (target_cwd,),), {})
+            except Exception:
+                pass
 
     def transfer_path(self, with_cwd=False):
         if with_cwd:        # Issue 13506
