@@ -13,6 +13,7 @@ import contextlib
 import functools
 import io
 import linecache
+import os
 import queue
 import sys
 import textwrap
@@ -566,8 +567,32 @@ class MyHandler(rpc.RPCHandler):
         install_recursionlimit_wrappers()
 
         self.interp = self.get_remote_proxy("interp")
+        self.install_cwd_reporter()
         perflog.mark("subprocess: RPC handler ready, stdio bound, entering getresponse loop")
         rpc.RPCHandler.getresponse(self, myseq=None, wait=0.05)
+
+    def install_cwd_reporter(self):
+        """Wrap os.chdir so every working-directory change is reported to the GUI.
+
+        The GUI remembers the last reported folder and moves the next
+        interpreter there, so the working directory carries over when this
+        process is stopped or crashes -- without the GUI ever having to ask a
+        process that might not answer.  The report is fire-and-forget, like
+        writes to sys.stdout.
+        """
+        realChdir = os.chdir
+        rpchandler = self
+
+        @functools.wraps(realChdir)   # keeps help(os.chdir) looking normal
+        def chdirAndReport(path):
+            realChdir(path)
+            try:
+                rpchandler.asynccall_noreturn(
+                    "interp", "remember_cwd", (os.getcwd(),), {})
+            except OSError:
+                pass   # GUI connection already gone; nobody left to tell
+
+        os.chdir = chdirAndReport
 
     def exithook(self):
         "override SocketIO method - wait for MainThread to shut us down"

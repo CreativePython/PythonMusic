@@ -162,7 +162,8 @@ class PyShellFileList(FileList):
     EditorWindow = PyShellEditorWindow
 
     pyshell = None
-    interp_cwd = None          # tracks interpreter's current working directory
+    default_cwd = None          # interpreter's starting working directory this session
+    interp_cwd = None           # interpreter's last known working directory
     last_focused_editor = None  # last editor window to receive focus
 
     def open_shell(self, event=None):
@@ -170,17 +171,6 @@ class PyShellFileList(FileList):
             self.pyshell.show()
             return self.pyshell
 
-        # Seed interpreter cwd from the focused editor's working directory
-        editor = self.last_focused_editor
-        if editor is not None:
-            if editor.io.filename:
-                editor_cwd = os.path.dirname(os.path.abspath(editor.io.filename))
-            elif editor.io.dirname:
-                editor_cwd = editor.io.dirname
-            else:
-                editor_cwd = None
-            if editor_cwd:
-                self.interp_cwd = editor_cwd
         self.pyshell = PyShell(self)
         if self.pyshell:
             if not self.pyshell.begin():
@@ -1461,25 +1451,14 @@ def main():
     flist = PyShellFileList(root)
     macosx.setupApp(root, flist)
 
-    # Determine initial working directory for blank editor windows.
-    # For a frozen app: use the directory containing the app/executable.
-    # On macOS the executable lives inside PEM.app/Contents/MacOS/, so
-    # walk up to find the .app bundle and return its parent directory.
-    # For development (running PEM.py): use the launch cwd.
+    # Starting working directory for the interpreter this session.
+    # A frozen app starts in the user's home folder; launched from a shell,
+    # PEM starts in the shell's current directory.
     if isFrozen():
-        _exe = os.path.abspath(sys.executable)
-        _launch_dir = os.path.dirname(_exe)
-        _p = _exe
-        for _ in range(8):
-            _p = os.path.dirname(_p)
-            if _p == os.path.dirname(_p):  # filesystem root, give up
-                break
-            if os.path.basename(_p).endswith('.app'):
-                _launch_dir = os.path.dirname(_p)
-                break
+        flist.default_cwd = os.path.expanduser('~')
     else:
-        _launch_dir = os.getcwd()
-    flist.interp_cwd = _launch_dir
+        flist.default_cwd = os.getcwd()
+    flist.interp_cwd = flist.default_cwd
 
     if enable_edit:
         if not (cmd or script):
@@ -1488,7 +1467,7 @@ def main():
                     # filename is a directory actually, disconsider it
                     args.remove(filename)
             if not args:
-                flist.new(_launch_dir)
+                flist.new(flist.default_cwd)
 
     if enable_shell:
         shell = flist.open_shell()
